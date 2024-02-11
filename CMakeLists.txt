@@ -16,3 +16,5 @@ target_compile_options     (${BINARY_NAME} PRIVATE -std=c2x -fvisibility=hidden
 target_compile_definitions (${BINARY_NAME} PRIVATE $<$<CONFIG:Debug>: DEBUG>)
 
 add_subdirectory           (dependencies/libwebsockets)
+target_include_directories (${BINARY_NAME} PRIVATE dependencies/libwebsockets/include)
+target_include_directories (${BINARY_NAME} PRIVATE build/dependencies/libwebsockets)
