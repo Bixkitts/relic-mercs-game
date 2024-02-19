@@ -7,14 +7,13 @@ I aim to provide a simple client as a test/example within this project however.
 
 ## Building and Running
 ### Dependencies
-- https://github.com/warmcat/libwebsockets version 4.3.x
-
-(Should be fine to just have these installed on the system)
+- https://github.com/Bixkitts/bb-net-lib
 
 ### Building The Project:
 - clone the repo: 
   git clone https://github.com/Bixkitts/relic-mercs-game.git
 - cd relic-mercs-game
+- git submodule update --init --recursive
 - mkdir build
 - cd build
 - cmake -DCMAKE_BUILD_TYPE=Release ..
