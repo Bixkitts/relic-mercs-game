@@ -1,0 +1,3 @@
+[submodule "dependencies/bb-net-lib"]
+	path = dependencies/bb-net-lib
+	url = https://github.com/Bixkitts/bb-net-lib.git
