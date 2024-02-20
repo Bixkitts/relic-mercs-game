@@ -3,17 +3,10 @@
 
 #include "bbnetlib.h"
 #include "helpers.h"
+#include "packet_handlers.h"
+
 Host localhost = NULL;
 
-void testPacketHandler(char *data, ssize_t packetSize, Host remotehost)
-{
-    printf("\nReceived data:");
-    for (int i = 0; i < packetSize; i++) {
-        printf("%c", data[i]);
-    }
-    printf("\n");
-    return;
-}
 
 int main(void)
 {
@@ -21,6 +14,6 @@ int main(void)
     printf("\n-----------------------------------\n");
     localhost = createHost("0.0.0.0", 80);
 
-    listenForTCP(localhost, testPacketHandler);
+    listenForTCP(localhost, masterHandler);
     return 0;
 }
