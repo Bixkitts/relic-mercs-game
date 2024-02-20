@@ -15,14 +15,13 @@
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
-static void htmlHandler        (char *data, ssize_t packetSize, Host remotehost);
+static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
 static void establishedHandler (char *data, ssize_t packetSize, Host remotehost);
 
 
 static PacketHandler handlers[HANDLER_COUNT] = {
-    htmlHandler,
-    websockHandler,
+    httpHandler,
     establishedHandler
 };
 
@@ -53,7 +52,7 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
     return;
 }
 
-static void htmlHandler(char *data, ssize_t packetSize, Host remotehost)
+static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     if (stringSearch(data, "GET /game", packetSize) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
@@ -70,19 +69,8 @@ static void htmlHandler(char *data, ssize_t packetSize, Host remotehost)
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-#ifdef DEBUG
-    printf("\nwebsockHandler() called...\n");
-#endif
 
-    getWebSocketResponse(data);
+    sendWebSocketResponse(data);
     // We've succesfully opened a websocket channel
-    customAttr->handler = HANDLER_ESTABLISHED;
-}
-
-static void establishedHandler(char *data, ssize_t packetSize, Host remotehost)
-{
-#ifdef DEBUG
-    printf("\nestablishedHandler() called...\n");
-#endif
-
+    customAttr->handler = HANDLER_WEBSOCK;
 }

@@ -3,22 +3,31 @@
 
 #include "websockets.h"
 #include "error_handling.h"
+#include "helpers.h"
 
-char *getWebSocketResponse(char *httpString)
+#define WEBSOCK_HEADERS_LEN 512
+
+static void extractAcceptCode(char *outString, char *httpString, ssize_t packetSize)
 {
-    char *response     = NULL;
+    const char *pattern = "Sec-WebSocket-Accept: ";
+    int index  = stringSearch(httpString, pattern, packetSize);
+    index += 22; // size of above pattern
+    int index2 = httpString
+}
+void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost)
+{
+    char  response[WEBSOCK_HEADERS_LEN]  = { 0 };
+    // We append the calculated hash to this
+    // Then build the response
     char *tempResponse = 
         "HTTP/1.1 101 Switching Protocols\n"
         "Upgrade: websocket\n"
         "Connection: Upgrade\n"
-        "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\n"
+        "Sec-WebSocket-Accept: ";
+    char *finResponse =
         "Sec-WebSocket-Protocol: chat\n\n";
 
-    response = (char*)calloc(strlen(tempResponse), sizeof(char));
-    if (response == NULL) {
-        printError(BB_ERR_CALLOC);
-        exit(1);
-    }
+    strcpy(response, tempResponse);
 
-    return response;
+
 }

@@ -24,7 +24,7 @@ static void stringSearch_computeLps(char* pattern, int m, int* lps)
     }
 }
 
-int stringSearch(char* text, char* pattern, int maxLength) 
+int stringSearch(const char* text, const char* pattern, int maxLength) 
 {
     int textLength = strlen(text);
     int patLength  = strlen(pattern);
@@ -55,4 +55,16 @@ int stringSearch(char* text, char* pattern, int maxLength)
     }
     free(lps);
     return -1;
+}
+
+int charSearch(char* text, char c, int bufLen)
+{
+    int i = 0;
+    while (text[i] != c && i < bufLen) {
+        i++;
+    }
+    if (i == bufLen) {
+        return -1;
+    }
+    return i;
 }

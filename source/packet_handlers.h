@@ -4,9 +4,8 @@
 #include "bbnetlib.h"
 
 typedef enum {
-    HANDLER_HTML,
+    HANDLER_HTTP,
     HANDLER_WEBSOCK,
-    HANDLER_ESTABLISHED,
     HANDLER_COUNT
 } HandlerEnum;
 
