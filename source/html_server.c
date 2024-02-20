@@ -8,6 +8,12 @@
 #include "error_handling.h"
 #include "html_server.h"
 
+static const char contentTypeStrings[MAX_HEADERS][STATUS_LENGTH] = {
+    "text/html\n",
+    "image/jpg\n",
+    "image/png\n"
+};
+
 void sendForbiddenPacket(Host remotehost)
 {
     char *forbidden =
@@ -17,6 +23,40 @@ void sendForbiddenPacket(Host remotehost)
         "Content-Length: 0\n\n";
     sendDataTCP(forbidden, strlen(forbidden), remotehost);
     return;
+}
+static const char *getContentTypeString(HTTPContentType type)
+{
+    return contentTypeStrings[type];
+}
+void sendContent(char* dir, HTTPContentType type, Host remotehost)
+{
+    char       header[HEADER_PACKET_LENGTH] = { 0 };
+    const char status       [HEADER_LENGTH] = "HTTP/1.1 200 OK\n";
+    const char contentType  [HEADER_LENGTH] = "Content-Type: ";
+    const char contentLength[HEADER_LENGTH] = "Content-Length: ";
+
+    char *content               = NULL;
+    int   contentLen            = getFileData(dir, &content);
+    char  lenStr[STATUS_LENGTH] = {0};
+
+    sprintf(lenStr, "%d\n\n", contentLen);
+
+    // Status:
+    strncpy(header, status, HEADER_LENGTH);
+    // Content-Type:
+    strncat(header, contentType, HEADER_LENGTH);
+    strncat(header, getContentTypeString(type), STATUS_LENGTH);
+    // Content-Length:
+    strncat(header, contentLength, HEADER_LENGTH);
+    strncat(header, lenStr, STATUS_LENGTH);
+
+    // ------ Header Over -----------//
+    //strncat(header, content, len);
+
+    sendDataTCP(header, strlen(header), remotehost);
+    sendDataTCP(content, contentLen, remotehost);
+    
+    free (content);
 }
 int getFileData(const char *dir, char **buffer)
 {
@@ -36,7 +76,7 @@ int getFileData(const char *dir, char **buffer)
     }
 
     // Allocate memory for the buffer to hold the file content
-    *buffer = (char *)malloc(file_stat.st_size + 1); // +1 for null terminator
+    *buffer = (char *)calloc(1, file_stat.st_size + 1); // +1 for null terminator
     if (*buffer == NULL) {
         printError(BB_ERR_MALLOC);
         close(fd);

@@ -52,30 +52,19 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
     return;
 }
+
 static void htmlHandler(char *data, ssize_t packetSize, Host remotehost)
 {
-    if (stringSearch(data, "/game") < 0) {
+    if (stringSearch(data, "GET /game", packetSize) >= 0) {
+        sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+    }
+    else if (stringSearch(data, "GET /CADE.png", packetSize) >= 0) {
+        sendContent("./CADE.png", HTTP_FLAG_IMAGE_PNG, remotehost);
+    }
+    else {
         sendForbiddenPacket(remotehost);
     }
-    char header[2048]            = { 0 };
-    const char status       [64] =    "HTTP/1.1 200 OK\n";
-    const char contentType  [64] =    "Content-Type: text/html\n";
-    const char contentLength[64] =    "Content-Length: ";
-
-    char *content   = NULL;
-    int  len        = getFileData("./index.html", &content);
-    char lenStr[32] = {0};
-    sprintf(lenStr, "%d\n\n", len);
-
-    strncpy(header, status, 64);
-    strncat(header, contentType, 64);
-    strncat(header, contentLength, 64);
-    strncat(header, lenStr, 32);
-    strncat(header, content, len);
-
-    sendDataTCP(header, strlen(header), remotehost);
-
-    free (content);
+    
 }
 
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
