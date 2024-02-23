@@ -16,6 +16,7 @@ typedef enum HTTPContentType {
     HTTP_FLAG_TEXT_HTML,
     HTTP_FLAG_IMAGE_JPG,
     HTTP_FLAG_IMAGE_PNG,
+    HTTP_FLAG_TEXT_JAVASCRIPT,
     HTTP_FLAG_COUNT
 } HTTPContentType;
 
@@ -23,7 +24,5 @@ void sendContent         (char* dir,
                           HTTPContentType type, 
                           Host remotehost);
 void sendForbiddenPacket (Host remotehost);
-int  getFileData         (const char *dir, 
-                          char **outBuffer);
 
 #endif

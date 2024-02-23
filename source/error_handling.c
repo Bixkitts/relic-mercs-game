@@ -4,7 +4,8 @@
 
 static const char errStrings[BB_ERR_COUNT][BB_ERROR_STRLEN] = {
     "\nmalloc error\n",
-    "\ncalloc error\n"
+    "\ncalloc error\n",
+    "\nfile not found\n"
 };
 
 void printError(ErrorString string)

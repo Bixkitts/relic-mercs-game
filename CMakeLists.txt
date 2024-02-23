@@ -15,7 +15,7 @@ target_sources             (${BINARY_NAME} PRIVATE ${SOURCES})
 
 target_compile_options     (${BINARY_NAME} PRIVATE -std=c2x
                             $<$<CONFIG:Debug>:-O0;-g3;-ggdb;-Wall>
-                            $<$<CONFIG:Release>:-O3>)
+                            $<$<CONFIG:Release>:-O3;-flto>)
 target_compile_definitions (${BINARY_NAME} PRIVATE $<$<CONFIG:Debug>: DEBUG>)
 
 target_link_options        (${BINARY_NAME} PRIVATE -lpthread)

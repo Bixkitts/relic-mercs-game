@@ -53,11 +53,15 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
+    // TODO: Hashmap or something <3
     if (stringSearch(data, "GET /game", packetSize) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
     }
-    else if (stringSearch(data, "GET /CADE.png", packetSize) >= 0) {
-        sendContent("./CADE.png", HTTP_FLAG_IMAGE_PNG, remotehost);
+    else if (stringSearch(data, "GET /renderer.js", packetSize) >= 0) {
+        sendContent("./renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
+    else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
+        sendWebSocketResponse(data, packetSize, remotehost);
     }
     else {
         sendForbiddenPacket(remotehost);

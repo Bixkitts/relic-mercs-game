@@ -12,6 +12,9 @@ int main(void)
 {
     printf("\nWelcome to the test server!");
     printf("\n-----------------------------------\n");
+#ifdef DEBUG
+    printf("RUNNING SLOW DEBUG VERSION\n");
+#endif
     enableTLS    ();
     localhost = createHost("0.0.0.0", 443);
     listenForTCP (localhost, masterHandler);
