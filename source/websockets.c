@@ -17,24 +17,23 @@ static char *base64_encode      (const unsigned char *input,
 static void  extractKeyCode     (char *outString, 
                                  char *httpString, 
                                  ssize_t packetSize);
-static void  generateAcceptCode (char **outCode, 
+static void  generateAcceptCode (char *outCode, 
                                  char *inCode, 
                                  ssize_t codeLen);
 
 static void extractKeyCode(char *outString, char *httpString, ssize_t packetSize)
 {
     const char *pattern = "Sec-WebSocket-Key: ";
-    int index  = stringSearch(httpString, pattern, packetSize);
-    index += strlen(pattern); 
-    // TODO: This could buffer overflow
-    int index2 = charSearch(&httpString[index], '\n', WEBSOCK_CODE_LEN);
-    index2 += index;
+    int index  =  stringSearch (httpString, pattern, packetSize);
+    index      += strnlen      (pattern, packetSize); 
+    int index2 =  charSearch   (&httpString[index], '\n', packetSize-index);
+    index2     += index;
     int codeLen = index2 - index;
     memcpy (outString, &httpString[index], codeLen);
     outString[codeLen-1] = '\0';
 }
 
-static void generateAcceptCode(char **outCode, char *inCode, ssize_t codeLen)
+static void generateAcceptCode(char *outCode, char *inCode, ssize_t codeLen)
 {
 
 }
@@ -52,9 +51,9 @@ void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost
         "Sec-WebSocket-Protocol: chat\n\n";
 
     char receivedCode[WEBSOCK_CODE_LEN] = { 0 };
-    char *responseCode = NULL;
+    char responseCode[WEBSOCK_CODE_LEN] = { 0 };
     extractKeyCode  (receivedCode, httpString, packetSize);
-    generateAcceptCode (&responseCode, receivedCode, strlen(response));
+    generateAcceptCode (responseCode, receivedCode, strlen(response));
 
     strcpy(response, tempResponse);
 }

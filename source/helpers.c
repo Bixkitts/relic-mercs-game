@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void stringSearch_computeLps(char* pattern, int m, int* lps) 
+static void stringSearch_computeLps(const char* pattern, int m, int* lps) 
 {
     int len = 0;
     lps[0] = 0; // lps[0] is always 0
@@ -26,8 +26,8 @@ static void stringSearch_computeLps(char* pattern, int m, int* lps)
 
 int stringSearch(const char* text, const char* pattern, int maxLength) 
 {
-    int textLength = strlen(text);
-    int patLength  = strlen(pattern);
+    int textLength = strnlen(text, maxLength);
+    int patLength  = strnlen(pattern, maxLength);
     int* lps       = (int*)malloc(sizeof(int) * patLength);
     if (lps == NULL) {
         exit(1);

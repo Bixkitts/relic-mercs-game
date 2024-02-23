@@ -13,7 +13,7 @@ file                       (GLOB SOURCES "source/*.c")
 add_executable             (${BINARY_NAME})
 target_sources             (${BINARY_NAME} PRIVATE ${SOURCES})
 
-target_compile_options     (${BINARY_NAME} PRIVATE -std=c2x
+target_compile_options     (${BINARY_NAME} PRIVATE -std=gnu11
                             $<$<CONFIG:Debug>:-O0;-g3;-ggdb;-Wall>
                             $<$<CONFIG:Release>:-O3;-flto>)
 target_compile_definitions (${BINARY_NAME} PRIVATE $<$<CONFIG:Debug>: DEBUG>)
