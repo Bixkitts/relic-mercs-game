@@ -12,8 +12,8 @@ int main(void)
 {
     printf("\nWelcome to the test server!");
     printf("\n-----------------------------------\n");
-    localhost = createHost("0.0.0.0", 80);
-
-    listenForTCP(localhost, masterHandler);
+    enableTLS    ();
+    localhost = createHost("0.0.0.0", 443);
+    listenForTCP (localhost, masterHandler);
     return 0;
 }

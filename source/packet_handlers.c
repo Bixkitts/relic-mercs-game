@@ -17,12 +17,11 @@ typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
 static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
-static void establishedHandler (char *data, ssize_t packetSize, Host remotehost);
 
 
 static PacketHandler handlers[HANDLER_COUNT] = {
     httpHandler,
-    establishedHandler
+    websockHandler
 };
 
 void masterHandler(char *data, ssize_t packetSize, Host remotehost)
@@ -70,7 +69,7 @@ static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
 
-    sendWebSocketResponse(data);
+   // sendWebSocketResponse(data);
     // We've succesfully opened a websocket channel
     customAttr->handler = HANDLER_WEBSOCK;
 }

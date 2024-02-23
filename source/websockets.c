@@ -11,8 +11,7 @@ static void extractAcceptCode(char *outString, char *httpString, ssize_t packetS
 {
     const char *pattern = "Sec-WebSocket-Accept: ";
     int index  = stringSearch(httpString, pattern, packetSize);
-    index += 22; // size of above pattern
-    int index2 = httpString
+    index += strlen(pattern); // size of above pattern
 }
 void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost)
 {
