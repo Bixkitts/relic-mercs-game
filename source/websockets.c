@@ -12,12 +12,16 @@
 #define WEBSOCK_HEADERS_LEN 512
 #define WEBSOCK_CODE_LEN    64
 
-static char *base64_encode      (const unsigned char *input, 
-                                 int length); 
+static void  base64_encode      (const char *input, 
+                                 int length,
+                                 char *output); 
+static int   compute_sha1       (const char *data, 
+                                 size_t data_len, 
+                                 unsigned char *digest);
 static void  extractKeyCode     (char *outString, 
                                  char *httpString, 
                                  ssize_t packetSize);
-static void  generateAcceptCode (char *outCode, 
+static int   generateAcceptCode (unsigned char *outCode, 
                                  char *inCode, 
                                  ssize_t codeLen);
 
@@ -33,9 +37,18 @@ static void extractKeyCode(char *outString, char *httpString, ssize_t packetSize
     outString[codeLen-1] = '\0';
 }
 
-static void generateAcceptCode(char *outCode, char *inCode, ssize_t codeLen)
+static int generateAcceptCode(unsigned char *outCode, char *inCode, ssize_t codeLen)
 {
-
+    char temp1[WEBSOCK_CODE_LEN] = {0};
+    char temp2[WEBSOCK_CODE_LEN] = {0};
+    strncpy (temp1, inCode, codeLen);
+    strcat  (temp1, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+    if (compute_sha1(temp1, strlen(temp1), temp2) < 0) {
+        return -1;
+    } 
+    base64_encode (temp2, 20, outCode);
+    printf ("\n%s\n", outCode);
+    return 0;
 }
 void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost)
 {
@@ -48,19 +61,24 @@ void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost
         "Connection: Upgrade\n"
         "Sec-WebSocket-Accept: ";
     char *finResponse =
-        "Sec-WebSocket-Protocol: chat\n\n";
+        "\n\n";
 
     char receivedCode[WEBSOCK_CODE_LEN] = { 0 };
     char responseCode[WEBSOCK_CODE_LEN] = { 0 };
-    extractKeyCode  (receivedCode, httpString, packetSize);
-    generateAcceptCode (responseCode, receivedCode, strlen(response));
+    extractKeyCode     (receivedCode, httpString, packetSize);
+    if (generateAcceptCode (responseCode, receivedCode, WEBSOCK_CODE_LEN) < 0) {
+        return;
+    }
 
-    strcpy(response, tempResponse);
+    strcpy  (response, tempResponse);
+    strncat (response, responseCode, WEBSOCK_CODE_LEN);
+    strncat (response, finResponse, strlen(finResponse));
+    sendDataTCP (response, strnlen(response, WEBSOCK_HEADERS_LEN), remotehost);
 }
 
 
 // TODO: might move this to own file or smthn
-static char* base64_encode(const unsigned char* input, int length) 
+static void base64_encode(const char* input, int length, char *outString) 
 {
     BIO     *bio, *b64;
     BUF_MEM *bufferPtr;
@@ -74,11 +92,44 @@ static char* base64_encode(const unsigned char* input, int length)
     BIO_flush       (bio);
     BIO_get_mem_ptr (bio, &bufferPtr);
 
-    char *buffer = (char *)malloc(bufferPtr->length + 1);
-    memcpy(buffer, bufferPtr->data, bufferPtr->length);
-    buffer[bufferPtr->length] = '\0';
+    memcpy(outString, bufferPtr->data, bufferPtr->length);
+    outString[bufferPtr->length] = '\0';
 
     BIO_free_all(bio);
+}
+static int compute_sha1(const char *data, size_t data_len, unsigned char *digest) {
+    EVP_MD_CTX *mdctx;
+    const EVP_MD *md;
+    unsigned int digest_len;
 
-    return buffer;
+    // Create and initialize the message digest context
+    mdctx = EVP_MD_CTX_new();
+    if (mdctx == NULL) {
+        fprintf(stderr, "Error creating message digest context\n");
+        return -1;
+    }
+
+    // Set the digest algorithm to SHA-1
+    md = EVP_sha1();
+
+    // Initialize the message digest computation
+    if (1 != EVP_DigestInit_ex(mdctx, md, NULL)) {
+        fprintf(stderr, "Error initializing message digest computation\n");
+        return -1;
+    }
+
+    // Update the message digest computation with the input data
+    if (1 != EVP_DigestUpdate(mdctx, data, data_len)) {
+        fprintf(stderr, "Error updating message digest computation\n");
+        return -1;
+    }
+
+    // Finalize the message digest computation and obtain the digest value
+    if (1 != EVP_DigestFinal_ex(mdctx, digest, &digest_len)) {
+        fprintf(stderr, "Error finalizing message digest computation\n");
+        return -1;
+    }
+
+    // Clean up the message digest context
+    EVP_MD_CTX_free(mdctx);
 }

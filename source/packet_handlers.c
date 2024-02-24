@@ -53,6 +53,7 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
+    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
     // TODO: Hashmap or something <3
     if (stringSearch(data, "GET /game", packetSize) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
@@ -62,8 +63,9 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);
+        customAttr->handler = HANDLER_WEBSOCK;
     }
-    else {
+    else if (stringSearch(data, "GET", packetSize) >= 0) {
         sendForbiddenPacket(remotehost);
     }
     
@@ -71,9 +73,5 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
-    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-
-   // sendWebSocketResponse(data);
-    // We've succesfully opened a websocket channel
-    customAttr->handler = HANDLER_WEBSOCK;
+    printf("\nI got websocket data!\n");
 }
