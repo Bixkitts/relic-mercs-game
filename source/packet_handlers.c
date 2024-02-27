@@ -73,5 +73,19 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
-    printf("\nI got websocket data!\n");
+    char *decodedData = (char*)calloc(packetSize, sizeof(char));
+    char  responsePacket[MAX_PACKET_SIZE] = {0};
+    int   responseLength = 0;
+    char *response = "Hello!";
+
+    if (decodedData == NULL) {
+        printError(BB_ERR_CALLOC);
+        exit(1);
+    }
+    decodeWebsocketMessage(decodedData, data, packetSize);
+    printf("\nReceived websocked message: %s\n", decodedData);
+    responseLength = 
+        encodeWebsocketMessage(responsePacket, response, strlen(response));
+    sendDataTCP (responsePacket, responseLength, remotehost);
+    free        (decodedData);
 }

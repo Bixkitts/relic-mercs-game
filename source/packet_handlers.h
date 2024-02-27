@@ -3,6 +3,8 @@
 
 #include "bbnetlib.h"
 
+#define MAX_PACKET_SIZE 1024
+
 typedef enum {
     HANDLER_HTTP,
     HANDLER_WEBSOCK,
