@@ -54,18 +54,27 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-    // TODO: Hashmap or something <3
+    // TODO: haha lmao
     if (stringSearch(data, "GET /game", packetSize) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
     }
     else if (stringSearch(data, "GET /renderer.js", packetSize) >= 0) {
-        sendContent("./renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./code/renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
+    else if (stringSearch(data, "GET /gl-draw-scene.js", packetSize) >= 0) {
+        sendContent("./code/gl-draw-scene.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
+    else if (stringSearch(data, "GET /gl-buffers.js", packetSize) >= 0) {
+        sendContent("./code/gl-buffers.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
+    else if (stringSearch(data, "GET /networking.js", packetSize) >= 0) {
+        sendContent("./code/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);
         customAttr->handler = HANDLER_WEBSOCK;
     }
-    else if (stringSearch(data, "GET", packetSize) >= 0) {
+    else {
         sendForbiddenPacket(remotehost);
     }
     
@@ -76,14 +85,24 @@ static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
     char *decodedData = (char*)calloc(packetSize, sizeof(char));
     char  responsePacket[MAX_PACKET_SIZE] = {0};
     int   responseLength = 0;
-    char *response = "Hello!";
+    char *response       = "Hello!";
 
     if (decodedData == NULL) {
         printError(BB_ERR_CALLOC);
         exit(1);
     }
+    // Otherwise, decode the websocket message...
     decodeWebsocketMessage(decodedData, data, packetSize);
-    printf("\nReceived websocked message: %s\n", decodedData);
+    // Respond to PING control messages
+    if (decodedData[0] == 0x1) {
+    #ifdef DEBUG
+        printf("\nReceived websocket heartbeat.\n");
+    #endif
+        return;
+    }
+#ifdef DEBUG
+    printf("\nReceived websocket message: %s\n", decodedData);
+#endif
     responseLength = 
         encodeWebsocketMessage(responsePacket, response, strlen(response));
     sendDataTCP (responsePacket, responseLength, remotehost);

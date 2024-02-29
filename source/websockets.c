@@ -190,3 +190,4 @@ static int compute_sha1(const char *data, size_t data_len, unsigned char *digest
     // Clean up the message digest context
     EVP_MD_CTX_free(mdctx);
 }
+
