@@ -4,11 +4,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "error_handling.h"
 
+static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
+
 int getFileData(const char *dir, char **buffer)
 {
+    pthread_mutex_lock(&fileMutex);
     // Open the HTML file
     int fd = open(dir, O_RDONLY);
     if (fd == -1) {
@@ -41,5 +45,6 @@ int getFileData(const char *dir, char **buffer)
 
     // Close the file
     close(fd);
+    pthread_mutex_unlock(&fileMutex);
     return bytes_read;
 }

@@ -74,6 +74,9 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     else if (stringSearch(data, "GET /user-inputs.js", packetSize) >= 0) {
         sendContent("./code/user-inputs.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
+    else if (stringSearch(data, "GET /map01.png", packetSize) >= 0) {
+        sendContent("./images/map01.png", HTTP_FLAG_IMAGE_PNG, remotehost);
+    }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);
         cacheHost(remotehost, 0);

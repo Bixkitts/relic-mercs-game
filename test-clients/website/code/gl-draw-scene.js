@@ -1,23 +1,21 @@
 import { getKeyPan } from './user-inputs.js';
+import { getZoom } from './user-inputs.js';
 
-let camPan = [0.0, 0.0, 0.0];
+let camPan  = [0.0, 0.0, 0.0];
+let camZoom = -2.5;
+const camPanLimitVert = 1.0;
+const camPanLimitHor  = 1.6;
+const camZoomMin  = -2.5
+const camZoomMax  = -0.5
 
-function drawScene(gl, programInfo, buffers) {
+function drawMapPlane(gl, programInfo, buffers, texture) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
 
     // Clear the canvas before we start drawing on it.
-
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Create a perspective matrix, a special matrix that is
-    // used to simulate the distortion of perspective in a camera.
-    // Our field of view is 45 degrees, with a width/height
-    // ratio that matches the display size of the canvas
-    // and we only want to see objects between 0.1 units
-    // and 100 units away from the camera.
 
     const fieldOfView      = (45 * Math.PI) / 180; // in radians
     const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -25,42 +23,47 @@ function drawScene(gl, programInfo, buffers) {
     const zFar             = 100.0;
     const projectionMatrix = mat4.create();
 
-    // note: glmatrix.js always has the first argument
-    // as the destination to receive the result.
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-    // Set the drawing position to the "identity" point, which is
-    // the center of the scene.
     const modelViewMatrix = mat4.create();
+    const scaleMatrix     = mat4.create();
+    
+    // Camera Zoom Logic
+    if (camZoom <= camZoomMax && camZoom >= camZoomMin) {
+        camZoom += getZoom() / (Math.abs(camZoom) * 1);
+    }
+    else if (camZoom > camZoomMax){
+        camZoom -= 0.004;
+    }
+    else {
+        camZoom += 0.002;
+    }
 
-    // Now move the drawing position a bit to where we want to
-    // start drawing the square.
     mat4.translate(modelViewMatrix, // destination matrix
                    modelViewMatrix, // matrix to translate
-                   [-0.0, 0.0, -2.5],); // amount to translate
+                   [-0.0, 0.0, camZoom],); // amount to translate
 
     mat4.rotate(modelViewMatrix,
                 modelViewMatrix,
-                Math.PI / 3,
+                Math.PI / (camZoom+4) * 0.5,
                 [-1, 0, 0],);
 
-    camPan[1] += getKeyPan(0); 
-    camPan[1] -= getKeyPan(2); 
-    camPan[0] += getKeyPan(3); 
-    camPan[0] -= getKeyPan(1); 
+    camPan[1] -= getKeyPan(0) * (camPan[1] > -camPanLimitVert); 
+    camPan[1] += getKeyPan(2) * (camPan[1] < camPanLimitVert); 
+    camPan[0] -= getKeyPan(3) * (camPan[0] > -camPanLimitHor); 
+    camPan[0] += getKeyPan(1) * (camPan[0] < camPanLimitHor); 
 
     mat4.translate(modelViewMatrix, // destination matrix
                    modelViewMatrix, // matrix to translate
                    camPan,); // amount to translate
+    mat4.scale    (scaleMatrix,
+                   modelViewMatrix,
+                   [1.618, 1.0, 1.0],);
 
-
-    // Tell WebGL how to pull out the positions from the position
-    // buffer into the vertexPosition attribute.
     setPositionAttribute (gl, buffers, programInfo);
-    setColorAttribute    (gl, buffers, programInfo);
+    setTextureAttribute  (gl, buffers, programInfo);
+
     gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-    // Tell WebGL to use our program when drawing
-    gl.useProgram(programInfo.program);
+    gl.useProgram        (programInfo.program);
 
     // Set the shader uniforms
     gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
@@ -68,14 +71,47 @@ function drawScene(gl, programInfo, buffers) {
                         projectionMatrix,);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
-                        modelViewMatrix,);
+                        scaleMatrix,);
+
+    // Texture shit
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture  (gl.TEXTURE_2D, texture);
+    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+
 
     {
         const offset      = 0;
         const type        = gl.UNSIGNED_SHORT;
         const vertexCount = 6;
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+
+        return modelViewMatrix;
     }
+}
+
+function drawCharacter(gl, programInfo, modelViewMatrix, pos) 
+{
+
+    mat4.rotate(modelViewMatrix,
+                modelViewMatrix,
+                (Math.PI / 2) - ((camZoom + 3) * 0.5),
+                [1, 0, 0],);
+    mat4.scale(modelViewMatrix,
+                modelViewMatrix,
+                [0.06, 0.1, 0.1],);
+    mat4.translate(modelViewMatrix,
+                   modelViewMatrix,
+                   pos,);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix,);
+    {
+        const offset      = 0;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 6;
+        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    }
+
 }
 
 // Tell WebGL how to pull out the positions from the position
@@ -101,10 +137,10 @@ function setPositionAttribute(gl, buffers, programInfo) {
 // into the vertexColor attribute.
 function setColorAttribute(gl, buffers, programInfo) {
     const numComponents = 4;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
+    const type          = gl.FLOAT;
+    const normalize     = false;
+    const stride        = 0;
+    const offset        = 0;
     gl.bindBuffer             (gl.ARRAY_BUFFER, 
                                buffers.color);
     gl.vertexAttribPointer    (programInfo.attribLocations.vertexColor,
@@ -115,5 +151,23 @@ function setColorAttribute(gl, buffers, programInfo) {
                                offset,);
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
+// tell webgl how to pull out the texture coordinates from buffer
+function setTextureAttribute(gl, buffers, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT; // the data in the buffer is 32-bit float
+    const normalize = false; // don't normalize
+    const stride    = 0; // how many bytes to get from one set to the next
+    const offset    = 0; // how many bytes inside the buffer to start from
+    gl.bindBuffer         (gl.ARRAY_BUFFER, buffers.texCoord);
+    gl.vertexAttribPointer(programInfo.attribLocations.textureCoord,
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+}
 
-export { drawScene };
+
+export { drawMapPlane };
+export { drawCharacter };
