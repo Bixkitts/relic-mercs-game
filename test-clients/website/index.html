@@ -10,9 +10,7 @@
     <input type="text" id="messageInput" placeholder="Enter message">
     <script>document.getElementById("messageInput").onkeydown = e => { if(e.keyCode === 13) sendMessage(); };</script>
     <button onclick="sendMessage()">Send Message</button>
-    <br/>
-    WASD to pan camera, scroll to zoom
-    <br/>
+    <div>WASD to pan camera, scroll to zoom</div>
     <canvas id="glcanvas" width="640" height="480"></canvas>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
