@@ -1,5 +1,9 @@
-const wsUrl = 'wss://localhost:443'; // WebSocket URL
+const wsUrl = 'wss://5.147.206.132:443'; // WebSocket URL
 const socket = new WebSocket(wsUrl);
+
+// The code:
+// 0x01 TCP keepalive ping
+// 0x6D Multicast test
 
 socket.addEventListener('open', function (event) 
 {

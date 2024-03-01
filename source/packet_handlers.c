@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "packet_handlers.h"
+#include "bbnetlib.h"
 #include "host_custom_attributes.h"
 #include "error_handling.h"
 #include "helpers.h"
@@ -70,8 +71,12 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     else if (stringSearch(data, "GET /networking.js", packetSize) >= 0) {
         sendContent("./code/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
+    else if (stringSearch(data, "GET /user-inputs.js", packetSize) >= 0) {
+        sendContent("./code/user-inputs.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);
+        cacheHost(remotehost, 0);
         customAttr->handler = HANDLER_WEBSOCK;
     }
     else {
@@ -82,10 +87,17 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
+    if (packetSize > 100) {
+        printf("\nToo long session sent\n");
+        return;
+    }
+
     char *decodedData = (char*)calloc(packetSize, sizeof(char));
     char  responsePacket[MAX_PACKET_SIZE] = {0};
     int   responseLength = 0;
     char *response       = "Hello!";
+
+
 
     if (decodedData == NULL) {
         printError(BB_ERR_CALLOC);
@@ -98,6 +110,15 @@ static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
     #ifdef DEBUG
         printf("\nReceived websocket heartbeat.\n");
     #endif
+        return;
+    }
+    if (decodedData[0] == 'm') {
+    #ifdef DEBUG
+        printf("\nMulticast test...\n");
+    #endif
+        responseLength = 
+            encodeWebsocketMessage(responsePacket, response, strlen(response));
+        multicastTCP(responsePacket, responseLength, 0);
         return;
     }
 #ifdef DEBUG

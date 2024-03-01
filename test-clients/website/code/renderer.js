@@ -1,25 +1,39 @@
 import {initBuffers} from './gl-buffers.js';
-import {drawScene} from './gl-draw-scene.js'
+import {drawScene} from './gl-draw-scene.js';
+import {initWASD} from './user-inputs.js';
+
+
+let squareRotation = 0;
+let deltaTime      = 0;
 
 main();
 function main() {
       // Vertex shader program
-      const vsSource = `
-          attribute vec4 aVertexPosition;
-          uniform mat4 uModelViewMatrix;
-          uniform mat4 uProjectionMatrix;
-          void main() {
-            gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-          }
-        `;
-      const fsSource = `
-          void main() {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-          }
-        `;
+        const vsSource = `
+            attribute vec4 aVertexPosition;
+            attribute vec4 aVertexColor; 
+
+            uniform mat4 uModelViewMatrix;
+            uniform mat4 uProjectionMatrix;
+
+            varying lowp vec4 vColor;
+
+            void main() {
+                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+                vColor      = aVertexColor;
+            }
+          `;
+        const fsSource = `
+            varying lowp vec4 vColor;
+
+            void main() {
+              gl_FragColor = vColor;
+            }
+          `;
 
     const canvas = document.querySelector("#glcanvas");
     const gl     = canvas.getContext("webgl");
+    initWASD(canvas);
 
     // Only continue if WebGL is available and working
     if (gl === null) {
@@ -41,6 +55,7 @@ function main() {
         program: shaderProgram,
         attribLocations: {
             vertexPosition:   gl.getAttribLocation(shaderProgram, "aVertexPosition"),
+            vertexColor:      gl.getAttribLocation(shaderProgram, "aVertexColor"),
         },
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
@@ -50,8 +65,21 @@ function main() {
     // Here's where we call the routine that builds all the
     // objects we'll be drawing.
     const buffers = initBuffers(gl);
-    // Draw the scene
-    drawScene(gl, programInfo, buffers);
+    let   then = 0;
+
+    // Draw the scene repeatedly
+    function render(now) {
+        now *= 0.001; // convert to seconds
+        deltaTime = now - then;
+        then = now;
+  
+        drawScene(gl, programInfo, buffers);
+        squareRotation += deltaTime;
+  
+        requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
 
 }
 function initShaderProgram(gl, vsSource, fsSource) {
