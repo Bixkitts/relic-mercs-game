@@ -4,6 +4,10 @@ let zoom = 0.0;
 let zoomTime = 0.0;
 let camZoom = -2.5;
 let zoomCoef = 1;
+const speed = 0.005;
+const mouseCoef = 0.003;
+const zoomFactor = 0.06;
+
 const camZoomMin = -2.5;
 const camZoomMax = -0.5;
 
@@ -11,9 +15,6 @@ let camPan = [0.0, 0.0, 0.0];
 const camPanLimitVert = 1.0;
 const camPanLimitHor = 1.6;
 
-const speed = 0.005;
-const mouseCoef = 0.003;
-const zoomFactor = 0.04;
 let isLeftDown = false;
 let isMiddleDown = false;
 let isRightDown = false;
@@ -104,11 +105,10 @@ export function initWASD(canvas) {
         }
     }
     canvas.onwheel = e => {
-        console.log(e);
         e.preventDefault();
         const res = -Math.sign(e.deltaY) * zoomFactor / Math.abs(camZoom);
         zoom = res;
-        zoomTime = 0.06;
+        zoomTime = 0.05;
         // setTimeout(function () {
         //     zoom += res;
         // }, 30);
@@ -116,12 +116,13 @@ export function initWASD(canvas) {
 }
 
 export function getCamPan(dt) {
-    const dtCoef = dt * 144;
-    camPan[0] = camPan[0] + ((mov[0] + moveOnce[0]) / zoomCoef * dtCoef);
+    const dtCoef = (((dt * 144) - 1) / 1.5) + 1;
+    const dtCoef2 = dt * 144
+    camPan[0] = camPan[0] + ((mov[0] * dtCoef + moveOnce[0] * dtCoef2) / zoomCoef);
     camPan[0] = Math.min(Math.max(-camPanLimitHor, camPan[0]), camPanLimitHor);
     moveOnce[0] = 0.0;
 
-    camPan[1] = camPan[1] - ((mov[1] + moveOnce[1]) / zoomCoef * dtCoef);
+    camPan[1] = camPan[1] - ((mov[1] * dtCoef + moveOnce[1] * dtCoef2) / zoomCoef);
     camPan[1] = Math.min(Math.max(-camPanLimitVert, camPan[1]), camPanLimitVert);
     moveOnce[1] = 0.0;
 
@@ -130,12 +131,12 @@ export function getCamPan(dt) {
 }
 
 export function getZoom(dt) {
-    const dtCoef = dt * 144;
+    const dtCoef = (((dt * 144) - 1) / 1.5) + 1;
     zoom *= (zoomTime > 0);
     zoomTime -= dt;
     const condA = camZoom <= camZoomMax;
     const condB = camZoom >= camZoomMin;
-    const res = condA * condB * dtCoef * zoom - ((1 - condA) * condB * 0.012) + ((1 - condB) * condA * 0.006);
+    const res = condA * condB * dtCoef * zoom - ((1 - condA) * condB * dtCoef * 0.008) + ((1 - condB) * condA * dtCoef * 0.004);
 
     recreateModelViewMatrix();
     camZoom += res;
