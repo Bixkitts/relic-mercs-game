@@ -8,17 +8,15 @@
 <body>
     <h1>Welcome To The Game</h1>
     <input type="text" id="messageInput" placeholder="Enter message">
-    <script>document.getElementById("messageInput").onkeydown = e => { if(e.keyCode === 13) sendMessage(); };</script>
     <button onclick="sendMessage()">Send Message</button>
-    <div>WASD to pan camera, scroll to zoom</div>
+    <div>WASD or right click drag to pan camera, scroll to zoom</div>
     <canvas id="glcanvas" width="640" height="480"></canvas>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
       integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
       crossorigin="anonymous"
       defer></script>
-    <script src="renderer.js" type="module"></script>
-    <script src="networking.js"></script>
+    <script src="index.js" type="module"></script>
 </body>
 </html>
 

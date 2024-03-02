@@ -1,40 +1,34 @@
-const wsUrl = 'wss://5.147.206.132:443'; // WebSocket URL
-const socket = new WebSocket(wsUrl);
+const websocketUrl = 'wss://5.147.206.132:443';
+const socket = new WebSocket(websocketUrl);
 
 // The code:
 // 0x01 TCP keepalive ping
 // 0x6D Multicast test
 
-socket.addEventListener('open', function (event) 
-{
+socket.addEventListener('open', () => {
     console.log('WebSocket connection established');
-    // Send a heartbeat message every 3 seconds
     setInterval(sendHeartbeat, 3000);
 });
 
-socket.addEventListener('error', function (error) 
-{
-    console.error('WebSocket error:', error);
+socket.addEventListener('error', function (error) {
+    console.log('WebSocket error:', error);
 });
 
-socket.addEventListener('message', function (event) 
-{
+socket.addEventListener('message', function (event) {
     console.log('Received:', event.data);
 });
 
-function sendHeartbeat() 
-{
+function sendHeartbeat() {
     console.log('Sending heartbeat...');
     const byteData = new Uint8Array([0x01]);
     const blob     = new Blob([byteData]);
     socket.send(blob);
 }
 
-function sendMessage() 
-{
-    const messageInput = document.getElementById('messageInput');
+const messageInput = document.getElementById('messageInput');
+function sendMessage() {
     const message = messageInput.value;
-    socket.send(message); // Send message to server
+    socket.send(message);
     console.log('Message sent:', message);
-    messageInput.value = ''; // Clear input field
+    messageInput.value = '';
 }
