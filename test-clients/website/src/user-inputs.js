@@ -15,6 +15,14 @@ let camPan = [0.0, 0.0, 0.0];
 const camPanLimitVert = 1.0;
 const camPanLimitHor = 1.6;
 
+const mouse = {
+    left: 0,
+    middle: 1,
+    right: 2
+};
+
+let mbtns = [0, 0, 0];
+
 let isLeftDown = false;
 let isMiddleDown = false;
 let isRightDown = false;
@@ -55,17 +63,15 @@ export function initWASD(canvas) {
     document.onmousedown = e => {
         mouseInCanvas = e.explicitOriginalTarget === canvas;
         if(e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0, 0.0, 0.0];
-        if (e.button & 0) isLeftDown = true;
-        if (e.button & 1) isMiddleDown = true;
-        if (e.button & 2) isRightDown = true;
+        if (e.button & 0) mbtns[mouse.left] = true;
+        if (e.button & 1) mbtns[mouse.middle] = true;
+        if (e.button & 2) mbtns[mouse.right] = true;
     }
     document.onmouseup = e => {
-        isLeftDown *= 1 - (e.button == 0);
-        isMiddleDown *= 1 - (e.button == 1);
-        isRightDown *= 1 - (e.button == 2);
+        mbtns[e.button] = false;
     }
     canvas.onmousemove = e => {
-        if (isRightDown) {
+        if (mbtns[mouse.right]) {
             moveOnce[1] = mouseCoef * e.movementY;
             moveOnce[0] = mouseCoef * e.movementX;
         }

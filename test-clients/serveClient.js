@@ -21,7 +21,6 @@ const mimes = {
 }
 
 /**
- * @returns {void}
  * @param {string} ext 
  */
 function mime(ext) {
@@ -86,7 +85,7 @@ http.createServer((req, res) => {
     if(cMime === undefined || content === undefined) {
         res.statusCode = 404;
         res.write("fucking uhhh");
-        res.end(); 
+        res.end();
         return;
     }
     res.mime(ext);
