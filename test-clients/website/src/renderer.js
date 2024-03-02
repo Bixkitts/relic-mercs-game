@@ -7,8 +7,7 @@ let deltaTime      = 0;
 
 main();
 function main() {
-        // Vertex shader program
-        const vsSource = `
+        const vertexShaderSource = `
             attribute vec4 aVertexPosition;
             attribute vec2 aTextureCoord; 
 
@@ -22,7 +21,7 @@ function main() {
                 vTextureCoord = aTextureCoord;
             }
           `;
-        const fsSource = `
+        const fragmentShaderSource = `
             varying highp vec2 vTextureCoord;
 
             uniform sampler2D uSampler;
@@ -37,16 +36,14 @@ function main() {
     initWASD(canvas);
 
     if (gl === null) {
-      alert(
-        "Unable to initialize WebGL. Your browser or machine may not support it.",
-      );
-      return;
+        alert("Unable to initialize WebGL. Your browser or machine may not support it.");
+        return;
     }
     
     gl.clearColor (0.0, 0.0, 0.0, 1.0);
     gl.clear      (gl.COLOR_BUFFER_BIT);
 
-    const shaderProgram = initShaderProgram(gl, vsSource, fsSource); 
+    const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource); 
     const texture       = loadTexture(gl, "map01.png");
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -66,7 +63,7 @@ function main() {
             uSampler:         gl.getUniformLocation(shaderProgram, "uSampler"),
         },
     };
-    // Here's where we call the routine that builds all the
+    // Call the routine that builds all the
     // objects we'll be drawing.
     const buffers = initBuffers(gl);
     let   then = 0;
@@ -114,9 +111,7 @@ function loadShader(gl, type, source) {
     gl.shaderSource  (shader, source);
     gl.compileShader (shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      alert(
-        `An error occurred compiling the shaders: ${gl.getShaderInfoLog(shader)}`,
-      );
+      alert(`An error occurred compiling the shaders: ${gl.getShaderInfoLog(shader)}`);
       gl.deleteShader(shader);
       return null;
     }
@@ -166,10 +161,9 @@ function loadTexture(gl, url)
       // vs. non power of 2 images so check if the image is a
       // power of 2 in both dimensions.
       if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-        // Yes, it's a power of 2. Generate mips.
         gl.generateMipmap(gl.TEXTURE_2D);
       } else {
-        // No, it's not a power of 2. Turn off mips and set
+        // It's not a power of 2. Turn off mips and set
         // wrapping to clamp to edge
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);

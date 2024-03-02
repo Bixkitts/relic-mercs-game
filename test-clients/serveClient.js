@@ -20,12 +20,28 @@ const mimes = {
     bin: "application/octet-stream",
 }
 
+/**
+ * @returns {void}
+ * @param {string} ext 
+ */
+function mime (ext) {
+    this.setHeader("Content-Type", mimes[ext] ?? ext);
+}
+
+/**
+ * @param {http.ServerResponse} res 
+ */
 const apply = (res) => {
-    res.mime = (mime) => res.setHeader("Content-Type", mimes[mime] ?? mime);
+    res.mime = mime
     res.mime.bind(res);
 }
 
-loadScripts = (scrobj, root, orir = root) => {
+/**
+ * @param {object} scrobj 
+ * @param {string} root path
+ * @param {never} orir 
+ */
+const loadScripts = (scrobj, root, orir = root) => {
     console.log("root: " + root);
     let paths = fs.readdirSync(root, { recursive: true, encoding: "utf-8" });
     for (const path of paths) {
