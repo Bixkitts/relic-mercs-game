@@ -59,6 +59,9 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     if (stringSearch(data, "GET /game", packetSize) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
     }
+    else if (stringSearch(data, "GET /index.js", packetSize) >= 0) {
+        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
     else if (stringSearch(data, "GET /renderer.js", packetSize) >= 0) {
         sendContent("./src/renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
@@ -67,6 +70,9 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     }
     else if (stringSearch(data, "GET /gl-buffers.js", packetSize) >= 0) {
         sendContent("./src/gl-buffers.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    }
+    else if (stringSearch(data, "GET /gl-matrix-min.js", packetSize) >= 0) {
+        sendContent("./src/gl-matrix-min.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /networking.js", packetSize) >= 0) {
         sendContent("./src/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
