@@ -2,6 +2,7 @@ let mov = [0.0, 0.0, 0.0, 0.0];
 let moveOnce = [0.0, 0.0, 0.0, 0.0];
 let zoom = 0.0;
 let camZoom = -2.5;
+let zoomCoef = 1 / (camZoom + 3.5);
 const camZoomMin  = -2.5;
 const camZoomMax  = -0.5;
 
@@ -34,9 +35,6 @@ export function initWASD(canvas) {
     canvas.onmouseup = e => {
         e.preventDefault();
     }
-    document.onclick = e => {
-        console.log(e)
-    }
     canvas.onclick = e => {
         document.activeElement.blur();
         mouseInCanvas = true;
@@ -56,10 +54,8 @@ export function initWASD(canvas) {
     }
     canvas.onmousemove = e => {
         if (isRightDown) {
-            moveOnce[0] = Math.max(mouseCoef * e.movementY, 0);
-            moveOnce[2] = Math.max(-mouseCoef * e.movementY, 0);
-            moveOnce[1] = Math.max(mouseCoef * e.movementX, 0);
-            moveOnce[3] = Math.max(-mouseCoef * e.movementX, 0);
+            moveOnce[0] = zoomCoef * mouseCoef * e.movementY;
+            moveOnce[1] = zoomCoef * mouseCoef * e.movementX;
         }
         prevMouseMove = e;
     }
@@ -100,10 +96,10 @@ export function initWASD(canvas) {
     canvas.onwheel = e => {
         e.preventDefault();
         const sign = Math.sign(e.deltaY);
-
-        zoom -= sign * zoomFactor;
+        const res =  sign * zoomFactor / Math.abs(camZoom)
+        zoom -= res;
         setTimeout(function () {
-            zoom += sign * zoomFactor;
+            zoom += res;
         }, 30);
     }
 }
@@ -117,15 +113,15 @@ export function getKeyPan(index) {
 
 export function getCamPan() {
     camPan[1] -= getKeyPan(0) * (camPan[1] > -camPanLimitVert); 
-    camPan[1] += getKeyPan(2) * (camPan[1] < camPanLimitVert); 
+    camPan[1] += getKeyPan(2) * (camPan[1] <  camPanLimitVert); 
     camPan[0] -= getKeyPan(3) * (camPan[0] > -camPanLimitHor); 
-    camPan[0] += getKeyPan(1) * (camPan[0] < camPanLimitHor); 
+    camPan[0] += getKeyPan(1) * (camPan[0] <  camPanLimitHor); 
 
     return camPan;
 }
 
 export function getZoom() {
-    const res = zoom / Math.abs(camZoom);
+    const res = zoom;
     if (camZoom <= camZoomMax && camZoom >= camZoomMin) {
         camZoom += res;
     }
@@ -135,6 +131,7 @@ export function getZoom() {
     else {
         camZoom += 0.002;
     }
+    zoomCoef = 1 / (camZoom + 3.5);
     return camZoom;
 }
 
