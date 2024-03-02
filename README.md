@@ -17,12 +17,12 @@ I aim to provide a simple client as a test/example within this project however.
 - git submodule update --init --recursive
 - mkdir build
 - cd build
-- cmake -DCMAKE_BUILD_TYPE=Release .. OR cmake -DCMAKE_BUILD_TYPE=Debug ..
+- cmake -DCMAKE_BUILD_TYPE=Release .. <br/>OR cmake -DCMAKE_BUILD_TYPE=Debug ..
 - cmake --build .
 ### Running The Server:
 - Run the server with: ./relicServer. You need permissions for https/port 443 (I do sudo).
-- Connect with client the browser to the https://SERVER_IP/game
-### Running Frontend Test Server
+- Connect with client browser to https://SERVER_IP/game
+### Frontend Test Server
 There's also a node server for frontend testing in the test-clients folder, if you're so inclined.
 ## Code Organisation
 The game server is written in C, and resides in the "source" directory and
