@@ -60,19 +60,19 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
     }
     else if (stringSearch(data, "GET /renderer.js", packetSize) >= 0) {
-        sendContent("./code/renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./src/renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /gl-draw-scene.js", packetSize) >= 0) {
-        sendContent("./code/gl-draw-scene.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./src/gl-draw-scene.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /gl-buffers.js", packetSize) >= 0) {
-        sendContent("./code/gl-buffers.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./src/gl-buffers.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /networking.js", packetSize) >= 0) {
-        sendContent("./code/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./src/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /user-inputs.js", packetSize) >= 0) {
-        sendContent("./code/user-inputs.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./src/user-inputs.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
     }
     else if (stringSearch(data, "GET /map01.png", packetSize) >= 0) {
         sendContent("./images/map01.png", HTTP_FLAG_IMAGE_PNG, remotehost);

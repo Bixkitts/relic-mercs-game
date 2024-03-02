@@ -24,6 +24,9 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
     }
 }
 
+/*
+ *  Complicated KMP string search algo, don't bother touching
+ */
 int stringSearch(const char* text, const char* pattern, int maxLength) 
 {
     int textLength = strnlen(text, maxLength);
