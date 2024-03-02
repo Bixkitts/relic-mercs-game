@@ -1,6 +1,13 @@
 let mov = [0.0, 0.0, 0.0, 0.0];
 let moveOnce = [0.0, 0.0, 0.0, 0.0];
 let zoom = 0.0;
+let camZoom = -2.5;
+const camZoomMin  = -2.5;
+const camZoomMax  = -0.5;
+
+let camPan  = [0.0, 0.0, 0.0];
+const camPanLimitVert = 1.0;
+const camPanLimitHor  = 1.6;
 
 // camPan[1] -= getKeyPan(0) * (camPan[1] > -camPanLimitVert); 
 // camPan[1] += getKeyPan(2) * (camPan[1] < camPanLimitVert); 
@@ -20,7 +27,7 @@ let prevMouseMove = null;
  * 
  * @param {HTMLCanvasElement} canvas 
  */
-function initWASD(canvas) {
+export function initWASD(canvas) {
     canvas.onmousedown = e => {
         e.preventDefault();
     }
@@ -29,7 +36,6 @@ function initWASD(canvas) {
     }
     document.onclick = e => {
         console.log(e)
-        if(e.explicitOriginalTarget !== canvas) mouseInCanvas = false;
     }
     canvas.onclick = e => {
         document.activeElement.blur();
@@ -37,6 +43,7 @@ function initWASD(canvas) {
     }
     canvas.oncontextmenu = () => false;
     document.onmousedown = e => {
+        mouseInCanvas = e.explicitOriginalTarget === canvas;
         if (e.button & 0) isLeftDown = true;
         if (e.button & 1) isMiddleDown = true;
         if (e.button & 2) isRightDown = true;
@@ -92,32 +99,42 @@ function initWASD(canvas) {
     }
     canvas.onwheel = e => {
         e.preventDefault();
-        if (e.deltaY > 0) {
-            // scrolled down
-            zoom -= zoomFactor;
-            setTimeout(function () {
-                zoom += zoomFactor;
-            }, 30);
-        }
-        if (e.deltaY < 0) {
-            // scrolled up
-            zoom += zoomFactor;
-            setTimeout(function () {
-                zoom -= zoomFactor;
-            }, 30);
-        }
+        const sign = Math.sign(e.deltaY);
+
+        zoom -= sign * zoomFactor;
+        setTimeout(function () {
+            zoom += sign * zoomFactor;
+        }, 30);
     }
 }
 
-function getKeyPan(index) {
+export function getKeyPan(index) {
     const res = mov[index] + moveOnce[index];
     moveOnce[index] = 0.0;
+
     return res;
 }
-function getZoom() {
-    return zoom;
+
+export function getCamPan() {
+    camPan[1] -= getKeyPan(0) * (camPan[1] > -camPanLimitVert); 
+    camPan[1] += getKeyPan(2) * (camPan[1] < camPanLimitVert); 
+    camPan[0] -= getKeyPan(3) * (camPan[0] > -camPanLimitHor); 
+    camPan[0] += getKeyPan(1) * (camPan[0] < camPanLimitHor); 
+
+    return camPan;
 }
 
-export { initWASD };
-export { getKeyPan };
-export { getZoom };
+export function getZoom() {
+    const res = zoom / Math.abs(camZoom);
+    if (camZoom <= camZoomMax && camZoom >= camZoomMin) {
+        camZoom += res;
+    }
+    else if (camZoom > camZoomMax){
+        camZoom -= 0.004;
+    }
+    else {
+        camZoom += 0.002;
+    }
+    return camZoom;
+}
+

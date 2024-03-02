@@ -1,12 +1,5 @@
-import { getKeyPan } from './user-inputs.js';
-import { getZoom } from './user-inputs.js';
 
-let camPan  = [0.0, 0.0, 0.0];
-let camZoom = -2.5;
-const camPanLimitVert = 1.0;
-const camPanLimitHor  = 1.6;
-const camZoomMin  = -2.5
-const camZoomMax  = -0.5
+import { getZoom, getCamPan } from './user-inputs.js';
 
 function drawMapPlane(gl, programInfo, buffers, texture) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
@@ -27,37 +20,26 @@ function drawMapPlane(gl, programInfo, buffers, texture) {
     const modelViewMatrix = mat4.create();
     const scaleMatrix     = mat4.create();
     
-    // Camera Zoom Logic
-    if (camZoom <= camZoomMax && camZoom >= camZoomMin) {
-        camZoom += getZoom() / (Math.abs(camZoom) * 1);
-    }
-    else if (camZoom > camZoomMax){
-        camZoom -= 0.004;
-    }
-    else {
-        camZoom += 0.002;
-    }
+    const camZoom = getZoom();
 
-    mat4.translate(modelViewMatrix, // destination matrix
-                   modelViewMatrix, // matrix to translate
-                   [-0.0, 0.0, camZoom],); // amount to translate
+    mat4.translate(modelViewMatrix,
+                   modelViewMatrix,
+                   [-0.0, 0.0, camZoom]);
 
     mat4.rotate(modelViewMatrix,
                 modelViewMatrix,
                 Math.PI / (camZoom+4) * 0.5,
-                [-1, 0, 0],);
+                [-1, 0, 0]);
 
-    camPan[1] -= getKeyPan(0) * (camPan[1] > -camPanLimitVert); 
-    camPan[1] += getKeyPan(2) * (camPan[1] < camPanLimitVert); 
-    camPan[0] -= getKeyPan(3) * (camPan[0] > -camPanLimitHor); 
-    camPan[0] += getKeyPan(1) * (camPan[0] < camPanLimitHor); 
 
-    mat4.translate(modelViewMatrix, // destination matrix
-                   modelViewMatrix, // matrix to translate
-                   camPan,); // amount to translate
+    const camPan = getCamPan();
+
+    mat4.translate(modelViewMatrix,
+                   modelViewMatrix,
+                   camPan);
     mat4.scale    (scaleMatrix,
                    modelViewMatrix,
-                   [1.618, 1.0, 1.0],);
+                   [1.618, 1.0, 1.0]);
 
     setPositionAttribute (gl, buffers, programInfo);
     setTextureAttribute  (gl, buffers, programInfo);
@@ -68,10 +50,10 @@ function drawMapPlane(gl, programInfo, buffers, texture) {
     // Set the shader uniforms
     gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
                         false,
-                        projectionMatrix,);
+                        projectionMatrix);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
-                        scaleMatrix,);
+                        scaleMatrix);
 
     // Texture shit
     gl.activeTexture(gl.TEXTURE0);
