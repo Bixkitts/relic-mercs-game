@@ -1,7 +1,16 @@
 
 import { getZoom, getCamPan } from './user-inputs.js';
 
-function drawMapPlane(gl, programInfo, buffers, texture) {
+/**
+ * 
+ * @param {*} gl 
+ * @param {*} programInfo 
+ * @param {*} buffers 
+ * @param {*} texture 
+ * @param {mat4} modelViewMatrix 
+ * @returns 
+ */
+function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -17,29 +26,11 @@ function drawMapPlane(gl, programInfo, buffers, texture) {
     const projectionMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-    const modelViewMatrix = mat4.create();
     const scaleMatrix     = mat4.create();
     
-    const camZoom = getZoom();
-
-    mat4.translate(modelViewMatrix,
-                   modelViewMatrix,
-                   [-0.0, 0.0, camZoom]);
-
-    mat4.rotate(modelViewMatrix,
-                modelViewMatrix,
-                Math.PI / (camZoom+4) * 0.5,
-                [-1, 0, 0]);
-
-
-    const camPan = getCamPan();
-
-    mat4.translate(modelViewMatrix,
-                   modelViewMatrix,
-                   camPan);
-    mat4.scale    (scaleMatrix,
-                   modelViewMatrix,
-                   [1.618, 1.0, 1.0]);
+    mat4.scale (scaleMatrix,
+                    modelViewMatrix,
+                    [1.618, 1.0, 1.0]);
 
     setPositionAttribute (gl, buffers, programInfo);
     setTextureAttribute  (gl, buffers, programInfo);
@@ -77,16 +68,16 @@ function drawCharacter(gl, programInfo, modelViewMatrix, pos)
     mat4.rotate(modelViewMatrix,
                 modelViewMatrix,
                 (Math.PI / 2) - ((camZoom + 3) * 0.5),
-                [1, 0, 0],);
+                [1, 0, 0]);
     mat4.scale(modelViewMatrix,
                 modelViewMatrix,
                 [0.06, 0.1, 0.1],);
     mat4.translate(modelViewMatrix,
                    modelViewMatrix,
-                   pos,);
+                   pos);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
-                        modelViewMatrix,);
+                        modelViewMatrix);
     {
         const offset      = 0;
         const type        = gl.UNSIGNED_SHORT;
@@ -111,7 +102,7 @@ function setPositionAttribute(gl, buffers, programInfo) {
                                type,
                                normalize,
                                stride,
-                               offset,);
+                               offset);
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 }
 
@@ -130,7 +121,7 @@ function setColorAttribute(gl, buffers, programInfo) {
                                type,
                                normalize,
                                stride,
-                               offset,);
+                               offset);
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
 // tell webgl how to pull out the texture coordinates from buffer
