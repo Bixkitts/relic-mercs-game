@@ -24,7 +24,7 @@ const mimes = {
  * @returns {void}
  * @param {string} ext 
  */
-function mime (ext) {
+function mime(ext) {
     this.setHeader("Content-Type", mimes[ext] ?? ext);
 }
 
@@ -62,14 +62,12 @@ const loadScripts = (scrobj, root, orir = root) => {
 }
 
 const resources = {
-    scripts: {
-        "index.js" : fs.readFileSync("./website/index.js")
-    },
+    "index.js" : fs.readFileSync("./website/index.js"),
     "index.html" : fs.readFileSync("./website/index.html"),
     "map01.png": fs.readFileSync("./website/images/map01.png")
 };
 
-loadScripts(resources.scripts, "./website/src");
+loadScripts(resources, "./website/src");
 
 http.createServer((req, res) => {
     apply(res);
@@ -77,28 +75,21 @@ http.createServer((req, res) => {
     console.log(url);
     res.statusCode = 200;
     let ext = url.split(".").at(-1);
-    switch(ext) {
-        case "js":
-            res.mime("js");
-            let content = resources.scripts[url.substring(1)] ?? ""
-            res.write(content);
-            break;
-        case "css":
-            res.mime("css");
-            res.write(fs.readFileSync("index.css"));
-            break;
-        case "png":
-            res.mime("png");
-            res.write(resources["map01.png"]);
-        default:
-            if(url === "/") {
-                res.mime("html");
-                res.write(resources["index.html"]);
-            }
-            else {
-                res.statusCode = 404;
-                res.write("fucking uhhh");
-            }
+    if(url === "/") {
+        res.mime("html");
+        res.write(resources["index.html"]);
+        res.end(); 
+        return;
     }
+    const cMime = mimes[ext];
+    let content = resources[url.substring(1)];
+    if(cMime === undefined || content === undefined) {
+        res.statusCode = 404;
+        res.write("fucking uhhh");
+        res.end(); 
+        return;
+    }
+    res.mime(ext);
+    res.write(content);
     res.end();
 }).listen(80);

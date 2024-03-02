@@ -25,10 +25,13 @@ function sendHeartbeat() {
     socket.send(blob);
 }
 
-const messageInput = document.getElementById('messageInput');
 function sendMessage() {
     const message = messageInput.value;
     socket.send(message);
     console.log('Message sent:', message);
     messageInput.value = '';
 }
+
+const messageInput = document.getElementById('messageInput');
+document.getElementById("messageInput").onkeydown = e => { if(e.key === "Enter") sendMessage(); };
+document.getElementById("sendMessage").onclick = () => { sendMessage(); };

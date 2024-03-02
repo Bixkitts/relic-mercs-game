@@ -72,8 +72,8 @@ function main() {
     let pos = [0.0, 0.0, 0.0];
     // Draw the scene repeatedly
 
-    const fpscap = 30;
-    const sperframe = 1 / fpscap;
+    const fpscap = 25;
+    document.sperframe = 1 / fpscap;
     const msperframe = 1000 / fpscap;
     // setInterval(() => {
     //     requestAnimationFrame(render);
@@ -88,7 +88,7 @@ function main() {
         document.fps++;
         now *= 0.001; // convert to seconds
         deltaTime = now - then;
-        const wait = sperframe - deltaTime;
+        const wait = document.sperframe - deltaTime;
         then = now;
 
         const camPan = getCamPan(deltaTime);
