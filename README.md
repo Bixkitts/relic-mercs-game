@@ -8,6 +8,7 @@ I aim to provide a simple client as a test/example within this project however.
 ## Building and Running
 ### Dependencies
 - https://github.com/Bixkitts/bb-net-lib
+- OpenSSL v3.2.x+ (just have it installed)
 
 ### Building The Project:
 - clone the repo: 
@@ -16,16 +17,15 @@ I aim to provide a simple client as a test/example within this project however.
 - git submodule update --init --recursive
 - mkdir build
 - cd build
-- cmake -DCMAKE_BUILD_TYPE=Release ..
+- cmake -DCMAKE_BUILD_TYPE=Release .. OR cmake -DCMAKE_BUILD_TYPE=Debug ..
 - cmake --build .
 ### Running The Server:
-- Make sure the example "server.conf" exists in the same directory as the "relicServer" binary
-- Configure the settings in "server.conf"
-- Run the server with: ./relicServer
-- Connect with client
-
+- Run the server with: ./relicServer. You need permissions for https/port 443 (I do sudo).
+- Connect with client the browser to the https://SERVER_IP/game
+### Running Frontend Test Server
+There's also a node server for frontend testing in the test-clients folder, if you're so inclined.
 ## Code Organisation
 The game server is written in C, and resides in the "source" directory and
 depends on the libraries in the "dependencies" directory.
 
-The client is written in Javascript and will reside in the "test-client" directory.
+The client is written in Javascript+WebGL and will reside in the "test-client/website" directory.
