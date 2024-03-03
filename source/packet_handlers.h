@@ -13,6 +13,6 @@ typedef enum {
 
 void masterHandler      (char *data, ssize_t packetSize, Host remotehost);
 
-void initServeFiles     (void);
+void buildFileTable     (void);
 
 #endif

@@ -17,7 +17,7 @@ int main(void)
 #endif
     enableTLS    ();
     localhost = createHost("0.0.0.0", 443);
-    initServeFiles();
+    buildFileTable();
     listenForTCP (localhost, masterHandler);
     return 0;
 }

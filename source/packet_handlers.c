@@ -53,7 +53,7 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
     return;
 }
-void initServeFiles(void)
+void buildFileTable(void)
 {
     fileTableLen = listFiles(fileTable);
     for (int i = 0; i < fileTableLen; i++) {
@@ -64,6 +64,7 @@ void initServeFiles(void)
 static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     char  requestedResource[MAX_FILENAME_LEN] = {0};
+
     char *startingPoint  = &data[5];
     int   stringLen      = charSearch(startingPoint, ' ', packetSize - 5);
 
@@ -101,9 +102,9 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
-    //if (packetSize < 10) {
-    //    return;
-    //}
+    if (packetSize < 10) {
+        return;
+    }
     if (stringSearch(data, "GET /", 8) >= 0) {
         GETHandler(data, packetSize, remotehost);
     }
