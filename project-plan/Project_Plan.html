@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Plan</title>
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f3ede1; /* Beige background */
+        color: #444; /* Dark gray text */
+        margin: 0;
+        padding: 0;
+    }
+    
+    h1, h2 {
+        color: #6c533d; /* Brown headings */
+        margin-top: 20px;
+        position: relative;
+    }
+    h3 {
+        color: #6c533d; /* Brown headings */
+        margin-top: 10px;
+        position: relative;
+        margin-left: 10px;
+        margin-bottom: -10px;
+    }
+    
+    h2:after {
+        content: '';
+        position: absolute;
+        bottom: -5px;
+        left: 0;
+        width: 50px;
+        height: 2px;
+        background-color: #6c533d; /* Brown underline */
+    }
+    
+    p {
+        line-height: 1.5;
+        margin-bottom: 20px;
+        margin-left: 15px;
+        max-width: 61%;
+    }
+
+    li {
+        max-width: 50%;
+        color: #222; /* Dark gray text */
+    }
+        /* Styling hyperlinks */
+    a {
+        color: #6c533d; /* Brown color for hyperlinks */
+        text-decoration: none; /* Remove underline by default */
+        margin-left: 20px;
+    }
+
+    /* Hover effect for hyperlinks */
+    a:hover {
+        color: #b68f6e; /* Darker brown color on hover */
+    }
+    .todo {
+        font-family: 'Courier New', monospace; /* Monospace font */
+        color: #888; /* Muted color */
+    }    
+    .todo::before {
+        content: "TODO:";
+        background-color: #f7f7f7; /* Light gray background */
+        padding: 5px; /* Padding around the comment */
+        color: #555; /* Darker color for the label */
+        font-weight: bold; /* Make the label bold */
+        position: relative; /* Position the label absolutely */
+        left: -10px; /* Adjust the position */
+    }
+    /* Example of a button style */
+    .button {
+        background-color: #d9b998; /* Light brown button */
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        text-transform: uppercase;
+        transition: background-color 0.3s ease;
+    }
+    
+    .button:hover {
+        background-color: #b68f6e; /* Darker brown on hover */
+    }
+    
+    /* Cool fade effect */
+    .fade-in {
+        opacity: 0;
+        animation: fadeInAnimation ease 1s forwards;
+    }
+    
+    @keyframes fadeInAnimation {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+</style></head>
+<body>
+<h1>Relic Mercs Game Project Plan</h1>
+<h2>Index Of Important Sections</h2>
+<a href="#charValidation">Player Character Validation</a><br/>
+<h2>What To Write In This Document</h2>
+<p>
+This document should contain descriptions of gameplay systems,
+graphical effects, protocols, user interfaces, how they interact with eachother
+and how they should be coded.
+This should be a helpful resource to anybody working on this project,
+mostly to see what to implement next and how.
+</p>
+<h2>What is this game?</h2>
+<p>
+A turn based role playing co-petetive game running in a browser.
+The players take turns moving their characters on a map, encountering
+events, using their character's skill to deal with the encounters and
+making themselves more powerful.
+The ultimate goal is to gather information and recover an ancient relic for a 
+benefactor, while denying the relic to the other players.
+</p>
+<h2>How does it start?</h2>
+<p>
+The players, upon loading into the website, are greeted by a login screen
+prompting a playername, player password and game password with a html form.
+This associates them with an in-game character.
+If they haven't been in the game yet, they are then redirected to
+a character creation html form.
+They fill in their character details, submit the form and it's validated
+before spawning the player on the board and last in the turn order.
+</p>
+<h3 id="charValidation">Player Character Validation</h3>
+<p>
+<ul>
+    <li>Usernames can't be duplicates</li>
+    <li>The statistics on the character sheet need to adhere to the rules (prevent cheating)</li>
+    <p class="todo"> What more do we need to validate?</p>
+</ul>
+</p>
+<h2>The Game Interface</h2>
+<ul>
+    <li>A horizontal 3d planar map occupies the center of the screen and allows
+        for camera panning and zooming (but no rotation, as it would only be confusing).</li>
+    <li>The portraits for all the participants in the game should be shown
+in the top left, along with vital statistics.</li>
+    <li>The player should be able to open their own and other character's statistics by
+        clicking on the portraits.
+        This should open a popup in the middle of the screen listing known statistics</li>
+</ul>
+
+</body>
+</html>
