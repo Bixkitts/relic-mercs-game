@@ -1,4 +1,4 @@
-import { getContext } from './canvas-getter.js'
+import { getContext, getCanvas } from './canvas-getter.js'
 
 let mov = [0.0, 0.0];
 let moveOnce = [0.0, 0.0];
@@ -25,10 +25,10 @@ const mouse = {
 
 let pressed = [0, 0, 0];
 const gl = getContext();
-const fieldOfView      = (45 * Math.PI) / 180; // in radians
-const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
-const zNear            = 0.1;
-const zFar             = 100.0;
+const fieldOfView = (45 * Math.PI) / 180; // in radians
+const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+const zNear = 0.1;
+const zFar = 100.0;
 const projectionMatrix = mat4.create();
 mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 mat4.invert(projectionMatrix, projectionMatrix);
@@ -39,12 +39,12 @@ function recreateModelViewMatrix() {
     mat4.translate(modelViewMatrix,
         modelViewMatrix,
         [-0.0, 0.0, camZoom]);
-    
+
     mat4.rotate(modelViewMatrix,
         modelViewMatrix,
         Math.PI / (camZoom + 4) * 0.5,
         [-1, 0, 0]);
-    
+
     mat4.translate(modelViewMatrix,
         modelViewMatrix,
         camPan);
@@ -53,11 +53,29 @@ function recreateModelViewMatrix() {
 }
 recreateModelViewMatrix();
 
+function keyPressed(e, coef) {
+    if (mouseInCanvas) {
+        switch (e.key) {
+            case 'w': case 'W':
+                coef *= -1;
+            case 's': case 'S':
+                mov[1] += coef * speed;
+                break;
+            case 'a': case 'A':
+                coef *= -1;
+            case 'd': case 'D':
+                mov[0] += coef * speed;
+                break;
+        }
+    }
+}
+
 /**
  * 
  * @param {HTMLCanvasElement} canvas 
  */
-export function initWASD(canvas) {
+export function initWASD() {
+    const canvas = getCanvas();
     canvas.onmousedown = e => {
         e.preventDefault();
     }
@@ -71,12 +89,12 @@ export function initWASD(canvas) {
     canvas.oncontextmenu = () => false;
     document.onmousedown = e => {
         mouseInCanvas = e.explicitOriginalTarget === canvas;
-        if(e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0];
+        if (e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0];
         if (e.button & 0) pressed[mouse.left] = true;
         if (e.button & 1) pressed[mouse.middle] = true;
         if (e.button & 2) pressed[mouse.right] = true;
 
-        if(mouseInCanvas && pressed[mouse.left]) {
+        if (mouseInCanvas && pressed[mouse.left]) {
             console.log(e.clientX + " " + e.clientY);
             console.log(e);
         }
@@ -85,51 +103,16 @@ export function initWASD(canvas) {
         pressed[e.button] = false;
     }
     canvas.onmousemove = e => {
-        moveOnce = [pressed[mouse.right] * mouseCoef * e.movementX, 
-                    pressed[mouse.right] * mouseCoef * e.movementY];
+        moveOnce = [pressed[mouse.right] * mouseCoef * e.movementX,
+        pressed[mouse.right] * mouseCoef * e.movementY];
     }
-    document.onkeydown = e => {
-        if (mouseInCanvas) {
-            let coef = 1;
-            switch (e.key) {
-                case 's': case 'S':
-                    coef = -1;
-                case 'w': case 'W':
-                    mov[1] += coef * (1 - e.repeat) * speed;
-                    break;
-                case 'd': case 'D':
-                    coef = -1;
-                case 'a': case 'A':
-                    mov[0] += coef * (1 - e.repeat) * speed;
-                    break;
-            }
-        }
-    }
-    document.onkeyup = e => {
-        if (mouseInCanvas) {
-            let coef = 1;
-            switch (e.key) {
-                case 'w': case 'W':
-                    coef = -1;
-                case 's': case 'S':
-                    mov[1] += coef * speed;
-                    break;
-                case 'a': case 'A':
-                    coef = -1;
-                case 'd': case 'D':
-                    mov[0] += coef * speed;
-                    break;
-            }
-        }
-    }
+    document.onkeydown = e => keyPressed(e, -1);
+    document.onkeyup = e => keyPressed(e, 1);
     canvas.onwheel = e => {
         e.preventDefault();
         const res = -Math.sign(e.deltaY) * zoomFactor / Math.abs(camZoom);
         zoom = res;
         zoomTime = 0.05;
-        // setTimeout(function () {
-        //     zoom += res;
-        // }, 30);
     }
 }
 

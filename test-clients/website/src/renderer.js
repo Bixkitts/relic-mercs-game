@@ -33,12 +33,10 @@ function main() {
             }
           `;
 
-    const canvas = getCanvas();
     const gl = getContext();
-    initWASD(canvas);
+    initWASD();
 
     if (gl === null) {
-        alert("Unable to initialize WebGL. Your browser or machine may not support it.");
         return;
     }
 
@@ -139,16 +137,13 @@ function initShaderProgram(gl, vsSource, fsSource) {
     gl.linkProgram(shaderProgram);
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        alert(
-            `Unable to initialize the shader program: ${gl.getProgramInfoLog(
-                shaderProgram,
-            )}`,
-        );
+        alert(`Unable to initialize the shader program: ${gl.getProgramInfoLog(shaderProgram)}`);
         return null;
     }
 
     return shaderProgram;
 }
+
 function loadShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -160,6 +155,7 @@ function loadShader(gl, type, source) {
     }
     return shader;
 }
+
 function loadTexture(gl, url) {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
