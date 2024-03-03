@@ -3,7 +3,6 @@ import { getContext, getCanvas } from './canvas-getter.js'
 let mov = [0.0, 0.0];
 let moveOnce = [0.0, 0.0];
 let zoom = 0.0;
-let zoomTime = 0.0;
 let camZoom = -2.5;
 let zoomCoef = 1;
 const speed = 0.005;
@@ -15,7 +14,7 @@ const camZoomMax = -0.5;
 
 let camPan = [0.0, 0.0, 0.0];
 const camPanLimitVert = 1.0;
-const camPanLimitHor = 1.6;
+const camPanLimitHor = 1.3;
 
 const mouse = {
     left: 0,
@@ -25,13 +24,12 @@ const mouse = {
 
 let pressed = [0, 0, 0];
 const gl = getContext();
-const fieldOfView = (45 * Math.PI) / 180; // in radians
+const fieldOfView = (45 * Math.PI) / 180;
 const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-const zNear = 0.1;
-const zFar = 100.0;
+const zNear = 0.1; const zFar = 100.0;
 const projectionMatrix = mat4.create();
 mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-mat4.invert(projectionMatrix, projectionMatrix);
+//mat4.invert(projectionMatrix, projectionMatrix);
 
 let mouseInCanvas = false;
 let modelViewMatrix = mat4.create();
@@ -49,7 +47,7 @@ function recreateModelViewMatrix() {
         modelViewMatrix,
         camPan);
 
-    mat4.invert(modelViewMatrix, modelViewMatrix);
+    //mat4.invert(modelViewMatrix, modelViewMatrix);
 }
 recreateModelViewMatrix();
 
@@ -59,12 +57,12 @@ function keyPressed(e, coef) {
             case 'w': case 'W':
                 coef *= -1;
             case 's': case 'S':
-                mov[1] += coef * speed;
+                mov[1] += (1 - e.repeat) * coef * speed;
                 break;
             case 'a': case 'A':
                 coef *= -1;
             case 'd': case 'D':
-                mov[0] += coef * speed;
+                mov[0] += (1 - e.repeat) * coef * speed;
                 break;
         }
     }
@@ -87,18 +85,34 @@ export function initWASD() {
         mouseInCanvas = true;
     }
     canvas.oncontextmenu = () => false;
-    document.onmousedown = e => {
+
+    /**
+     * @param {MouseEvent} e 
+     */
+    function mouseDown(e) {
         mouseInCanvas = e.explicitOriginalTarget === canvas;
         if (e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0];
-        if (e.button & 0) pressed[mouse.left] = true;
-        if (e.button & 1) pressed[mouse.middle] = true;
-        if (e.button & 2) pressed[mouse.right] = true;
-
+        if (e.button === 0) pressed[mouse.left] = true;
+        if (e.button === 1) pressed[mouse.middle] = true;
+        if (e.button === 2) pressed[mouse.right] = true;
+        console.log(mouseInCanvas);
         if (mouseInCanvas && pressed[mouse.left]) {
-            console.log(e.clientX + " " + e.clientY);
+            const vec = [
+                e.pageX - canvas.offsetLeft,
+                e.pageY - canvas.offsetTop,
+                0, 0
+            ]
+            let matt = mat4.clone(modelViewMatrix);
+            mat4.multiply(matt, matt, projectionMatrix);
+            mat4.invert(matt, matt);
+
+            vec4.transformMat4(vec, vec, matt);
+
+            console.log(vec);
             console.log(e);
         }
     }
+    document.onmousedown = e => mouseDown(e)
     document.onmouseup = e => {
         pressed[e.button] = false;
     }
@@ -112,13 +126,13 @@ export function initWASD() {
         e.preventDefault();
         const res = -Math.sign(e.deltaY) * zoomFactor / Math.abs(camZoom);
         zoom = res;
-        zoomTime = 0.05;
     }
 }
 
 export function getCamPan(dt) {
     const dtCoef = (((dt * 144) - 1) / 1.5) + 1;
-    const dtCoef2 = dt * 144
+    const dtCoef2 = dt * 144;
+
     camPan[0] = camPan[0] + ((mov[0] * dtCoef + moveOnce[0] * dtCoef2) / zoomCoef);
     camPan[0] = Math.min(Math.max(-camPanLimitHor, camPan[0]), camPanLimitHor);
     moveOnce[0] = 0.0;
@@ -133,8 +147,8 @@ export function getCamPan(dt) {
 
 export function getZoom(dt) {
     const dtCoef = (((dt * 144) - 1) / 1.5) + 1;
-    zoom *= (zoomTime > 0);
-    zoomTime -= dt;
+    zoom *= (Math.abs(zoom) > 0.005);
+    zoom -= Math.sign(zoom) * dt / 4;
     const condA = camZoom <= camZoomMax;
     const condB = camZoom >= camZoomMin;
     const res = condA * condB * dtCoef * zoom - ((1 - condA) * condB * dtCoef * 0.008) + ((1 - condB) * condA * dtCoef * 0.004);
