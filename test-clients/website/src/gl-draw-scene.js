@@ -1,18 +1,18 @@
+import { ProgramInfo } from "./type-hints.js";
 
 /**
- * 
  * @param {WebGLRenderingContext} gl 
- * @param {*} programInfo 
+ * @param {ProgramInfo} programInfo 
  * @param {*} buffers 
  * @param {*} texture 
  * @param {mat4} modelViewMatrix 
  * @returns 
  */
 export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
-    gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
-    gl.clearDepth(1.0); // Clear everything
-    gl.enable(gl.DEPTH_TEST); // Enable depth testing
-    gl.depthFunc(gl.LEQUAL); // Near things obscure far things
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clearDepth(1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
 
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -58,6 +58,13 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
     return modelViewMatrix;
 }
 
+/**
+ * 
+ * @param {WebGlRenderingContext} gl 
+ * @param {ProgramInfo} programInfo 
+ * @param {mat4} modelViewMatrix 
+ * @param {Array<number>} pos 
+ */
 export function drawCharacter(gl, programInfo, modelViewMatrix, pos) 
 {
 
@@ -83,15 +90,12 @@ export function drawCharacter(gl, programInfo, modelViewMatrix, pos)
 
 }
 
-// Tell WebGL how to pull out the positions from the position
-// buffer into the vertexPosition attribute.
 function setPositionAttribute(gl, buffers, programInfo) {
-    const numComponents = 3;        // pull out 2 values per iteration
-    const type          = gl.FLOAT; // the data in the buffer is 32bit floats
-    const normalize     = false;    // don't normalize
-    const stride        = 0;        // how many bytes to get from one set of values to the next
-    // 0 = use type and numComponents above
-    const offset        = 0;        // how many bytes inside the buffer to start from
+    const numComponents = 3;
+    const type          = gl.FLOAT;
+    const normalize     = false;
+    const stride        = 0; 
+    const offset        = 0;
     gl.bindBuffer             (gl.ARRAY_BUFFER, buffers.position);
     gl.vertexAttribPointer    (programInfo.attribLocations.vertexPosition,
                                numComponents,
@@ -102,8 +106,6 @@ function setPositionAttribute(gl, buffers, programInfo) {
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
 }
 
-// Tell WebGL how to pull out the colors from the color buffer
-// into the vertexColor attribute.
 function setColorAttribute(gl, buffers, programInfo) {
     const numComponents = 4;
     const type          = gl.FLOAT;
@@ -120,13 +122,13 @@ function setColorAttribute(gl, buffers, programInfo) {
                                offset);
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
-// tell webgl how to pull out the texture coordinates from buffer
+
 function setTextureAttribute(gl, buffers, programInfo) {
     const num       = 2; // every coordinate composed of 2 values
-    const type      = gl.FLOAT; // the data in the buffer is 32-bit float
-    const normalize = false; // don't normalize
-    const stride    = 0; // how many bytes to get from one set to the next
-    const offset    = 0; // how many bytes inside the buffer to start from
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
     gl.bindBuffer         (gl.ARRAY_BUFFER, buffers.texCoord);
     gl.vertexAttribPointer(programInfo.attribLocations.textureCoord,
                            num,
