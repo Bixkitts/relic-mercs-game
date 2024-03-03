@@ -25,4 +25,6 @@ void sendContent         (char* dir,
                           Host remotehost);
 void sendForbiddenPacket (Host remotehost);
 
+HTTPContentType getContentTypeEnumFromFilename(char* name);
+
 #endif

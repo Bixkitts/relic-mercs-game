@@ -8,12 +8,21 @@
 #include "file_handling.h"
 #include "html_server.h"
 #include "error_handling.h"
+#include "helpers.h"
 
-static const char contentTypeStrings[MAX_HEADERS][STATUS_LENGTH] = {
+#define FILE_EXTENSION_LEN 16
+
+static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] = {
     "text/html\n",
     "image/jpg\n",
     "image/png\n",
     "text/javascript\n"
+};
+static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
+    "html",
+    "jpg",
+    "png",
+    "js"
 };
 
 void sendForbiddenPacket(Host remotehost)
@@ -29,6 +38,29 @@ void sendForbiddenPacket(Host remotehost)
 static const char *getContentTypeString(HTTPContentType type)
 {
     return contentTypeStrings[type];
+}
+
+/*
+ * Assumes NUL terminated string
+ */
+HTTPContentType getContentTypeEnumFromFilename(char* name)
+{
+    int extensionIndex =
+    charSearch(&name[1], '.', MAX_FILENAME_LEN) + 2;
+    // When a malformed filename comes, MIME type doesn't matter
+    // just return default
+    if (extensionIndex < 1) {
+        return 0;
+    }
+    char *extension = &name[extensionIndex];
+    int i = 0;
+    while( i < HTTP_FLAG_COUNT ) {
+        if (stringSearch(contentTypeMapping[i], extension, FILE_EXTENSION_LEN) >= 0) {
+            break;
+        }
+        i++;
+    }
+    return i;
 }
 void sendContent(char* dir, HTTPContentType type, Host remotehost)
 {

@@ -13,6 +13,8 @@
 #include "websockets.h"
 #include "html_server.h"
 
+static char fileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = { 0 };
+static int  fileTableLen = 0;
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
@@ -51,42 +53,59 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
     return;
 }
-
-static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
+void initServeFiles(void)
 {
-    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-    // TODO: haha lmao
-    if (stringSearch(data, "GET /game", packetSize) >= 0) {
+    fileTableLen = listFiles(fileTable);
+    for (int i = 0; i < fileTableLen; i++) {
+        printf("%s\n", &fileTable[i * MAX_FILENAME_LEN]);
+    }
+}
+
+static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
+{
+    char  requestedResource[MAX_FILENAME_LEN] = {0};
+    char *startingPoint  = &data[5];
+    int   stringLen      = charSearch(startingPoint, ' ', packetSize - 5);
+
+    if (stringLen < 0 || stringLen > MAX_FILENAME_LEN){
+        return;
+    }
+
+    memcpy(requestedResource, startingPoint, stringLen);
+
+    // TODO: Find a better way to send files with different names
+    if (stringSearch(data, "GET /game", MAX_FILENAME_LEN * MAX_FILE_COUNT) >= 0) {
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+        return;
     }
-    else if (stringSearch(data, "GET /index.js", packetSize) >= 0) {
-        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+    // TODO: Have an ignore list of files the client should not be able
+    // to download.
+    // Or just put the whole site in a subdirectory and count on file extensions.
+    for (int i = 0; i < fileTableLen; i++) {
+        char *fileTableEntry = &fileTable[i * MAX_FILENAME_LEN];
+        if(stringSearch(fileTableEntry, requestedResource, fileTableLen * MAX_FILENAME_LEN) >= 0) {
+            sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost);
+            return;
+        }
     }
-    else if (stringSearch(data, "GET /renderer.js", packetSize) >= 0) {
-        sendContent("./src/renderer.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /gl-draw-scene.js", packetSize) >= 0) {
-        sendContent("./src/gl-draw-scene.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /gl-buffers.js", packetSize) >= 0) {
-        sendContent("./src/gl-buffers.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /gl-matrix-min.js", packetSize) >= 0) {
-        sendContent("./src/gl-matrix-min.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /networking.js", packetSize) >= 0) {
-        sendContent("./src/networking.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /user-inputs.js", packetSize) >= 0) {
-        sendContent("./src/user-inputs.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
-    }
-    else if (stringSearch(data, "GET /map01.png", packetSize) >= 0) {
-        sendContent("./images/map01.png", HTTP_FLAG_IMAGE_PNG, remotehost);
-    }
-    else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
+    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+    if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);
         cacheHost(remotehost, 0);
         customAttr->handler = HANDLER_WEBSOCK;
+        return;
+    }
+    sendForbiddenPacket(remotehost);
+
+}
+
+static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
+{
+    //if (packetSize < 10) {
+    //    return;
+    //}
+    if (stringSearch(data, "GET /", 8) >= 0) {
+        GETHandler(data, packetSize, remotehost);
     }
     else {
         sendForbiddenPacket(remotehost);
