@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="UTF-8">
@@ -300,19 +301,30 @@ before spawning the player on the board and last in the turn order.
             <li>Injuries</li>
         </ul>
     <h3>World State</h3>
+    <p>
     World state would be the chances for certain encounters in certain regions.
     This remains server side completely, unless the client uncovers information
     to give them a hint of what sort of encounters are more likely and where.
     To the client, this would be a simple textual description, such as "The West Mountains are teeming with Monsters"
     but serverside this is reflected in the heat maps and weighted encounter type odds.
+    </p>
     <h3>Encounters</h3>
+    <p>
     The client asks the server for a random encounter at intervals, moving the character smoothly along the map.
     The server responds with whether there was an encounter or not and if there was, the character is snapped to the position of
     the encounter. The client side triggers the encounter UI, and then the client eventually responds with the same UID code
     but packet data to convey what decision they made for the encounter.
     The server needs to somehow know how to connect a decision for an encounter to the encounter and apply the state server side
     and then tell the client what to do next.
+    </p>
     <h3>Prediction</h3>
+    <p>
+    Some things in the game, like movement can be predicted and interpolated.
+    However, it's a turn based game where we'll be waiting on the results of
+    random numbers a lot which cannot be predicted client side as most of the
+    game is non-deterministic and relies on the server state.
+    This simplifies the code a lot.
+    </p>
     <h3>Localisation/Client Side Display</h3>
         <ul>
             <li>Encounters, player state, world state will all be handled through UID's on the network.
