@@ -71,6 +71,19 @@
         position: relative; /* Position the label absolutely */
         left: -10px; /* Adjust the position */
     }
+    .optional {
+        font-family: 'Courier New', monospace; /* Monospace font */
+        color: #888; /* Muted color */
+    }    
+    .optional::before {
+        content: "NICE-TO-HAVE:";
+        background-color: #e6cc00; /* Light yellow background */
+        padding: 5px; /* Padding around the comment */
+        color: #555; /* Darker color for the label */
+        font-weight: bold; /* Make the label bold */
+        position: relative; /* Position the label absolutely */
+        left: -10px; /* Adjust the position */
+    }
     /* Example of a button style */
     .button {
         background-color: #d9b998; /* Light brown button */
@@ -147,11 +160,95 @@ before spawning the player on the board and last in the turn order.
     <li>A horizontal 3d planar map occupies the center of the screen and allows
         for camera panning and zooming (but no rotation, as it would only be confusing).</li>
     <li>The portraits for all the participants in the game should be shown
-in the top left, along with vital statistics.</li>
+        in the top left, along with vital statistics.</li>
     <li>The player should be able to open their own and other character's statistics by
         clicking on the portraits.
         This should open a popup in the middle of the screen listing known statistics</li>
+    <li>The player should have one button to see their Resources (covered later)</li>
+    <li>The player should have one button to see their Reputations (covered later)</li>
 </ul>
+<h2>Core Gameplay Concepts</h2>
+    <h3>Turn Order</h3>
+    <p>The players take it in turns to play based on who joined the game first.</p>
+    <p class="optional"> The game is configured with a minimum player count, it waits
+        until there are that many people in the game, then it randomises the turn order </p>
+    <h3>Player Statistics</h3>
+    <p>The core loop of the game is that the players travel across the map, face random encounters and solve it with their skills.
+    Any event they encounter will allow the player to solve it with at least one skill.
+    Different skills are better for solving different situations, but applying different skills MIGHT yield different results-
+    such as having cooler results on success despite having a lower success chance (though not as a rule).
+    An event should present the player with a list of buttons presenting ways to solve the problem, also showing the success chance.
+    The players will also need to keep track of their health and other core things like that.</p>
+    <h3>Success Chance</h3>
+    <ul>
+        <li>Any encounter a player character faces has a certain difficulty for each different skill that
+            can be applied to solve it, making some skills more or less applicable for an encounter.</li>
+        <li>A success or failure on a skill check can have a range of possible outcomes.</li>
+        <li>Before selecting an option, the player should be shown a chance of getting a neutral or better result for each skill check.</li>
+        <li>The chance of success that the player is shown should scale with a wisdom chance, with lower wisdom characters
+            getting less precise chances of success shown to them.</li>
+    </ul>
+    <h3>Action Points</h3>
+    <p>The players will spawn in with a certain amount of Action points. Points are spent to travel and interact with locations.
+    MAYBE random encounters should also use up action points when they happen.</p>
+    <h3>Random Encounters</h3>
+    <ul>
+        <li>The player will spend action points to move around the map.</li>
+        <li>At regular intervals, there will be a chance of enountering certain types of events.</li>
+        <li>Encounters that the player could meet should all fall under tags e.g. BANDIT, or MONSTER or MERCHANT or MYSTICAL</li>
+        <li>These chances should stack, so a player may need to deal with multiple encounters in one go. This also simplifies the math. </li>
+        <li>You should be able to raise and lower chances of enountering events with certain tags based
+            on a regional heatmap e.g. make the chance of enountering BANDIT type events in the MOUNTAINS higher or lower dynamically,
+            where MOUNTAINS is an image denoting weight per pixel in the range of 0.0-1.0 (white->black)</li>
+        <p class="optional">Split the pixel maps based on colour so a lot of maps can be compressed into one image, OR use an efficient format for 0.0-1.0</p>
+        <li>Players should be able to gather information in game about what areas/regions have what type of events, and this
+        should show variation between games.</li>
+        <li>The chances of getting certain types of encounters in certain areas should change dynamically in response to other events and
+        player actions e.g. killing bandits might slightly lower the odds of encountering BANDIT type events in the region.</li>
+    </ul>
+    <h3>Fixed Enounters</h3>
+    <ul>
+        <li>There should be locations in the game such as settlements where a person can travel and have the same encounter and options every time, such as visiting
+            a shop to buy items.</li>
+        <p class="optional">There should be a visible circular radius where an interaction with the fixed encounter can be initiated.</p>
+        <li>Fixed encounter should NOT be random encounters i.e: go to a fixed location and then roll a random event.
+            This should be managed by the heatmaps.</li>
+    </ul>
+    <h3>Player Resources</h3>
+    <ul>
+        <li>Players have a "Resources" button that shows their inventory and retinue.</li>
+        <li>Certain items should be able to be equipped to modify chances of success with certain skills.</li>
+        <p class="todo">How complex should the equipment system be? Clothing + held item, or something more complex?</p>
+        <li>Items like consumables should be usable at any point and be consumed or have multiple uses.</li>
+        <li>Retinue are followers or favours players can otherwise call on. Followers can provide passive modifications, or
+            be "consumed" to aid the situation (or have multiple uses). They behave like items in this sense.
+            Retinue could be like a knight's squire, or a favour owed by an organisation to carry out an attempted assassination
+            on another player.</li>
+        <li>Retinue are affected by reputation, so a follower could have a requirement of a specific player reputation or leave the player.</li>
+        <p class="optional">Characters could have needs like hunger/thirst and what have you. May or may not be good. </p>
+        <li>A trade/inventory menu is needed to handle items. Some resources need to be marked sellable and others not.</li>
+        <p class="optional">Prices varying per region to create a simple economy simulation</p>
+        <li>The resources a character has should be hidden from other players. All resources should have an alternate description
+            that is public to other players, such as "A weapon" instead of "A sword", or "Ties to organisation X" instead of "A hired assassin".</li>
+        <li>It should be a gameplay element to uncover what resources other players actually have.</li>
+    </ul>
+    <h3>Player Reputation</h3>
+        <ul>
+            <li>Players have a separate reputation for each community of sentient beings in the game.</li>
+            <li>Reputation can be modified by performing actions in fixed or random encounters that helps/hinders members of that group.</li>
+            <li>Reputation will modify the outcome of events dramatically e.g. You encounter bandits, but you happen to have a great reputation
+                with the town they come from so your chance to talk them down is increased drastically.</li>
+            <li>It should be visible next to an action button if a reputation modifies the chance, and why.</li>
+            <li>The area the player is in doesn't need to be tracked, since events are tied to the areas and communities to begin with.</li>
+            <p class="optional">Maybe reputations could unlock or lock certain options in encounters too?</p>
+            <li>Player reputations are not private.</li>
+        </ul>
+    <h3>Winning The Game</h3>
+    <ul>
+        <li>There are special story events that arise in sequence. It starts with the players spawning in, and having the option to ask about the
+            relic in ANY settlement. No other relic-related encounters are active at this point.</li>
+        <li></li>
+    </ul>
 
 </body>
 </html>
