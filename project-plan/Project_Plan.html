@@ -210,7 +210,7 @@ before spawning the player on the board and last in the turn order.
     <ul>
         <li>There should be locations in the game such as settlements where a person can travel and have the same encounter and options every time, such as visiting
             a shop to buy items.</li>
-        <p class="optional">There should be a visible circular radius where an interaction with the fixed encounter can be initiated.</p>
+        <p class="optional">There should be a visible circular radius where an interaction with the fixed encounter can be initiated (but doens't NEED to be)</p>
         <li>Fixed encounter should NOT be random encounters i.e: go to a fixed location and then roll a random event.
             This should be managed by the heatmaps.</li>
     </ul>
@@ -231,6 +231,8 @@ before spawning the player on the board and last in the turn order.
         <li>The resources a character has should be hidden from other players. All resources should have an alternate description
             that is public to other players, such as "A weapon" instead of "A sword", or "Ties to organisation X" instead of "A hired assassin".</li>
         <li>It should be a gameplay element to uncover what resources other players actually have.</li>
+        <li>Information should be a resource. There should literally be an item a player can own that has the passive
+            effect of displaying certain information that would otherwise be hidden. This should be trade-able with other players exclusively.</li>
     </ul>
     <h3>Player Reputation</h3>
         <ul>
@@ -243,12 +245,67 @@ before spawning the player on the board and last in the turn order.
             <p class="optional">Maybe reputations could unlock or lock certain options in encounters too?</p>
             <li>Player reputations are not private.</li>
         </ul>
+    <h3>Player On Player Interaction</h3>
+        <ul>
+            <li>Other players are a fixed encounter where you can fight or trade sellable resources.</li>
+            <li>You should also be able to affect other players through encounters that have regional effects (e.g. a storm)</li>
+            <li>You should be able to use resource to remotely affect other players e.g. A hired assassin</li>
+            <p class="optional">What if players could team up into a party and win the game together? Make sure to consider this while designing, it could be BIG as a feature,
+            or entirely unnecessary. </p>
+            <li>A lot of resources should be usable during other player's turns. e.g. Hiring an assassin should make the player's next encounter be the assassin
+                even during their turn. A very specific intervention I want to implement is the ability for enemies to sabotage skill checks
+                of other players, turning a successful check into a failed one and having the victim be aware of the sabotage (or sometimes not?).
+                All of this of course should be accomplished through the usage of character resources.</li>
+            <p class="todo">Should you need to activate an antagonistic resource during the victim's turn and have it take
+            effect immediately, or activate it any time, specify a target and have the game handle the logic?</p>
+        </ul>
+    <h3>Dying And Injuries</h3>
+        <ul>
+            <li>When a player loses a combat, they receive an injury, which is it's own unique system and shows up in the character sheet.
+                A player's injuries is hidden information until uncovered.</li>
+            <li>Injuries are sorted into light, heavy and critical. Different combat encounters will trigger different injury types.
+                A specific injury is then chosen at random from the category, and can then be disabled or disable other specific injuries
+                (e.g. losing leg cancels sprained ankle effects, and prevents getting it in the future).</li>
+            <li>Injuries debuff a player until they are healed (if they can be healed at all).
+                An injury has a fresh and a healed state, where the healed state can still affect the player.</li>
+            <li>Each injury adds it's own amount of damage to a pool and the player dies at a certain threshold.</li>
+            <li>Dead players observe the game, MAYBE respawn.</li>
+            <p class="optional"> It might be cooler if the players could influence the game as ghosts, rerolling player checks or controlling
+            animal companions and such.</p>
     <h3>Winning The Game</h3>
     <ul>
         <li>There are special story events that arise in sequence. It starts with the players spawning in, and having the option to ask about the
             relic in ANY settlement. No other relic-related encounters are active at this point.</li>
-        <li></li>
+        <li>Only one settlement actually has the correct info, the other settlements point to that one.</li>
+        <li>Asking at the correct settlement uncovers an information resource (see "Player Resources") that shows a fixed enounter in a random
+            location with an ancient temple where the relic could be.</li>
+        <p class="todo">Flesh this out completely, not a priority until other systems work.</p>
     </ul>
-
+<h2>Protocols and Serialisation</h2>
+    <h3>Overview</h3>
+    <p>The player character sheet and login information will be transferred through HTML form submission,
+    but after that a websocket channel is opened and a custom protocol begins.
+    All websocket packet should be sent in binary format, and the first two bytes of the packet should determine
+    what the message is and how it should be interpreted.
+    Every message/state update in the game will have a specific single integer code to denote it.
+    <h3>Keepalive</h3>
+    The client send a keepalive ping every few seconds to keep the TCP connection open.
+    <h3>Player State</h3>
+        <ul>
+            <li></li>
+        </ul>
+    <h3>World State</h3>
+    <h3>Prediction</h3>
+    <h3>Localisation/Client Side Display</h3>
+        <ul>
+            <li>Encounters, player state, world state will all be handled through UID's on the network.
+                Server side, it's raw numbers. Client side, it needs to show the right strings based on
+                the UID for the state change.</li>
+        </ul>
+<h2>Robustness and Convenience</h2>
+<h3>Handling a Disconnection</h3>
+<h3>Vote Kicking</h3>
+<h3>Vote Banning?</h3>
+<h3>Malformed Input and Validation</h3>
 </body>
 </html>
