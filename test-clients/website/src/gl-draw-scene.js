@@ -1,16 +1,14 @@
 
-import { getZoom, getCamPan } from './user-inputs.js';
-
 /**
  * 
- * @param {*} gl 
+ * @param {WebGLRenderingContext} gl 
  * @param {*} programInfo 
  * @param {*} buffers 
  * @param {*} texture 
  * @param {mat4} modelViewMatrix 
  * @returns 
  */
-function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
+export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
@@ -30,7 +28,7 @@ function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
     
     mat4.scale (scaleMatrix,
                     modelViewMatrix,
-                    [1.618, 1.0, 1.0]);
+                    [1.0, 1.0, 1.0]);
 
     setPositionAttribute (gl, buffers, programInfo);
     setTextureAttribute  (gl, buffers, programInfo);
@@ -52,17 +50,15 @@ function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix) {
     gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
 
 
-    {
-        const offset      = 0;
-        const type        = gl.UNSIGNED_SHORT;
-        const vertexCount = 6;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    const offset      = 0;
+    const type        = gl.UNSIGNED_SHORT;
+    const vertexCount = 6;
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 
-        return modelViewMatrix;
-    }
+    return modelViewMatrix;
 }
 
-function drawCharacter(gl, programInfo, modelViewMatrix, pos) 
+export function drawCharacter(gl, programInfo, modelViewMatrix, pos) 
 {
 
     mat4.rotate(modelViewMatrix,
@@ -140,7 +136,3 @@ function setTextureAttribute(gl, buffers, programInfo) {
                            offset,);
     gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
 }
-
-
-export { drawMapPlane };
-export { drawCharacter };

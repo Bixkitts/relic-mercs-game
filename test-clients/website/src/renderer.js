@@ -3,6 +3,7 @@ import { drawMapPlane } from './gl-draw-scene.js';
 import { drawCharacter } from './gl-draw-scene.js';
 import { initWASD } from './user-inputs.js';
 import { getZoom, getCamPan } from './user-inputs.js';
+import { getCanvas, getContext } from './canvas-getter.js'
 
 let deltaTime = 0;
 
@@ -32,8 +33,8 @@ function main() {
             }
           `;
 
-    const canvas = document.querySelector("#glcanvas");
-    const gl = canvas.getContext("webgl");
+    const canvas = getCanvas();
+    const gl = getContext();
     initWASD(canvas);
 
     if (gl === null) {
@@ -72,7 +73,7 @@ function main() {
     let pos = [0.0, 0.0, 0.0];
     // Draw the scene repeatedly
 
-    const fpscap = 25;
+    const fpscap = 50;
     document.sperframe = 1 / fpscap;
     const msperframe = 1000 / fpscap;
     // setInterval(() => {
@@ -119,6 +120,14 @@ function main() {
 
 
 }
+
+/**
+ * 
+ * @param {WebGLRenderingContext} gl 
+ * @param {string} vsSource 
+ * @param {string} fsSource 
+ * @returns 
+ */
 function initShaderProgram(gl, vsSource, fsSource) {
     const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);

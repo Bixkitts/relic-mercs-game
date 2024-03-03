@@ -1,5 +1,7 @@
-let mov = [0.0, 0.0, 0.0, 0.0];
-let moveOnce = [0.0, 0.0, 0.0, 0.0];
+import { getContext } from './canvas-getter.js'
+
+let mov = [0.0, 0.0];
+let moveOnce = [0.0, 0.0];
 let zoom = 0.0;
 let zoomTime = 0.0;
 let camZoom = -2.5;
@@ -21,11 +23,16 @@ const mouse = {
     right: 2
 };
 
-let mbtns = [0, 0, 0];
+let pressed = [0, 0, 0];
+const gl = getContext();
+const fieldOfView      = (45 * Math.PI) / 180; // in radians
+const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
+const zNear            = 0.1;
+const zFar             = 100.0;
+const projectionMatrix = mat4.create();
+mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+mat4.invert(projectionMatrix, projectionMatrix);
 
-let isLeftDown = false;
-let isMiddleDown = false;
-let isRightDown = false;
 let mouseInCanvas = false;
 let modelViewMatrix = mat4.create();
 function recreateModelViewMatrix() {
@@ -41,6 +48,8 @@ function recreateModelViewMatrix() {
     mat4.translate(modelViewMatrix,
         modelViewMatrix,
         camPan);
+
+    mat4.invert(modelViewMatrix, modelViewMatrix);
 }
 recreateModelViewMatrix();
 
@@ -62,19 +71,22 @@ export function initWASD(canvas) {
     canvas.oncontextmenu = () => false;
     document.onmousedown = e => {
         mouseInCanvas = e.explicitOriginalTarget === canvas;
-        if(e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0, 0.0, 0.0];
-        if (e.button & 0) mbtns[mouse.left] = true;
-        if (e.button & 1) mbtns[mouse.middle] = true;
-        if (e.button & 2) mbtns[mouse.right] = true;
+        if(e.explicitOriginalTarget !== canvas) mov = [0.0, 0.0];
+        if (e.button & 0) pressed[mouse.left] = true;
+        if (e.button & 1) pressed[mouse.middle] = true;
+        if (e.button & 2) pressed[mouse.right] = true;
+
+        if(mouseInCanvas && pressed[mouse.left]) {
+            console.log(e.clientX + " " + e.clientY);
+            console.log(e);
+        }
     }
     document.onmouseup = e => {
-        mbtns[e.button] = false;
+        pressed[e.button] = false;
     }
     canvas.onmousemove = e => {
-        if (mbtns[mouse.right]) {
-            moveOnce[1] = mouseCoef * e.movementY;
-            moveOnce[0] = mouseCoef * e.movementX;
-        }
+        moveOnce = [pressed[mouse.right] * mouseCoef * e.movementX, 
+                    pressed[mouse.right] * mouseCoef * e.movementY];
     }
     document.onkeydown = e => {
         if (mouseInCanvas) {

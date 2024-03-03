@@ -39,8 +39,10 @@ const apply = (res) => {
  * @param {object} scrobj 
  * @param {string} root path
  * @param {never} orir 
+ * @param {keyof typeof fs} handler
+ * @param {BufferEncoding} enc
  */
-const loadScripts = (scrobj, root, orir = root) => {
+const loadScripts = (scrobj, root, enc = "utf-8", handler = "readFileSync", opt = undefined, orir = root) => {
     console.log("root: " + root);
     let paths = fs.readdirSync(root, { recursive: true, encoding: "utf-8" });
     for (const path of paths) {
@@ -50,11 +52,11 @@ const loadScripts = (scrobj, root, orir = root) => {
             if(err) throw err;
             if(stats.isDirectory()) {
                 console.log("dir")
-                loadScripts(scrobj, cpath + "/", orir)
+                loadScripts(scrobj, cpath + "/", enc, orir)
             } else {
                 console.log("reading: " + cpath);
                 let key = cpath.split(orir)[1].replace(/^\//, "");
-                scrobj[key] = fs.readFileSync(cpath, "utf-8");
+                scrobj[key] = fs[handler](cpath, enc);
             }
         })
     }
@@ -62,11 +64,12 @@ const loadScripts = (scrobj, root, orir = root) => {
 
 const resources = {
     "index.js" : fs.readFileSync("./website/index.js"),
-    "index.html" : fs.readFileSync("./website/index.html"),
-    "map01.png": fs.readFileSync("./website/images/map01.png")
+    "index.html" : fs.readFileSync("./website/index.html")
+    //"map01.png": fs.readFileSync("./website/images/map01.png")
 };
 
 loadScripts(resources, "./website/src");
+loadScripts(resources, "./website/images", { autoClose: false }, "createReadStream");
 
 http.createServer((req, res) => {
     apply(res);
@@ -89,6 +92,15 @@ http.createServer((req, res) => {
         return;
     }
     res.mime(ext);
-    res.write(content);
-    res.end();
+    if(content instanceof fs.ReadStream) {
+        console.log("readstream");
+        content.pipe(res);
+    } else {
+        if(!res.write(content, (err) => {
+            if(err) console.log(err);
+            res.end();
+        })) {
+            console.error("buffer write failure");
+        }
+    }
 }).listen(80);
