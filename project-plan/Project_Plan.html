@@ -287,14 +287,30 @@ before spawning the player on the board and last in the turn order.
     but after that a websocket channel is opened and a custom protocol begins.
     All websocket packet should be sent in binary format, and the first two bytes of the packet should determine
     what the message is and how it should be interpreted.
-    Every message/state update in the game will have a specific single integer code to denote it.
+    Every message/state update in the game will have a specific single integer code to denote it.</p>
     <h3>Keepalive</h3>
     The client send a keepalive ping every few seconds to keep the TCP connection open.
     <h3>Player State</h3>
         <ul>
-            <li></li>
+            <li>World Position</li>
+            <li>Dead/Alive</li>
+            <li>Resources</li>
+            <li>Reputation</li>
+            <li>Injuries</li>
         </ul>
     <h3>World State</h3>
+    World state would be the chances for certain encounters in certain regions.
+    This remains server side completely, unless the client uncovers information
+    to give them a hint of what sort of encounters are more likely and where.
+    To the client, this would be a simple textual description, such as "The West Mountains are teeming with Monsters"
+    but serverside this is reflected in the heat maps and weighted encounter type odds.
+    <h3>Encounters</h3>
+    The client asks the server for a random encounter at intervals, moving the character smoothly along the map.
+    The server responds with whether there was an encounter or not and if there was, the character is snapped to the position of
+    the encounter. The client side triggers the encounter UI, and then the client eventually responds with the same UID code
+    but packet data to convey what decision they made for the encounter.
+    The server needs to somehow know how to connect a decision for an encounter to the encounter and apply the state server side
+    and then tell the client what to do next.
     <h3>Prediction</h3>
     <h3>Localisation/Client Side Display</h3>
         <ul>
