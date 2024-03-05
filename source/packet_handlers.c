@@ -136,13 +136,6 @@ static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
     }
     decodedDataLength =
     decodeWebsocketMessage(decodedData, data, packetSize);
-    if ((uint16_t)decodedData[0] >= GAME_MSG_COUNT) {
-    #ifdef DEBUG
-        fprintf(stderr, "\nBad websocket opcode received\n");
-    #endif
-        free(decodedData);
-        return;
-    }
     handleGameMessage (decodedData, decodedDataLength, remotehost);
     free              (decodedData);
 }
