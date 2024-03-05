@@ -15,16 +15,32 @@
 
 #define MESSAGE_HANDLER_COUNT 7
 
-typedef void (*GameMessageHandler)(char* data, ssize_t dataSize, Host remotehost);
+typedef void (*GameMessageHandler)  (char* data, ssize_t dataSize, Host remotehost);
 
 typedef void (*UseResourceHandler)  (ResourceID resource, Player *user, Player *target);
 typedef void (*GiveResourceHandler) (ResourceID resource, Player *target, int count);
 typedef void (*TakeResourceHandler) (ResourceID resource, Player *target, int count);
 
 /*
+ * Encounter Categories, and their possible encounters
+ */
+static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
+    {ENCOUNTER_BANDITS},                 // ENCOUNTER_TYPE_BANDIT
+    {ENCOUNTER_WOLVES,                   // ENCOUNTER_TYPE_BEASTS
+     ENCOUNTER_RATS},
+    {ENCOUNTER_TROLLS},                  // ENCOUNTER_TYPE_MONSTROSITIES
+    {ENCOUNTER_DRAGONS},                 // ENCOUNTER_TYPE_DRAGON
+    {ENCOUNTER_RUINS_OLD,                // ENCOUNTER_TYPE_MYSTICAL
+     ENCOUNTER_TREASURE_MAGICAL,
+     ENCOUNTER_SPELL_TOME},
+    {ENCOUNTER_CULTISTS_CANNIBAL,        // ENCOUNTER_TYPE_CULTISTS
+     ENCOUNTER_CULTISTS_PEACEFUL}
+};
+
+
+/*
  * Handlers for incoming messages from the websocket connection
  */
-
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
 static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);

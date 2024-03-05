@@ -22,6 +22,9 @@ typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
 
+static void POSTHandler(char *data, ssize_t packetSize, Host remotehost);
+static void GETHandler (char *data, ssize_t packetSize, Host remotehost);
+
 
 static PacketHandler handlers[HANDLER_COUNT] = {
     httpHandler,
@@ -101,6 +104,29 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 
 }
 
+static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
+{
+    // Read the Submitted Player Name, Player Password and Game Password
+    // and link the remotehost to a specific player object based on that.
+    char playerName    [MAX_CREDENTIAL_LEN] = { 0 };
+    char playerPassword[MAX_CREDENTIAL_LEN] = { 0 };
+    char gamePassword  [MAX_CREDENTIAL_LEN] = { 0 };
+    int  credentialIndex                    = 0;
+    int  stopIndex                          = 0;
+    const char searchKey[MAX_CREDENTIAL_LEN] = "playerName=";
+
+    credentialIndex = stringSearch(data, searchKey, packetSize);
+    // the player name is here:
+    credentialIndex += strlen(searchKey);
+    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    memcpy(playerName, &data[credentialIndex], stopIndex);
+    credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
+    credentialIndex += 1;
+    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    memcpy(playerPassword, &data[credentialIndex], stopIndex);
+
+}
+
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     if (packetSize < 10) {
@@ -108,6 +134,9 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     }
     if (stringSearch(data, "GET /", 8) >= 0) {
         GETHandler(data, packetSize, remotehost);
+    }
+    else if (stringSearch(data, "POST /", 8) >= 0) {
+        POSTHandler(data, packetSize, remotehost);
     }
     else {
         sendForbiddenPacket(remotehost);
