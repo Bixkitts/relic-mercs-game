@@ -40,7 +40,10 @@ static void extractKeyCode(char *outString, char *httpString, ssize_t packetSize
 /*
  * this function assumes outData is large enough to hold the payload of inData
  */
-void decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
+/*
+ * Returns the length of the decoded data
+ */
+int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 {
     const int opcodeLength = 1;
     const int maskLength   = 4;
@@ -75,7 +78,7 @@ void decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
     for (int i = 0; i < dataSize - payloadIndex; i++) {
         outData[i] = mask[i % maskLength] ^ inPayload[i];
     }
-
+    return dataSize - payloadIndex;
     // 4. All subsequent bytes are payload
 }
 

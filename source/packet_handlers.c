@@ -12,6 +12,7 @@
 #include "helpers.h"
 #include "websockets.h"
 #include "html_server.h"
+#include "game_logic.h"
 
 static char fileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = { 0 };
 static int  fileTableLen = 0;
@@ -116,45 +117,32 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
 
 static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
 {
-    if (packetSize > 100) {
-        printf("\nToo long session sent\n");
+    if (packetSize > 120) {
+        fprintf(stderr, "\nToo long websocket packet received.\n");
         return;
     }
-
-    char *decodedData = (char*)calloc(packetSize, sizeof(char));
-    char  responsePacket[MAX_PACKET_SIZE] = {0};
-    int   responseLength = 0;
-    char *response       = "Hello!";
-
-
+    if (packetSize < 8) {
+        fprintf(stderr, "\nToo short websocket packet received.\n");
+        return;
+    }
+    // After this part we can freely dereference the 
+    // first 8 bytes for opcodes and such.
+    char *decodedData       = (char*)calloc(packetSize, sizeof(char));
+    int   decodedDataLength = 0;
 
     if (decodedData == NULL) {
         printError(BB_ERR_CALLOC);
         exit(1);
     }
-    // Otherwise, decode the websocket message...
+    decodedDataLength =
     decodeWebsocketMessage(decodedData, data, packetSize);
-    // Respond to PING control messages
-    if (decodedData[0] == 0x1) {
+    if ((uint16_t)decodedData[0] >= GAME_MSG_COUNT) {
     #ifdef DEBUG
-        printf("\nReceived websocket heartbeat.\n");
+        fprintf(stderr, "\nBad websocket opcode received\n");
     #endif
+        free(decodedData);
         return;
     }
-    if (decodedData[0] == 'm') {
-    #ifdef DEBUG
-        printf("\nMulticast test...\n");
-    #endif
-        responseLength = 
-            encodeWebsocketMessage(responsePacket, response, strlen(response));
-        multicastTCP(responsePacket, responseLength, 0);
-        return;
-    }
-#ifdef DEBUG
-    printf("\nReceived websocket message: %s\n", decodedData);
-#endif
-    responseLength = 
-        encodeWebsocketMessage(responsePacket, response, strlen(response));
-    sendDataTCP (responsePacket, responseLength, remotehost);
-    free        (decodedData);
+    handleGameMessage (decodedData, decodedDataLength, remotehost);
+    free              (decodedData);
 }
