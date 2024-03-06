@@ -14,6 +14,7 @@
 #include "file_handling.h"
 #include "html_server.h"
 #include "game_logic.h"
+#include "auth.h"
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
@@ -125,6 +126,10 @@ static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
     credentialIndex += 1;
     stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
     memcpy(playerPassword, &data[credentialIndex], stopIndex);
+    credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
+    credentialIndex += 1;
+    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    memcpy(gamePassword, &data[credentialIndex], stopIndex);
 
 }
 

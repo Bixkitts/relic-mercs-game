@@ -5,12 +5,14 @@
 
 #include "bbnetlib.h"
 
-#define MAX_CREDENTIAL_LEN   64
+#define MAX_CREDENTIAL_LEN 32
+
 #define MAX_RESOURCES_IN_INV 128
+#define MAX_PLAYERS_IN_GAME  16
 
 typedef struct Resource Resource;
 typedef struct Player Player;
-typedef struct Gamestate Gamestate;
+typedef struct Game Game;
 // All injuries are followed immediately by their 
 // healed counterparts.
 typedef enum {
@@ -70,19 +72,20 @@ typedef enum {
     RESOURCE_COUNT
 } ResourceID;
 
-struct Gamestate {
+struct Game {
     // Who's turn is it
-    int   playerTurn;
+    int     playerTurn;
     // Map weights for different
     // encounter types in which regions
-
+    Player *players [MAX_PLAYERS_IN_GAME];
+    char    password[MAX_CREDENTIAL_LEN];
 };
 
 struct Player {
     int        playerID;
-    char       playerName [MAX_CREDENTIAL_LEN];
-    char       password   [MAX_CREDENTIAL_LEN];
     Host       associatedHost;
+    char       password[MAX_CREDENTIAL_LEN];
+    char       name    [MAX_CREDENTIAL_LEN];
     int        xCoord;
     int        yCoord;
     // How many of each ResourceID the player has
@@ -90,5 +93,21 @@ struct Player {
 };
 
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost);
+
+/*
+ * Authentication
+ */
+char *getGamePassword   (Game *game);
+void  setGamePassword   (Game *game, char *password);
+int   tryGameLogin      (Game *game,
+                         char *password);
+// Will associate a remotehost with a player,
+// or create a new player and redirect
+// to character creator when there isn't an
+// existing one.
+int   tryPlayerLogin    (char *playerName, 
+                         char *password, 
+                         Host remotehost);
+/* --------------------------------------------- */
 
 #endif
