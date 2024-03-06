@@ -75,46 +75,6 @@ int charSearch(char* text, char c, int bufLen)
     return i;
 }
 
-int listFiles(char *outArray)
-{
-    DIR *d = NULL;
-    int  i = 0;
-    struct dirent *dir;
-    d = opendir(".");
-    if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-3, "./%s", dir->d_name);
-              i++;
-          }
-        }
-        closedir(d);
-    }
-    d = opendir("./src");
-    if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-8, "./src/%s", dir->d_name);
-              i++;
-          }
-        }
-        closedir(d);
-    }
-    d = opendir("./images");
-    if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-10, "./images/%s", dir->d_name);
-              i++;
-          }
-        }
-    }
-    closedir(d);
-    return i;
-}
 
 unsigned int hashDataSimple(const char *data, size_t data_len) 
 {

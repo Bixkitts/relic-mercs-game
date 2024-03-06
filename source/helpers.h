@@ -7,6 +7,3 @@ int  stringSearch(const char* text, const char* pattern, int maxLength);
 // returns the index at which c is found or -1
 int  charSearch  (char* text, char c, int bufLen);
 
-#define MAX_FILENAME_LEN 64
-#define MAX_FILE_COUNT   256
-int  listFiles(char *outArray);

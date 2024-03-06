@@ -20,10 +20,15 @@ typedef enum HTTPContentType {
     HTTP_FLAG_COUNT
 } HTTPContentType;
 
-void sendContent         (char* dir, 
-                          HTTPContentType type, 
-                          Host remotehost);
-void sendForbiddenPacket (Host remotehost);
+void sendContent            (char* dir, 
+                             HTTPContentType type, 
+                             Host remotehost);
+void sendForbiddenPacket    (Host remotehost);
+
+// A list of files we're allowed to serve
+// with "sendContent()"
+void createAllowedFileTable (void);
+bool isFileAllowed          (const char* inDir, char **outDir);
 
 HTTPContentType getContentTypeEnumFromFilename(char* name);
 

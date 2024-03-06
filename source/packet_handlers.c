@@ -11,11 +11,9 @@
 #include "error_handling.h"
 #include "helpers.h"
 #include "websockets.h"
+#include "file_handling.h"
 #include "html_server.h"
 #include "game_logic.h"
-
-static char fileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = { 0 };
-static int  fileTableLen = 0;
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
@@ -57,13 +55,7 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
 
     return;
 }
-void buildFileTable(void)
-{
-    fileTableLen = listFiles(fileTable);
-    for (int i = 0; i < fileTableLen; i++) {
-        printf("%s\n", &fileTable[i * MAX_FILENAME_LEN]);
-    }
-}
+
 
 static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 {
@@ -71,6 +63,7 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 
     char *startingPoint  = &data[5];
     int   stringLen      = charSearch(startingPoint, ' ', packetSize - 5);
+    char *fileTableEntry = NULL;
 
     if (stringLen < 0 || stringLen > MAX_FILENAME_LEN){
         return;
@@ -79,20 +72,28 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
     memcpy(requestedResource, startingPoint, stringLen);
 
     // TODO: Find a better way to send files with different names
-    if (stringSearch(data, "GET /game", MAX_FILENAME_LEN * MAX_FILE_COUNT) >= 0) {
+    if (stringSearch(data, "GET /game", 10) >= 0) {
+        // TODO: only allow the game
+        // when the remotehost is logged
+        // in as a player
         sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+        return;
+    }
+    else if (stringSearch(data, "GET /login", 10) >= 0) {
+        sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost);
+        return;
+    }
+    else if (stringSearch(data, "GET /index.js", 12) >= 0) {
+        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        return;
+    }
+    else if (isFileAllowed(requestedResource, &fileTableEntry)) {
+        sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost);
         return;
     }
     // TODO: Have an ignore list of files the client should not be able
     // to download.
     // Or just put the whole site in a subdirectory and count on file extensions.
-    for (int i = 0; i < fileTableLen; i++) {
-        char *fileTableEntry = &fileTable[i * MAX_FILENAME_LEN];
-        if(stringSearch(fileTableEntry, requestedResource, fileTableLen * MAX_FILENAME_LEN) >= 0) {
-            sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost);
-            return;
-        }
-    }
     HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
     if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse(data, packetSize, remotehost);

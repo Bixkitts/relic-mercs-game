@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/mman.h>
 
 #include "file_handling.h"
 #include "html_server.h"
@@ -11,6 +12,10 @@
 #include "helpers.h"
 
 #define FILE_EXTENSION_LEN 16
+
+
+static char allowedFileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = { 0 };
+static int  allowedFileTableLen = 0;
 
 static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] = {
     "text/html\n",
@@ -41,6 +46,24 @@ static const char *getContentTypeString(HTTPContentType type)
 }
 
 /*
+ * Returns if the file is allowed to be served
+ * by looking it up in the allowed list.
+ * Also returns the entire directory name
+ * in an out parameter.
+ */
+bool isFileAllowed(const char* inName, char** outDir)
+{
+    for (int i = 0; i < allowedFileTableLen; i++) {
+        char *fileTableEntry = &allowedFileTable[i * MAX_FILENAME_LEN];
+        if(stringSearch(fileTableEntry, inName, allowedFileTableLen * MAX_FILENAME_LEN) >= 0) {
+            *outDir = fileTableEntry;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/*
  * Assumes NUL terminated string
  */
 HTTPContentType getContentTypeEnumFromFilename(char* name)
@@ -62,6 +85,23 @@ HTTPContentType getContentTypeEnumFromFilename(char* name)
     }
     return i;
 }
+
+/*
+ * This function is supposed to
+ * create a list of files that
+ * are whitelisted to be served
+ */
+void createAllowedFileTable(void)
+{
+    // Currently just whitelists everything
+    allowedFileTableLen = listFiles(allowedFileTable);
+#ifdef DEBUG
+    for (int i = 0; i < allowedFileTableLen; i++) {
+        printf("%s\n", &allowedFileTable[i * MAX_FILENAME_LEN]);
+    }
+#endif
+}
+
 void sendContent(char* dir, HTTPContentType type, Host remotehost)
 {
     char          header   [HEADER_PACKET_LENGTH] = { 0 };
@@ -112,5 +152,4 @@ void sendContent(char* dir, HTTPContentType type, Host remotehost)
     sendDataTCP(packet, packetLen, remotehost);
     
     free (packet);
-    free (content);
 }
