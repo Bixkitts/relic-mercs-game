@@ -14,15 +14,15 @@
 #include "file_handling.h"
 #include "html_server.h"
 #include "game_logic.h"
-#include "auth.h"
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
 static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
 
-static void POSTHandler(char *data, ssize_t packetSize, Host remotehost);
-static void GETHandler (char *data, ssize_t packetSize, Host remotehost);
+static void loginHandler (char *data, ssize_t packetSize, Host remotehost);
+static void POSTHandler  (char *data, ssize_t packetSize, Host remotehost);
+static void GETHandler   (char *data, ssize_t packetSize, Host remotehost);
 
 
 static PacketHandler handlers[HANDLER_COUNT] = {
@@ -106,7 +106,7 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 
 }
 
-static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
+static void loginHandler(char *data, ssize_t packetSize, Host remotehost)
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
@@ -121,16 +121,28 @@ static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
     // the player name is here:
     credentialIndex += strlen(searchKey);
     stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
     memcpy(playerName, &data[credentialIndex], stopIndex);
     credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
     credentialIndex += 1;
     stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
     memcpy(playerPassword, &data[credentialIndex], stopIndex);
     credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
     credentialIndex += 1;
-    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
+    stopIndex       = strnlen(&data[credentialIndex], packetSize - credentialIndex);
+    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
     memcpy(gamePassword, &data[credentialIndex], stopIndex);
 
+    tryGameLogin(getTestGame(), gamePassword);
+    // TODO: Player Login
+}
+
+static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
+{
+    if (stringSearch(data, "login", 12) >= 0) {
+        loginHandler(data, packetSize, remotehost);
+    }
 }
 
 static void httpHandler(char *data, ssize_t packetSize, Host remotehost)

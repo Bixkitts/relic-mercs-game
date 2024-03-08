@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h> 
+#include <limits.h>
 
 #include "helpers.h"
 
@@ -75,6 +76,11 @@ int charSearch(char* text, char c, int bufLen)
     return i;
 }
 
+void capInt(int *intToCap, int maxValue)
+{
+    int diff = *intToCap - maxValue;
+    *intToCap |= diff >> (sizeof(int) * CHAR_BIT - 1);
+}
 
 unsigned int hashDataSimple(const char *data, size_t data_len) 
 {
