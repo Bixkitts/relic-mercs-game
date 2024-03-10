@@ -18,15 +18,24 @@ typedef struct GameConfig {
     char password[MAX_CREDENTIAL_LEN];
     int  maxPlayerCount;
 } GameConfig;
+
+typedef struct CharacterSheet {
+    // TODO: Character stats from charsheet.html here.
+} CharacterSheet;
+
+/*
+ * Primary entry point for interpreting
+ * incoming websocket messages
+ */
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost);
 
 /*
  * Authentication
- */
+ * ----------------------------------------------- */
 void  getGamePassword   (Game *restrict game, 
-                         char* outPassword[static MAX_CREDENTIAL_LEN]);
+                         char outPassword[static MAX_CREDENTIAL_LEN]);
 void  setGamePassword   (Game *restrict game, 
-                         const char *password);
+                         const char password[static MAX_CREDENTIAL_LEN]);
 // This just returns 0 on success
 // and -1 on failure
 int   tryGameLogin      (Game *restrict game,
@@ -35,16 +44,20 @@ int   tryGameLogin      (Game *restrict game,
 // or create a new player and redirect
 // to character creator when there isn't an
 // existing one.
-int   tryPlayerLogin    (Game *game,
-                         char *playerName, 
-                         char *password, 
+int   tryPlayerLogin    (Game *restrict game,
+                         char playerName[static MAX_CREDENTIAL_LEN], 
+                         char password[static MAX_CREDENTIAL_LEN], 
                          Host remotehost);
 /* --------------------------------------------- */
+
 int   createGame      (Game **game, 
                        GameConfig *config);
+int   createCharacter (Game *game,
+                       CharacterSheet sheet);
 // Returns the pointer to global Game
 // variable.
-// Not thread safe, set this exactly once.
+// Not thread safe, set this exactly once
+// in the main thread.
 Game *getTestGame     ();
 
 

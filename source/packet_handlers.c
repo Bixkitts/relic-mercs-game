@@ -20,9 +20,9 @@ typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
 
-static void loginHandler (char *data, ssize_t packetSize, Host remotehost);
-static void POSTHandler  (char *data, ssize_t packetSize, Host remotehost);
-static void GETHandler   (char *data, ssize_t packetSize, Host remotehost);
+static void loginHandler (char *restrict data, ssize_t packetSize, Host remotehost);
+static void POSTHandler  (char *restrict data, ssize_t packetSize, Host remotehost);
+static void GETHandler   (char *restrict data, ssize_t packetSize, Host remotehost);
 
 
 static PacketHandler handlers[HANDLER_COUNT] = {
@@ -30,7 +30,7 @@ static PacketHandler handlers[HANDLER_COUNT] = {
     websockHandler
 };
 
-void masterHandler(char *data, ssize_t packetSize, Host remotehost)
+void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     HostCustomAttributes *customAttr = NULL;
     if (getHostCustomAttr(remotehost) == NULL) {
@@ -57,14 +57,13 @@ void masterHandler(char *data, ssize_t packetSize, Host remotehost)
     return;
 }
 
-
-static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
+static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     char  requestedResource[MAX_FILENAME_LEN] = {0};
 
-    char *startingPoint  = &data[5];
-    int   stringLen      = charSearch(startingPoint, ' ', packetSize - 5);
-    char *fileTableEntry = NULL;
+    char *restrict startingPoint  = &data[5];
+    int   stringLen               = charSearch(startingPoint, ' ', packetSize - 5);
+    char *fileTableEntry          = NULL;
 
     if (stringLen < 0 || stringLen > MAX_FILENAME_LEN){
         return;
@@ -106,7 +105,7 @@ static void GETHandler(char *data, ssize_t packetSize, Host remotehost)
 
 }
 
-static void loginHandler(char *data, ssize_t packetSize, Host remotehost)
+static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
@@ -134,18 +133,20 @@ static void loginHandler(char *data, ssize_t packetSize, Host remotehost)
     capInt(&stopIndex, MAX_CREDENTIAL_LEN);
     memcpy(gamePassword, &data[credentialIndex], stopIndex);
 
-    tryGameLogin(getTestGame(), gamePassword);
-    // TODO: Player Login
+    if (tryGameLogin(getTestGame(), gamePassword) != 0) {
+        return;
+    };
+    tryPlayerLogin(getTestGame(), playerName, playerPassword, remotehost);
 }
 
-static void POSTHandler(char *data, ssize_t packetSize, Host remotehost)
+static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (stringSearch(data, "login", 12) >= 0) {
         loginHandler(data, packetSize, remotehost);
     }
 }
 
-static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
+static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (packetSize < 10) {
         return;
@@ -162,7 +163,7 @@ static void httpHandler(char *data, ssize_t packetSize, Host remotehost)
     
 }
 
-static void websockHandler(char *data, ssize_t packetSize, Host remotehost)
+static void websockHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (packetSize > 120) {
         fprintf(stderr, "\nToo long websocket packet received.\n");

@@ -109,6 +109,7 @@ struct Game {
     // Map weights for different
     // encounter types in which regions
     Player *players [MAX_PLAYERS_IN_GAME];
+    int     playerCount;
     char    password[MAX_CREDENTIAL_LEN];
 };
 
@@ -127,6 +128,10 @@ struct Player {
 static pthread_mutex_t gameStateLock  [STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
 static pthread_mutex_t playerStateLock[STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
 
+/*
+ * Not thread safe, the test game should be
+ * written to once on init
+ */
 static Game testGame = { 0 };
 Game *getTestGame()
 {
@@ -271,7 +276,7 @@ int createGame(Game **game, GameConfig *config)
     return 0;
 }
 
-void getGamePassword(Game *restrict game, char* outPassword[static MAX_CREDENTIAL_LEN])
+void getGamePassword(Game *restrict game, char outPassword[static MAX_CREDENTIAL_LEN])
 {
     int lock = (unsigned long)game % STATE_MUTEX_COUNT;
     pthread_mutex_lock   (&gameStateLock[lock]);
@@ -280,7 +285,8 @@ void getGamePassword(Game *restrict game, char* outPassword[static MAX_CREDENTIA
                           MAX_CREDENTIAL_LEN);
     pthread_mutex_unlock (&gameStateLock[lock]);
 }
-void setGamePassword(Game *restrict game, const char *password)
+
+void setGamePassword(Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
 {
     int lock = (unsigned long)game % STATE_MUTEX_COUNT;
     pthread_mutex_lock   (&gameStateLock[lock]);
@@ -292,6 +298,7 @@ void setGamePassword(Game *restrict game, const char *password)
                           MAX_CREDENTIAL_LEN);
     pthread_mutex_unlock (&gameStateLock[lock]);
 }
+
 int tryGameLogin(Game *restrict game, const char *password)
 {
     bool match = 0;
@@ -301,4 +308,45 @@ int tryGameLogin(Game *restrict game, const char *password)
     pthread_mutex_unlock (&gameStateLock[lock]);
     match = -1 * (match != 0);
     return match;
+}
+
+/*
+ * This function assumes the player had a valid
+ * game password, so it'll make them a new
+ * character if their credentials don't fit.
+ */
+// TODO: Not done yet, but this is the general idea.
+int   tryPlayerLogin    (Game *restrict game,
+                         char playerName[static MAX_CREDENTIAL_LEN], 
+                         char password[static MAX_CREDENTIAL_LEN], 
+                         Host remotehost)
+{
+    int                   playerFound   = -1;
+    HostCustomAttributes *hostAttr      = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+    int                   playerIndex   = 0;
+    int                   passwordCheck = -1;
+
+    int lock   = (unsigned long)game % STATE_MUTEX_COUNT;
+    pthread_mutex_lock   (&gameStateLock[lock]);
+
+    for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
+        playerFound = strncmp(playerName, game->players[playerIndex]->name, MAX_CREDENTIAL_LEN); 
+        if (playerFound == 0) {
+            goto player_exists;
+        }
+    }
+    // Player was not found in game redirect them to character creation
+    sendContent("./charsheet.html", HTTP_FLAG_TEXT_HTML, remotehost);
+    pthread_mutex_unlock (&gameStateLock[lock]);
+    return 0;
+player_exists:
+    passwordCheck = strncmp(password, game->players[playerIndex]->password, MAX_CREDENTIAL_LEN); 
+    if (passwordCheck == 0) {
+        hostAttr->player = game->players[playerIndex];
+        game->players[playerIndex]->associatedHost = remotehost;
+        sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+    }
+    // login was unsuccessful...
+    pthread_mutex_unlock (&gameStateLock[lock]);
+    return -1;
 }

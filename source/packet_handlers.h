@@ -11,7 +11,7 @@ typedef enum {
     HANDLER_COUNT
 } HandlerEnum;
 
-void masterHandler      (char *data, ssize_t packetSize, Host remotehost);
+void masterHandler      (char *restrict data, ssize_t packetSize, Host remotehost);
 
 void buildFileTable     (void);
 
