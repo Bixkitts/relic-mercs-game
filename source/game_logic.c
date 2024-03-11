@@ -332,21 +332,16 @@ int   tryPlayerLogin    (Game *restrict game,
     for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
         playerFound = strncmp(playerName, game->players[playerIndex]->name, MAX_CREDENTIAL_LEN); 
         if (playerFound == 0) {
-            goto player_exists;
+            passwordCheck = strncmp(password, game->players[playerIndex]->password, MAX_CREDENTIAL_LEN); 
+            if (passwordCheck == 0) {
+                hostAttr->player = game->players[playerIndex];
+                game->players[playerIndex]->associatedHost = remotehost;
+                sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+            }
         }
     }
     // Player was not found in game redirect them to character creation
     sendContent("./charsheet.html", HTTP_FLAG_TEXT_HTML, remotehost);
-    pthread_mutex_unlock (&gameStateLock[lock]);
-    return 0;
-player_exists:
-    passwordCheck = strncmp(password, game->players[playerIndex]->password, MAX_CREDENTIAL_LEN); 
-    if (passwordCheck == 0) {
-        hostAttr->player = game->players[playerIndex];
-        game->players[playerIndex]->associatedHost = remotehost;
-        sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
-    }
-    // login was unsuccessful...
     pthread_mutex_unlock (&gameStateLock[lock]);
     return -1;
 }

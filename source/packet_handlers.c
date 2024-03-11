@@ -71,15 +71,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     memcpy(requestedResource, startingPoint, stringLen);
 
-    // TODO: Find a better way to send files with different names
-    if (stringSearch(data, "GET /game", 10) >= 0) {
-        // TODO: only allow the game
-        // when the remotehost is logged
-        // in as a player
-        sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
-        return;
-    }
-    else if (stringSearch(data, "GET /login", 10) >= 0) {
+    if (stringSearch(data, "GET /login", 10) >= 0) {
         sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost);
         return;
     }
