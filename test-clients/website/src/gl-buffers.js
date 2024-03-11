@@ -16,10 +16,10 @@ function initPositionBuffer(gl)
 {
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    const positions = [-1.0, -1.0, 0.0,   // Mesh for map 
-                      1.0, -1.0, 0.0, 
-                       -1.0, 1.0, 0.0, 
-                      1.0, 1.0, 0.0,
+    const positions = [1.618, -1.0, 0.0,   // Mesh for map 
+                      -1.618, -1.0, 0.0, 
+                      1.618, 1.0, 0.0, 
+                      -1.618, 1.0, 0.0,
                       1.0, 1.0, 0.0,  // Mesh for square
                       -1.0, 1.0, 0.0,
                       1.0, -1.0, 0.0,
