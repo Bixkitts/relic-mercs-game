@@ -48,7 +48,7 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
     const int opcodeLength = 1;
     const int maskLength   = 4;
     int       lengthBytes  = 0; // the amount of bytes that tell us
-                                // the length of the packet
+                                 // the length of the packet
     int       maskIndex    = 0; // index at which to find the MASK
     int       payloadIndex = 0;
     char     *mask         = NULL;
@@ -98,13 +98,13 @@ int encodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 static int generateAcceptCode(unsigned char *outCode, char *inCode, ssize_t codeLen)
 {
     char temp1[WEBSOCK_CODE_LEN] = {0};
-    char temp2[WEBSOCK_CODE_LEN] = {0};
+    unsigned char temp2[WEBSOCK_CODE_LEN] = {0};
     strncpy (temp1, inCode, codeLen);
     strcat  (temp1, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     if (compute_sha1(temp1, strlen(temp1), temp2) < 0) {
         return -1;
     } 
-    base64_encode (temp2, 20, outCode);
+    base64_encode ((char*)temp2, 20, (char*)outCode);
     printf ("\n%s\n", outCode);
     return 0;
 }
@@ -125,7 +125,7 @@ void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost
     char receivedCode[WEBSOCK_CODE_LEN] = { 0 };
     char responseCode[WEBSOCK_CODE_LEN] = { 0 };
     extractKeyCode     (receivedCode, httpString, packetSize);
-    if (generateAcceptCode (responseCode, receivedCode, WEBSOCK_CODE_LEN) < 0) {
+    if (generateAcceptCode ((unsigned char*)responseCode, receivedCode, WEBSOCK_CODE_LEN) < 0) {
         return;
     }
 

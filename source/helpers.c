@@ -28,6 +28,13 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
     }
 }
 
+void printBufferInHex(char *data, int size)
+{
+    for (size_t i = 0; i < size; ++i) {
+        fprintf(stderr, "%02X ", data[i]);
+    }
+    fprintf(stderr, "\n");
+}
 /*
  *  Complicated KMP string search algo, don't bother touching
  */

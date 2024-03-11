@@ -28,6 +28,7 @@ typedef struct CharacterSheet {
  * incoming websocket messages
  */
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost);
+typedef uint16_t Opcode;
 
 /*
  * Authentication

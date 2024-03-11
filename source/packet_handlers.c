@@ -65,6 +65,8 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     int   stringLen               = charSearch(startingPoint, ' ', packetSize - 5);
     char *fileTableEntry          = NULL;
 
+    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+
     if (stringLen < 0 || stringLen > MAX_FILENAME_LEN){
         return;
     }
@@ -79,6 +81,12 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
         return;
     }
+    else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
+        sendWebSocketResponse (data, packetSize, remotehost);
+        cacheHost             (remotehost, 0);
+        customAttr->handler = HANDLER_WEBSOCK;
+        return;
+    }
     else if (isFileAllowed(requestedResource, &fileTableEntry)) {
         sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost);
         return;
@@ -86,13 +94,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     // TODO: Have an ignore list of files the client should not be able
     // to download.
     // Or just put the whole site in a subdirectory and count on file extensions.
-    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-    if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
-        sendWebSocketResponse(data, packetSize, remotehost);
-        cacheHost(remotehost, 0);
-        customAttr->handler = HANDLER_WEBSOCK;
-        return;
-    }
     sendForbiddenPacket(remotehost);
 
 }

@@ -296,47 +296,57 @@ before spawning the player on the board and last in the turn order.
     Otherwise it times out after 5 seconds.
     </p>
     <h3>On First Connection</h3>
-    <p>
+    <ol type= "1">
+        <li>
     (this assumes a character and account have been made)
     When someone gets into the game they will know nothing.
     What they will immediately need to know are how many players there are, player positions, where to draw them on the map,
     player classes and pictures of the players for the map and hud.
+        </li>
+        <li>
     The client will then need to know who's turn it is.
     If it's their turn, then the client and server is waiting for their input.
+        </li>
+        <li>
     The player can make inputs to get and set states on the server
     For example, when they move, they change their state on the server remotely.
+        </li>
+        <li>
     All the other players need to fetch this state. 
     The client that changed the state, needs to fetch this state change too because
     the server needs to validate the state change.
-    </p>
-    <p>
+        </li>
+        <li>
     The clients get updates by asking the server for state changes
     in a loop and updating their local data with anything the server tells them.
+        </li>
+        <li>
     They might receive lots of state changes from the server every second, but because
     it's a turn based game there will be mostly silence waiting for the
     player who's turn it is to do stuff.
-    </p>
-    <p>
+        </li>
+        <li>
     Any state could theoretically change at any time, so the clients have one entry point
     to ask the server "What's up? What's changed in which data structure?"
     and then they need to reflect those changes clientside.
+        </li>
+        <li>
     Or once, when loading in they ask: "I need the entire state of everything I might see"
     (in other words, the changes they need to apply to their zeroed state on load-in)
-    </p>
-    <p>
     The clients will have lots of methods to request specific state changes,
     the server will see if it's okay to change and change it.
-    </p>
-    <p>
+        </li>
+        <li>
     Everyone asking what's changed, and having permission to see the state change, 
     will have that update sent to them (including the client that
     requested it).
-    </p>
-    <p>
+        </li>
+        <li>
     Client state change queries should block when nothing has changed, so
     as not to flood the network unnecessarily and they should be capped
     at a low tickrate for the same reason, in the case that lots of state changes are happening.
-    </p>
+        </li>
+    </ol>
 
     <h3>Player State</h3>
         <ul>

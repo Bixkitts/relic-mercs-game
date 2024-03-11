@@ -114,7 +114,6 @@ struct Game {
 };
 
 struct Player {
-    int        playerID;
     Host       associatedHost;
     char       password[MAX_CREDENTIAL_LEN];
     char       name    [MAX_CREDENTIAL_LEN];
@@ -138,10 +137,16 @@ Game *getTestGame()
     return &testGame;
 }
 
+static int isGameDataValidLength          (Opcode opcode, ssize_t messageSize);
+
 /*
  * Handlers for incoming messages from the websocket connection
  */
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
+struct MovePlayerData {
+    double xCoord;
+    double yCoord;
+};
 static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
 // Player chose a response to an encounter
@@ -207,6 +212,20 @@ static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     getGameStateChangeHandler,
     getGameStateHandler         
 };
+static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
+    0,
+    sizeof(struct MovePlayerData),
+    0,
+    0,
+    0,
+    0,
+    0
+};
+
+static int isGameDataValidLength(Opcode opcode, ssize_t messageSize)
+{
+    return messageSize == gameDataSizes[opcode];
+}
 
 /*
  * This function expects
@@ -215,33 +234,68 @@ static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
  */
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
 {
-    uint16_t opcode = (uint16_t) data[0];
-    if (opcode >= MESSAGE_HANDLER_COUNT) {
+    Opcode *opcode = (Opcode*)data;
+    if (*opcode >= MESSAGE_HANDLER_COUNT) {
 #ifdef DEBUG
         fprintf(stderr, "\nBad websocket Opcode.\n");
 #endif
         return;
     }
-    // Execute the opcode, this function
-    // assumes it won't segfault.
-    gameMessageHandlers[(uint16_t)data[0]](data, dataSize, remotehost);
+#ifdef DEBUG
+    printBufferInHex(data, dataSize);
+#endif 
+
+    if(isGameDataValidLength(*opcode, dataSize - sizeof(Opcode))) {
+        // Execute the opcode, this function
+        // assumes it won't segfault.
+        gameMessageHandlers[*opcode](&data[sizeof(Opcode)], dataSize, remotehost);
+    };
 }
 
-
-static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost)
+static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 {
-
+    printf("Ping incoming!");
 }
-static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost)
+
+static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 {
+    struct MovePlayerData *moveData = (struct MovePlayerData*)data; 
+#ifdef DEBUG
+    printBufferInHex(data, dataSize);
+#endif 
+    printf("\nxCoord: %f\n", moveData->xCoord);
+    printf("\nyCoord: %f\n", moveData->yCoord);
 
+    // Here we respond to the clients,
+    // telling them all who moved and where.
+    Opcode responseOpcode = 0x0001;
+    char   gameResponseData[(sizeof(struct MovePlayerData) 
+                            + sizeof(Opcode))] = { 0 };
+    memcpy (&gameResponseData, &responseOpcode, sizeof(Opcode));
+    memcpy (&gameResponseData[sizeof(Opcode)], 
+            moveData, 
+            sizeof(struct MovePlayerData));
+
+
+    char multicastBuffer   [(sizeof(struct MovePlayerData) 
+                            + sizeof(Opcode)) 
+                            + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+    encodeWebsocketMessage (multicastBuffer, 
+                            gameResponseData, 
+                            sizeof(struct MovePlayerData) 
+                            + sizeof(Opcode));
+    multicastTCP           (multicastBuffer, 
+                            (sizeof(struct MovePlayerData) 
+                            + sizeof(Opcode)) 
+                            + WEBSOCKET_HEADER_SIZE_MAX, 
+                            0);
 }
-static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost)
+static void endTurnHandler(char *data, ssize_t dataSize, Host remotehost)
 {
 
 }
 // Player chose a response to an encounter
-static void respondToEventHandler       (char *data, ssize_t dataSize, Host remotehost)
+static void respondToEventHandler(char *data, ssize_t dataSize, Host remotehost)
 {
 
 }
