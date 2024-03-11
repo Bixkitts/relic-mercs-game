@@ -25,7 +25,7 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
 
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
     const scaleMatrix     = mat4.create();
-    
+
     mat4.scale (scaleMatrix,
                     modelViewMatrix,
                     [1.0, 1.0, 1.0]);
