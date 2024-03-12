@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "bbnetlib.h"
+#include "html_server.h"
 
 #define MAX_CREDENTIAL_LEN   32
 
@@ -13,6 +14,8 @@
 typedef struct Resource Resource;
 typedef struct Player Player;
 typedef struct Game Game;
+
+typedef int64_t SessionToken;
 
 typedef struct GameConfig {
     char password[MAX_CREDENTIAL_LEN];
@@ -38,21 +41,28 @@ typedef uint16_t Opcode;
 /*
  * Authentication
  * ----------------------------------------------- */
-void  getGamePassword   (Game *restrict game, 
-                         char outPassword[static MAX_CREDENTIAL_LEN]);
-void  setGamePassword   (Game *restrict game, 
-                         const char password[static MAX_CREDENTIAL_LEN]);
+void         getGamePassword        (Game *restrict game, 
+                                     char outPassword[static MAX_CREDENTIAL_LEN]);
+void         setGamePassword        (Game *restrict game, 
+                                     const char password[static MAX_CREDENTIAL_LEN]);
 // This just returns 0 on success
 // and -1 on failure
-int   tryGameLogin      (Game *restrict game,
-                         const char *password);
+int          tryGameLogin           (Game *restrict game,
+                                     const char *password);
 // Will associate a remotehost with a player,
 // or create a new player and redirect
 // to character creator when there isn't an
 // existing one.
-int   tryPlayerLogin    (Game *restrict game,
-                         PlayerCredentials *credentials,
-                         Host remotehost);
+int          tryPlayerLogin         (Game *restrict game,
+                                     PlayerCredentials *credentials,
+                                     Host remotehost);
+// returns the associated player ID
+// if the session token is valid
+int          checkSessionToken      (SessionToken token,
+                                     const Game *game);
+SessionToken generateSessionToken   (Player *player);
+void         initSessionTokenHeader (char outHeader[static MAX_CREDENTIAL_LEN], 
+                                     SessionToken token);
 /* --------------------------------------------- */
 
 int   createGame      (Game **game, 
@@ -65,6 +75,7 @@ int   createPlayer    (Game *game,
 // Not thread safe, set this exactly once
 // in the main thread.
 Game *getTestGame     ();
+int   getPlayerCount  (const Game *game);
 
 
 #endif

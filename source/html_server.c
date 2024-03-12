@@ -64,7 +64,8 @@ bool isFileAllowed(const char* inName, char** outDir)
 }
 
 /*
- * Assumes NUL terminated string
+ * Assumes NUL terminated string,
+ * parses file extension
  */
 HTTPContentType getContentTypeEnumFromFilename(char* name)
 {
@@ -79,11 +80,14 @@ HTTPContentType getContentTypeEnumFromFilename(char* name)
     int i = 0;
     while( i < HTTP_FLAG_COUNT ) {
         if (stringSearch(contentTypeMapping[i], extension, FILE_EXTENSION_LEN) >= 0) {
-            break;
+            return i;
         }
         i++;
     }
-    return i;
+    // default to HTML
+    // TODO: This might be an issue? idek?
+    // Is there a better MIME type to fall back to?
+    return 0;
 }
 
 /*
@@ -102,7 +106,7 @@ void createAllowedFileTable(void)
 #endif
 }
 
-void sendContent(char* dir, HTTPContentType type, Host remotehost)
+void sendContent(char* dir, HTTPContentType type, Host remotehost, const char *customHeaders)
 {
     char          header   [HEADER_PACKET_LENGTH] = { 0 };
     unsigned long headerLen                       = 0;
@@ -125,7 +129,7 @@ void sendContent(char* dir, HTTPContentType type, Host remotehost)
         return;
     }
 
-    sprintf(lenStr, "%d\n\n", contentLen);
+    sprintf(lenStr, "%d\n", contentLen);
     // Status:
     strncpy(header, status, HEADER_LENGTH);
     // Content-Type:
@@ -135,7 +139,14 @@ void sendContent(char* dir, HTTPContentType type, Host remotehost)
     strncat(header, contentLenString, HEADER_LENGTH);
     strncat(header, lenStr, STATUS_LENGTH);
 
-    headerLen = strlen (header);
+    headerLen = strnlen (header, HEADER_PACKET_LENGTH);
+    // Custom Header:
+    if (customHeaders != NULL) {
+        strncat(header, customHeaders, HEADER_PACKET_LENGTH - headerLen);
+    }
+    strncat(header, "\n", 1);
+
+    headerLen = strnlen (header, HEADER_PACKET_LENGTH);
 
     // ------ Header Over -----------//
 

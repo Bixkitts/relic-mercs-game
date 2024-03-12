@@ -116,6 +116,7 @@ struct Game {
 struct Player {
     Host              associatedHost;
     PlayerCredentials credentials;
+    SessionToken      sessionToken;
     int               xCoord;
     int               yCoord;
     // How many of each ResourceID the player has
@@ -373,6 +374,22 @@ int tryGameLogin(Game *restrict game, const char *password)
     return match;
 }
 
+
+int checkSessionToken(SessionToken token,
+                      const Game *game)
+{
+
+}
+SessionToken generateSessionToken(Player *player)
+{
+
+}
+void initSessionTokenHeader(char outHeader[static MAX_CREDENTIAL_LEN], 
+                            SessionToken token)
+{
+
+}
+
 /*
  * This function assumes the player had a valid
  * game password, so it'll make them a new
@@ -387,6 +404,8 @@ int   tryPlayerLogin    (Game *restrict game,
     HostCustomAttributes *hostAttr      = (HostCustomAttributes*)getHostCustomAttr(remotehost);
     int                   playerIndex   = 0;
     int                   passwordCheck = -1;
+    SessionToken          sessionToken  = 0;
+    char                  cookieHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
 
     int lock   = (unsigned long)game % STATE_MUTEX_COUNT;
     pthread_mutex_lock   (&gameStateLock[lock]);
@@ -402,12 +421,19 @@ int   tryPlayerLogin    (Game *restrict game,
             if (passwordCheck == 0) {
                 hostAttr->player = game->players[playerIndex];
                 game->players[playerIndex]->associatedHost = remotehost;
-                sendContent("./index.html", HTTP_FLAG_TEXT_HTML, remotehost);
+                sessionToken = 
+                generateSessionToken  (game->players[playerIndex]);
+                initSessionTokenHeader(cookieHeader, 
+                                       sessionToken);
+                sendContent           ("./index.html", 
+                                       HTTP_FLAG_TEXT_HTML, 
+                                       remotehost,
+                                       cookieHeader);
             }
         }
     }
     // Player was not found in game redirect them to character creation
-    sendContent("./charsheet.html", HTTP_FLAG_TEXT_HTML, remotehost);
+    sendContent("./charsheet.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
     pthread_mutex_unlock (&gameStateLock[lock]);
     return -1;
 }

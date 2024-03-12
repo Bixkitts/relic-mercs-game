@@ -74,11 +74,11 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     memcpy(requestedResource, startingPoint, stringLen);
 
     if (stringSearch(data, "GET /login", 10) >= 0) {
-        sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost);
+        sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
         return;
     }
     else if (stringSearch(data, "GET /index.js", 12) >= 0) {
-        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost);
+        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
@@ -88,7 +88,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         return;
     }
     else if (isFileAllowed(requestedResource, &fileTableEntry)) {
-        sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost);
+        sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost, NULL);
         return;
     }
     // TODO: Have an ignore list of files the client should not be able
@@ -102,34 +102,33 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
-    char playerName    [MAX_CREDENTIAL_LEN] = { 0 };
-    char playerPassword[MAX_CREDENTIAL_LEN] = { 0 };
-    char gamePassword  [MAX_CREDENTIAL_LEN] = { 0 };
-    int  credentialIndex                    = 0;
-    int  stopIndex                          = 0;
-    const char searchKey[MAX_CREDENTIAL_LEN] = "playerName=";
+    PlayerCredentials credentials                        = { 0 };
+    char              gamePassword  [MAX_CREDENTIAL_LEN] = { 0 };
+    int               credentialIndex                    = 0;
+    int               stopIndex                          = 0;
+    const char        searchKey     [MAX_CREDENTIAL_LEN] = "playerName=";
 
     credentialIndex = stringSearch(data, searchKey, packetSize);
     // the player name is here:
     credentialIndex += strlen(searchKey);
     stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
     capInt(&stopIndex, MAX_CREDENTIAL_LEN);
-    memcpy(playerName, &data[credentialIndex], stopIndex);
+    memcpy(credentials.name, &data[credentialIndex], stopIndex);
     credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
     credentialIndex += 1;
     stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
     capInt(&stopIndex, MAX_CREDENTIAL_LEN);
-    memcpy(playerPassword, &data[credentialIndex], stopIndex);
+    memcpy(credentials.password, &data[credentialIndex], stopIndex);
     credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
     credentialIndex += 1;
     stopIndex       = strnlen(&data[credentialIndex], packetSize - credentialIndex);
     capInt(&stopIndex, MAX_CREDENTIAL_LEN);
     memcpy(gamePassword, &data[credentialIndex], stopIndex);
 
-    if (tryGameLogin(getTestGame(), gamePassword) != 0) {
+    if (!tryGameLogin(getTestGame(), gamePassword)) {
         return;
     };
-    tryPlayerLogin(getTestGame(), playerName, playerPassword, remotehost);
+    tryPlayerLogin(getTestGame(), &credentials, remotehost);
 }
 
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)

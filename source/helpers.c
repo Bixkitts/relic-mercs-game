@@ -85,8 +85,7 @@ int charSearch(char* text, char c, int bufLen)
 
 void capInt(int *intToCap, int maxValue)
 {
-    int diff = *intToCap - maxValue;
-    *intToCap |= diff >> (sizeof(int) * CHAR_BIT - 1);
+    *intToCap = *intToCap > maxValue ? maxValue : *intToCap;
 }
 
 unsigned int hashDataSimple(const char *data, size_t data_len) 
