@@ -19,6 +19,11 @@ typedef struct GameConfig {
     int  maxPlayerCount;
 } GameConfig;
 
+typedef struct PlayerCredentials {
+    char name     [MAX_CREDENTIAL_LEN];
+    char password [MAX_CREDENTIAL_LEN];
+} PlayerCredentials;
+
 typedef struct CharacterSheet {
     // TODO: Character stats from charsheet.html here.
 } CharacterSheet;
@@ -46,15 +51,15 @@ int   tryGameLogin      (Game *restrict game,
 // to character creator when there isn't an
 // existing one.
 int   tryPlayerLogin    (Game *restrict game,
-                         char playerName[static MAX_CREDENTIAL_LEN], 
-                         char password[static MAX_CREDENTIAL_LEN], 
+                         PlayerCredentials *credentials,
                          Host remotehost);
 /* --------------------------------------------- */
 
 int   createGame      (Game **game, 
                        GameConfig *config);
-int   createCharacter (Game *game,
-                       CharacterSheet sheet);
+// returns the ID the player got
+int   createPlayer    (Game *game,
+                       CharacterSheet *sheet);
 // Returns the pointer to global Game
 // variable.
 // Not thread safe, set this exactly once

@@ -114,13 +114,12 @@ struct Game {
 };
 
 struct Player {
-    Host       associatedHost;
-    char       password[MAX_CREDENTIAL_LEN];
-    char       name    [MAX_CREDENTIAL_LEN];
-    int        xCoord;
-    int        yCoord;
+    Host              associatedHost;
+    PlayerCredentials credentials;
+    int               xCoord;
+    int               yCoord;
     // How many of each ResourceID the player has
-    int        resources  [RESOURCE_COUNT];
+    int               resources[RESOURCE_COUNT];
 };
 #define STATE_MUTEX_COUNT 16
 
@@ -330,6 +329,16 @@ int createGame(Game **game, GameConfig *config)
     return 0;
 }
 
+/*
+ * This function assumes that the player was redirected to
+ * character creation and creates a character at the next free 
+ * index in the game
+ */
+int createPlayer(Game *game, CharacterSheet *charsheet)
+{
+
+}
+
 void getGamePassword(Game *restrict game, char outPassword[static MAX_CREDENTIAL_LEN])
 {
     int lock = (unsigned long)game % STATE_MUTEX_COUNT;
@@ -371,8 +380,7 @@ int tryGameLogin(Game *restrict game, const char *password)
  */
 // TODO: Not done yet, but this is the general idea.
 int   tryPlayerLogin    (Game *restrict game,
-                         char playerName[static MAX_CREDENTIAL_LEN], 
-                         char password[static MAX_CREDENTIAL_LEN], 
+                         PlayerCredentials *credentials,
                          Host remotehost)
 {
     int                   playerFound   = -1;
@@ -384,9 +392,13 @@ int   tryPlayerLogin    (Game *restrict game,
     pthread_mutex_lock   (&gameStateLock[lock]);
 
     for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
-        playerFound = strncmp(playerName, game->players[playerIndex]->name, MAX_CREDENTIAL_LEN); 
+        playerFound = strncmp(credentials->name, 
+                              game->players[playerIndex]->credentials.name, 
+                              MAX_CREDENTIAL_LEN); 
         if (playerFound == 0) {
-            passwordCheck = strncmp(password, game->players[playerIndex]->password, MAX_CREDENTIAL_LEN); 
+            passwordCheck = strncmp(credentials->password, 
+                                    game->players[playerIndex]->credentials.password, 
+                                    MAX_CREDENTIAL_LEN); 
             if (passwordCheck == 0) {
                 hostAttr->player = game->players[playerIndex];
                 game->players[playerIndex]->associatedHost = remotehost;
