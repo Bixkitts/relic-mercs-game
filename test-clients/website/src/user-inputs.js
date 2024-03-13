@@ -1,5 +1,6 @@
 import { getContext, getCanvas } from './canvas-getter.js'
 import { printMat4 } from './helpers.js';
+import { getSocket } from './networking.js';
 
 let mov = [0.0, 0.0];
 let moveOnce = [0.0, 0.0];
@@ -131,6 +132,15 @@ export function initWASD() {
             vec4.transformMat4(ov, vec, matt);
             console.log("#######")
             printMat4(modelViewMatrix);
+
+            const ab = new ArrayBuffer(18);
+            const dataView = new DataView(ab);
+
+            dataView.setInt16(0, 1, true);
+            dataView.setFloat64(2, ov[0], true);
+            dataView.setFloat64(10, ov[1], true);
+
+            getSocket().send(ab);
             console.log(vec + " # " + ov);
             console.log(e);
         }
