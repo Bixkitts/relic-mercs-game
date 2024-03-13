@@ -1,28 +1,37 @@
 const websocketUrl = 'wss://5.147.206.132:443';
 const socket = new WebSocket(websocketUrl);
+socket.binaryType = "arraybuffer";
 
-// The code:
-// 0x01 TCP keepalive ping
-// 0x6D Multicast test
+export function getSocket() {
+    return socket;
+}
 
-socket.addEventListener('open', () => {
+socket.onopen = () => {
     console.log('WebSocket connection established');
     setInterval(sendHeartbeat, 3000);
-});
+}
 
-socket.addEventListener('error', function (error) {
-    console.log('WebSocket error:', error);
-});
+socket.onerror = e => console.log('WebSocket error:', error);
 
-socket.addEventListener('message', function (event) {
-    console.log('Received:', event.data);
-});
+/**
+ * @param {ArrayBuffer} msg 
+ */
+function handleIncoming(msg) {
+    console.log('Received: ', msg.byteLength);
+}
+
+socket.onmessage = e => handleIncoming(e.data);
 
 function sendHeartbeat() {
     console.log('Sending heartbeat...');
-    const byteData = new Uint8Array([0x01]);
-    const blob     = new Blob([byteData]);
-    socket.send(blob);
+    const ab = new ArrayBuffer(2);
+    ab[0] = 0b0;
+    ab[1] = 0b0;
+    socket.send(ab);
+}
+
+export function sendArgs() {
+    
 }
 
 function sendMessage() {
