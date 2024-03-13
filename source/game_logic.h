@@ -15,7 +15,7 @@ typedef struct Resource Resource;
 typedef struct Player Player;
 typedef struct Game Game;
 
-typedef int64_t SessionToken;
+typedef long long int SessionToken;
 
 typedef struct GameConfig {
     char password[MAX_CREDENTIAL_LEN];
@@ -28,7 +28,9 @@ typedef struct PlayerCredentials {
 } PlayerCredentials;
 
 typedef struct CharacterSheet {
-    // TODO: Character stats from charsheet.html here.
+    int vigour;
+    int violence;
+    int guile;
 } CharacterSheet;
 
 /*
@@ -58,24 +60,25 @@ int          tryPlayerLogin         (Game *restrict game,
                                      Host remotehost);
 // returns the associated player ID
 // if the session token is valid
-int          checkSessionToken      (SessionToken token,
-                                     const Game *game);
-SessionToken generateSessionToken   (Player *player);
-void         initSessionTokenHeader (char outHeader[static MAX_CREDENTIAL_LEN], 
-                                     SessionToken token);
+Player       *tryGetPlayerFromToken  (SessionToken token,
+                                      Game *game);
+void          generateSessionToken   (Player *player,
+                                      Game *game);
+long long int getTokenFromHTTP       (char *http,
+                                      int httpLength);
 /* --------------------------------------------- */
 
-int   createGame      (Game **game, 
-                       GameConfig *config);
+int   createGame         (Game **game, 
+                          GameConfig *config);
 // returns the ID the player got
-int   createPlayer    (Game *game,
-                       CharacterSheet *sheet);
 // Returns the pointer to global Game
 // variable.
 // Not thread safe, set this exactly once
 // in the main thread.
-Game *getTestGame     ();
-int   getPlayerCount  (const Game *game);
+Game *getTestGame        ();
+int   getPlayerCount     (const Game *game);
+void  setPlayerCharSheet (Player *player,
+                          CharacterSheet *charsheet);
 
 
 #endif

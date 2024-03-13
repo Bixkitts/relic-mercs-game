@@ -3,6 +3,7 @@
 #include <string.h>
 #include <dirent.h> 
 #include <limits.h>
+#include <openssl/rand.h>
 
 #include "helpers.h"
 
@@ -26,6 +27,11 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
             }
         }
     }
+}
+
+int getMutexIndex(const void *object, unsigned long size, int mutexCount)
+{
+    return ((unsigned long)object / size) % mutexCount;
 }
 
 void printBufferInHex(char *data, int size)
@@ -81,6 +87,21 @@ int charSearch(char* text, char c, int bufLen)
         return -1;
     }
     return i;
+}
+
+long long int getRandomInt()
+{
+    long long     randomInteger                      = 0;
+    unsigned char randomBytes[sizeof(long long int)] = { 0 };
+
+    if (RAND_bytes(randomBytes, sizeof(randomBytes)) != 1) {
+        fprintf(stderr, "Error generating random bytes.\n");
+        return 0;
+    }
+    for (int i = 0; i < sizeof(long long int); ++i) {
+        randomInteger = (randomInteger << 8) | randomBytes[i];
+    }
+    return randomInteger;
 }
 
 void capInt(int *intToCap, int maxValue)

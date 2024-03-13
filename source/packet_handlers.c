@@ -83,8 +83,20 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse (data, packetSize, remotehost);
-        cacheHost             (remotehost, 0);
+        Game *game = getTestGame();
+        long long int  token     = getTokenFromHTTP     (data, packetSize);
+        Player        *player    = tryGetPlayerFromToken(token, game);
+
+        if (player == NULL) {
+            // invalid token TODO: make this fancy
+            sendForbiddenPacket(remotehost);
+            return;
+        }
+
+        HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+        hostAttr->player = player;
         customAttr->handler = HANDLER_WEBSOCK;
+        cacheHost             (remotehost, 0);
         return;
     }
     else if (isFileAllowed(requestedResource, &fileTableEntry)) {
@@ -134,6 +146,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (stringSearch(data, "login", 12) >= 0) {
+        loginHandler(data, packetSize, remotehost);
+    }
+    else if (stringSearch(data, "charsheet", 14) >= 0) {
         loginHandler(data, packetSize, remotehost);
     }
 }

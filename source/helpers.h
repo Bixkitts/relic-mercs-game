@@ -10,3 +10,8 @@ int  charSearch       (char* text, char c, int bufLen);
 void capInt           (int *intToCap, int maxValue);
 
 void printBufferInHex (char *data, int size);
+int  getMutexIndex    (const void *object, 
+                       unsigned long size, 
+                       int mutexCount);
+
+long long int getRandomInt();

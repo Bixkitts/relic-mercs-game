@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "bbnetlib.h"
 #include "helpers.h"
