@@ -143,13 +143,20 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     tryPlayerLogin(getTestGame(), &credentials, remotehost);
 }
 
+static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+{
+    // Get the player from the token, set their character sheet from 
+    // interpreted AND VALIDATED html form,
+    // serve the main game page
+}
+
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (stringSearch(data, "login", 12) >= 0) {
         loginHandler(data, packetSize, remotehost);
     }
     else if (stringSearch(data, "charsheet", 14) >= 0) {
-        loginHandler(data, packetSize, remotehost);
+        charsheetHandler(data, packetSize, remotehost);
     }
 }
 
