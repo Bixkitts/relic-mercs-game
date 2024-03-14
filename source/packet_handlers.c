@@ -145,9 +145,22 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    // Get the player from the token, set their character sheet from 
-    // interpreted AND VALIDATED html form,
-    // serve the main game page
+    // 1. Get the player from the token, 
+    long long int   token  = getTokenFromHTTP(data, packetSize); 
+    Player         *player = tryGetPlayerFromToken(token, getTestGame());
+    CharacterSheet  sheet  = {0};
+
+    if (player == NULL) {
+        // token was invalid, handle that
+        sendForbiddenPacket(remotehost);
+        return;
+    }
+    // 2. Interpret CharacterSheet object from html form
+
+     
+    // 3. Validate CharacterSheet object
+
+    // 4. Copy it to the player
 }
 
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)

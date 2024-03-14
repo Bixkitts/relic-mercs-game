@@ -14,7 +14,7 @@
 #include "html_server.h"
 #include "game_logic.h"
 
-#define MESSAGE_HANDLER_COUNT 7
+#define MESSAGE_HANDLER_COUNT 6
 
 // All injuries are followed immediately by their 
 // healed counterparts.
@@ -163,8 +163,6 @@ static void movePlayerHandler           (char *data, ssize_t dataSize, Host remo
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
 // Player chose a response to an encounter
 static void respondToEventHandler       (char *data, ssize_t dataSize, Host remotehost);
-// Client calls this each tick
-static void getGameStateChangeHandler   (char *data, ssize_t dataSize, Host remotehost);
 // Client calls this on connect,
 // this should either:
 // 1. Set an atomic lock on the entire game state while the client connects (easy)
@@ -221,13 +219,11 @@ static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     movePlayerHandler, 
     endTurnHandler,           
     respondToEventHandler, 
-    getGameStateChangeHandler,
     getGameStateHandler         
 };
 static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
     0,
     sizeof(struct MovePlayerData),
-    0,
     0,
     0,
     0,
@@ -316,11 +312,7 @@ static void useResourceHandler(char *data, ssize_t dataSize, Host remotehost)
 {
 
 }
-// Client calls this each tick
-static void getGameStateChangeHandler(char *data, ssize_t dataSize, Host remotehost)
-{
 
-}
 // Client calls this on connect,
 // this should either:
 // 1. Set an atomic lock on the entire game state while the client connects (easy)
@@ -442,6 +434,13 @@ Player *tryGetPlayerFromToken(SessionToken token,
     pthread_mutex_unlock (&gameStateLock[lock]);
     return NULL;
 }
+
+/*
+ * We pass in the game because the
+ * session token needs to be unique
+ * on a per game basis
+ * TODO: oh crap, what about with multiple games?
+ */
 
 void generateSessionToken(Player *player, Game *game)
 {
