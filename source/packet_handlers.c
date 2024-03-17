@@ -189,25 +189,26 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    // 1. Get the player from the token, 
     long long int   token         = getTokenFromHTTP(data, packetSize); 
     Player         *player        = tryGetPlayerFromToken(token, getTestGame());
     CharacterSheet  sheet         = {0};
     HTMLForm        form          = {0};
-    const int       formFieldsMin = 1;
 
-    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "characterClass=";
+    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerClass=";
 
     if (player == NULL) {
         // token was invalid, handle that
         sendForbiddenPacket(remotehost);
         return;
     }
-    // 2. Interpret CharacterSheet object from html form
     int htmlFormIndex =
     stringSearch         (data, firstFormField, packetSize);
+    if (htmlFormIndex < 0) {
+        // TODO: Malformed form data, let the client know
+        return;
+    }
     parseHTMLForm        (&data[htmlFormIndex], &form, packetSize - htmlFormIndex);
-    if (form.fieldCount < formFieldsMin) {
+    if (form.fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
         // TODO: Malformed form data, let the client know
         return;
     }

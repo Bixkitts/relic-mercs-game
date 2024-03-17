@@ -12,11 +12,21 @@
     <h2>~Fill in the character sheet~</h2>
     </div>
     <br>
-    <form action="/charsheet" method="post">
-        <label for="playerName">Placeholder:</label><br>
-        <input type="text" id="playerName" name="playerName" maxlength="32"><br><br>
+    <form id="charsheetForm" action="/charsheet" method="post">
+        <label for="playerClass">Player Class:</label>
+        <input type="hidden" id="playerClassInput" name="playerClass" maxlength="32"><br>
+        <div id="optionBox">
+            <span id="leftArrow">&lt;</span>
+            <span id="selectedPlayerClass">Knight</span>
+            <span id="rightArrow">&gt;</span>
+        </div>
+        <br><br>
         <input type="submit" value="Submit">
     </form>
+    <br>
+
+    <script src="charsheet.js"></script>
+
 </body>
 </html>
 

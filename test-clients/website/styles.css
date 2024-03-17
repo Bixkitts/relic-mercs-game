@@ -79,3 +79,12 @@ input[type="submit"]:hover {
   from, to { border-color: transparent }
   50% { border-color: orange; }
 }
+
+#optionBox {
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: inline-block;
+}
+#leftArrow, #rightArrow {
+    cursor: pointer;
+}
