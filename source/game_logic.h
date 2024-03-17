@@ -28,9 +28,10 @@ typedef struct PlayerCredentials {
 } PlayerCredentials;
 
 typedef struct CharacterSheet {
-    int vigour;
-    int violence;
-    int guile;
+    bool isValid; // Is this Charsheet valid at all?
+    int  vigour;
+    int  violence;
+    int  guile;
 } CharacterSheet;
 
 // All injuries are followed immediately by their 
@@ -160,8 +161,13 @@ int          tryPlayerLogin         (Game *restrict game,
 
 long long int getTokenFromHTTP      (char *http,
                                      int httpLength);
-const Player *tryGetPlayerFromToken (SessionToken token,
-                                     const Game *game);
+Player *tryGetPlayerFromToken       (SessionToken token,
+                                     Game *game);
+// Character sheet setup stuff
+void          validateNewCharsheet  (CharacterSheet *charsheet);
+bool          isCharsheetValid      (const Player *player);
+void          setPlayerCharSheet    (Player *player,
+                                     CharacterSheet *charsheet);
 /* --------------------------------------------- */
 
 int   createGame         (Game **game, 

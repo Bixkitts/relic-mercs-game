@@ -74,8 +74,36 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     memcpy(requestedResource, startingPoint, stringLen);
 
-    if (stringSearch(data, "GET /login", 10) >= 0) {
-        sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+    Game          *game      = getTestGame();
+    long long int  token     = getTokenFromHTTP     (data, packetSize);
+    const Player  *player    = tryGetPlayerFromToken(token, game);
+
+    /*
+     * Direct the remotehost to the login, character creation
+     * or game depending on their session token.
+     */
+    if (stringSearch(data, "GET / ", 10) >= 0) {
+        if (player == NULL) {
+            sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+        }
+        else if (!isCharsheetValid(player)) {
+            sendContent ("./charsheet.html", 
+                        HTTP_FLAG_TEXT_HTML, 
+                        remotehost, 
+                        NULL);
+        }
+        else {
+            sendContent("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+        }
+        return;
+    }
+    /*
+     * For any other url than a blank one,
+     * the remotehost needs to be authenticated
+     * otherwise we're not sending anything at all.
+     */
+    if (player == NULL) {
+        sendForbiddenPacket(remotehost);
         return;
     }
     else if (stringSearch(data, "GET /index.js", 12) >= 0) {
@@ -84,16 +112,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     }
     else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
         sendWebSocketResponse (data, packetSize, remotehost);
-        Game *game = getTestGame();
-        long long int  token     = getTokenFromHTTP     (data, packetSize);
-        const Player  *player    = tryGetPlayerFromToken(token, game);
-
-        if (player == NULL) {
-            // invalid token TODO: make this fancy
-            sendForbiddenPacket(remotehost);
-            return;
-        }
-
         HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
         hostAttr->player    = player;
         customAttr->handler = HANDLER_WEBSOCK;
@@ -161,10 +179,18 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     }
     // 2. Interpret CharacterSheet object from html form
 
-     
     // 3. Validate CharacterSheet object
+    validateNewCharsheet (&sheet);
 
     // 4. Copy it to the player
+    setPlayerCharSheet   (player, 
+                          &sheet);
+
+    // 5. Send them the game itself
+    sendContent          ("./game.html", 
+                          HTTP_FLAG_TEXT_HTML, 
+                          remotehost,
+                          NULL);
 }
 
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)
@@ -172,7 +198,7 @@ static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost
     if (stringSearch(data, "login", 12) >= 0) {
         loginHandler(data, packetSize, remotehost);
     }
-    else if (stringSearch(data, "charsheet", 14) >= 0) {
+    else if (stringSearch(data, "charsheet", 16) >= 0) {
         charsheetHandler(data, packetSize, remotehost);
     }
 }

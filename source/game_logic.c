@@ -60,8 +60,6 @@ static Player       *tryGetPlayerFromCredentials   (Game *game,
                                                     const PlayerCredentials *credentials);
 static Player       *createPlayer                  (Game *game,
                                                     PlayerCredentials *credentials);
-static void          setPlayerCharSheet            (Player *player,
-                                                    CharacterSheet *charsheet);
 
 /*
  * Handlers for incoming messages from the websocket connection
@@ -183,6 +181,36 @@ void  setPlayerCharSheet (Player *player,
     pthread_mutex_unlock (&playerStateLock[lock]);
 }
 
+/*
+ * We've just gotten a character sheet
+ * parsed out of a html form,
+ * but we need to make sure it's
+ * not fudged somehow by the client.
+ * We then set the "isValid" flag in the 
+ * CharacterSheet in question.
+ */
+void validateNewCharsheet (CharacterSheet *charsheet)
+{
+    // TODO: literally anything at all
+    charsheet->isValid = true;
+}
+
+/*
+ * This just checks the "isValid" flag
+ * in a thread safe manner,
+ * see "validateNewCharsheet()"
+ * for vibe-checking hackers
+ */
+bool isCharsheetValid (const Player *player)
+{
+    bool result = 0;
+    int lock = getMutexIndex(player, sizeof(Player), STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&playerStateLock[lock]);
+    result = player->charSheet.isValid;
+    pthread_mutex_unlock (&playerStateLock[lock]);
+    return result;
+}
+
 void setGamePassword(Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
 {
     int lock = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
@@ -214,7 +242,7 @@ int tryGameLogin(Game *restrict game, const char *password)
 
 /*
  * Parses an int64 token out of a HTTP
- * message and returns it.
+ * message and returns it, or 0 on failure.
  */
 long long int getTokenFromHTTP(char *http,
                                int httpLength)
@@ -235,10 +263,10 @@ long long int getTokenFromHTTP(char *http,
 /*
  * Returns NULL when none is found
  * It's all readonly, so it _should_ be
- * thread safe in this specific case.
+ * thread safe in this specific case...
  */
-const Player *tryGetPlayerFromToken(SessionToken token,
-                                    const Game *game)
+Player *tryGetPlayerFromToken(SessionToken token,
+                              Game *game)
 {
     for (int i = 0; i < game->playerCount; i ++) {
         if (token == game->players[i].sessionToken) {
@@ -257,8 +285,8 @@ static void generateSessionToken(Player *player, Game *game)
 {
     long long int nonce = getRandomInt();
     int           i     = 0;
-    // Make sure the token is unique
-    while (tryGetPlayerFromToken(nonce, game) != NULL) {
+    // Make sure the token is unique, and not 0.
+    while ((tryGetPlayerFromToken(nonce, game) != NULL) || (nonce == 0)) {
         nonce = getRandomInt();
         i++;
         if (i > 2) {
@@ -329,7 +357,7 @@ int   tryPlayerLogin    (Game *restrict game,
                                    game);
            buildSessionTokenHeader(sessionTokenHeader, 
                                    player->sessionToken);
-           sendContent            ("./index.html", 
+           sendContent            ("./game.html", 
                                    HTTP_FLAG_TEXT_HTML, 
                                    remotehost,
                                    sessionTokenHeader);
