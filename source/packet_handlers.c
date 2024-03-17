@@ -15,6 +15,16 @@
 #include "html_server.h"
 #include "game_logic.h"
 
+enum CredentialFormFields {
+    FORM_CREDENTIAL_PLAYERNAME,
+    FORM_CREDENTIAL_PLAYERPASSWORD,
+    FORM_CREDENTIAL_GAMEPASSWORD,
+    FORM_CREDENTIAL_FIELD_COUNT
+};
+
+enum CharsheetFormFields {
+    FORM_CHARSHEET_FIELD_COUNT
+};
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
 static void httpHandler      (char *data, ssize_t packetSize, Host remotehost);
@@ -132,7 +142,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     // to download.
     // Or just put the whole site in a subdirectory and count on file extensions.
     sendForbiddenPacket(remotehost);
-
 }
 
 static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehost)
@@ -141,33 +150,48 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     // and link the remotehost to a specific player object based on that.
     PlayerCredentials credentials                        = { 0 };
     int               credentialIndex                    = 0;
-    const char        searchKey     [MAX_CREDENTIAL_LEN] = "playerName=";
+    const char        firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
     HTMLForm          form                               = { 0 };
 
-    credentialIndex = stringSearch(data, searchKey, packetSize);
+    credentialIndex = 
 
-    parseHTMLForm(&data[credentialIndex], &form, packetSize - credentialIndex);
-    if (form.fieldCount < 3) {
-        // something went wrong while parsing, abort and 
+    stringSearch  (data, 
+                   firstFormField, 
+                   packetSize);
+    parseHTMLForm (&data[credentialIndex], 
+                   &form, 
+                   packetSize - credentialIndex);
+    if (form.fieldCount < FORM_CREDENTIAL_FIELD_COUNT) {
+        // TODO: something went wrong while parsing, abort and 
         // tell the user something about their malformed data
         return;
     }
-    if (!tryGameLogin(getTestGame(), form.fields[2])) {
+    if (!tryGameLogin(getTestGame(), form.fields[FORM_CREDENTIAL_GAMEPASSWORD])) {
         // TODO: Need to let the user know what's going on
         // here
         return;
     };
-    strncpy (credentials.name, form.fields[0], MAX_CREDENTIAL_LEN);
-    strncpy (credentials.password, form.fields[1], MAX_CREDENTIAL_LEN);
-    tryPlayerLogin(getTestGame(), &credentials, remotehost);
+    strncpy        (credentials.name, 
+                    form.fields[FORM_CREDENTIAL_PLAYERNAME], 
+                    MAX_CREDENTIAL_LEN);
+    strncpy        (credentials.password, 
+                    form.fields[FORM_CREDENTIAL_PLAYERPASSWORD], 
+                    MAX_CREDENTIAL_LEN);
+    tryPlayerLogin (getTestGame(), 
+                    &credentials, 
+                    remotehost);
 }
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     // 1. Get the player from the token, 
-    long long int   token  = getTokenFromHTTP(data, packetSize); 
-    Player         *player = tryGetPlayerFromToken(token, getTestGame());
-    CharacterSheet  sheet  = {0};
+    long long int   token         = getTokenFromHTTP(data, packetSize); 
+    Player         *player        = tryGetPlayerFromToken(token, getTestGame());
+    CharacterSheet  sheet         = {0};
+    HTMLForm        form          = {0};
+    const int       formFieldsMin = 1;
+
+    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "characterClass=";
 
     if (player == NULL) {
         // token was invalid, handle that
@@ -175,15 +199,15 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
         return;
     }
     // 2. Interpret CharacterSheet object from html form
-
-    // 3. Validate CharacterSheet object
+    int htmlFormIndex =
+    stringSearch         (data, firstFormField, packetSize);
+    parseHTMLForm        (&data[htmlFormIndex], &form, packetSize - htmlFormIndex);
+    if (form.fieldCount < formFieldsMin) {
+        // TODO: Malformed form data, let the client know
+        return;
+    }
     validateNewCharsheet (&sheet);
-
-    // 4. Copy it to the player
-    setPlayerCharSheet   (player, 
-                          &sheet);
-
-    // 5. Send them the game itself
+    setPlayerCharSheet   (player, &sheet);
     sendContent          ("./game.html", 
                           HTTP_FLAG_TEXT_HTML, 
                           remotehost,
