@@ -1,3 +1,10 @@
+#ifndef BB_HELPERS
+#define BB_HELPERS
+
+#include <stdio.h>
+
+#define HTMLFORM_FIELD_MAX_LEN 64
+#define HTMLFORM_MAX_FIELDS    64
 /* Helper functions */
 
 // returns the index of the first occurence of the pattern or -1 on failure.
@@ -13,5 +20,10 @@ void printBufferInHex (char *data, int size);
 int  getMutexIndex    (const void *object, 
                        unsigned long size, 
                        int mutexCount);
+void parseHTMLForm    (char *inBuffer, 
+                       char *outBuffer, 
+                       ssize_t inBufferLen);
 
 long long int getRandomInt();
+
+#endif

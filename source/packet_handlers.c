@@ -17,12 +17,13 @@
 
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
-static void httpHandler        (char *data, ssize_t packetSize, Host remotehost);
-static void websockHandler     (char *data, ssize_t packetSize, Host remotehost);
+static void httpHandler      (char *data, ssize_t packetSize, Host remotehost);
+static void websockHandler   (char *data, ssize_t packetSize, Host remotehost);
 
-static void loginHandler (char *restrict data, ssize_t packetSize, Host remotehost);
-static void POSTHandler  (char *restrict data, ssize_t packetSize, Host remotehost);
-static void GETHandler   (char *restrict data, ssize_t packetSize, Host remotehost);
+static void loginHandler     (char *restrict data, ssize_t packetSize, Host remotehost);
+static void charsheetHandler (char *restrict data, ssize_t packetSize, Host remotehost);
+static void POSTHandler      (char *restrict data, ssize_t packetSize, Host remotehost);
+static void GETHandler       (char *restrict data, ssize_t packetSize, Host remotehost);
 
 
 static PacketHandler handlers[HANDLER_COUNT] = {
@@ -85,7 +86,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         sendWebSocketResponse (data, packetSize, remotehost);
         Game *game = getTestGame();
         long long int  token     = getTokenFromHTTP     (data, packetSize);
-        Player        *player    = tryGetPlayerFromToken(token, game);
+        const Player  *player    = tryGetPlayerFromToken(token, game);
 
         if (player == NULL) {
             // invalid token TODO: make this fancy
@@ -94,7 +95,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         }
 
         HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-        hostAttr->player = player;
+        hostAttr->player    = player;
         customAttr->handler = HANDLER_WEBSOCK;
         cacheHost             (remotehost, 0);
         return;
@@ -120,6 +121,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     int               stopIndex                          = 0;
     const char        searchKey     [MAX_CREDENTIAL_LEN] = "playerName=";
 
+    // 
+    // Shitty string concatenation insanity
+    //
     credentialIndex = stringSearch(data, searchKey, packetSize);
     // the player name is here:
     credentialIndex += strlen(searchKey);

@@ -101,6 +101,7 @@ int listFiles(char *outArray)
         closedir(d);
     }
     */
+    // TODO: make this a function instead of copy pasting
     d = opendir("./src");
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
@@ -118,6 +119,17 @@ int listFiles(char *outArray)
           if (dir->d_type == DT_REG)
           {
               snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-10, "./images/%s", dir->d_name);
+              i++;
+          }
+        }
+    }
+    closedir(d);
+    d = opendir("./src/rendering");
+    if (d) {
+        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
+          if (dir->d_type == DT_REG)
+          {
+              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-17, "./src/rendering/%s", dir->d_name);
               i++;
           }
         }

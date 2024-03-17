@@ -16,116 +16,20 @@
 
 #define MESSAGE_HANDLER_COUNT 6
 
-// All injuries are followed immediately by their 
-// healed counterparts.
-typedef enum {
-    INJURY_NOTHING,
-    INJURY_DEEP_CUT,
-    INJURY_BIG_SCAR,
-    INJURY_BROKEN_LEFT_LEG,
-    INJURY_BROKEN_RIGHT_LEG,
-    INJURY_BROKEN_RIGHT_ARM,
-    INJURY_BROKEN_LEFT_ARM,
-    INJURY_MISSING_LEFT_LEG,
-    INJURY_MISSING_RIGHT_LEG,
-    INJURY_MISSING_LEFT_ARM,
-    INJURY_MISSING_RIGHT_ARM,
-    INJURY_COUNT
-}InjuryType;
-
-// These ID's will be direct
-// callbacks to handle these encounters
-// serverside
-typedef enum {
-    ENCOUNTER_BANDITS,
-    ENCOUNTER_TROLLS,
-    ENCOUNTER_WOLVES,
-    ENCOUNTER_RATS,
-    ENCOUNTER_BEGGAR,
-    ENCOUNTER_DRAGONS,
-    ENCOUNTER_TREASURE_SMALL,
-    ENCOUNTER_TREASURE_LARGE,
-    ENCOUNTER_TREASURE_MAGICAL,
-    ENCOUNTER_RUINS_OLD,
-    ENCOUNTER_SPELL_TOME,
-    ENCOUNTER_CULTISTS_CANNIBAL,
-    ENCOUNTER_CULTISTS_PEACEFUL,
-    ENCOUNTER_COUNT
-}EncounterID;
-
-typedef enum {
-    ENCOUNTER_TYPE_BANDIT,
-    ENCOUNTER_TYPE_BEASTS,
-    ENCOUNTER_TYPE_MONSTROSITIES,
-    ENCOUNTER_TYPE_DRAGON,
-    ENCOUNTER_TYPE_MYSTICAL,
-    ENCOUNTER_TYPE_CULTISTS,
-    ENCOUNTER_TYPE_SLAVERS,
-    ENCOUNTER_TYPE_REFUGEES,
-    ENCOUNTER_TYPE_EXILES,
-    ENCOUNTER_TYPE_PLAGUE,
-    ENCOUNTER_TYPE_COUNT
-}EncounterTypeID;
-
-typedef enum {
-    RESOURCE_KNIFE,
-    RESOURCE_SWORD,
-    RESOURCE_AXE,
-    RESOURCE_POTION_HEAL,
-    RESOURCE_COUNT
-} ResourceID;
 
 /*
- * Encounter Categories, and their possible encounters
+ * Handler type definitions
  */
-// NOTE: Every encounter category needs at least one specific
-// encounter in it.
-static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
-    {ENCOUNTER_BANDITS},                 // ENCOUNTER_TYPE_BANDIT
-    {ENCOUNTER_WOLVES,                   // ENCOUNTER_TYPE_BEASTS
-     ENCOUNTER_RATS},
-    {ENCOUNTER_TROLLS},                  // ENCOUNTER_TYPE_MONSTROSITIES
-    {ENCOUNTER_DRAGONS},                 // ENCOUNTER_TYPE_DRAGON
-    {ENCOUNTER_RUINS_OLD,                // ENCOUNTER_TYPE_MYSTICAL
-     ENCOUNTER_TREASURE_MAGICAL,
-     ENCOUNTER_SPELL_TOME},
-    {ENCOUNTER_CULTISTS_CANNIBAL,        // ENCOUNTER_TYPE_CULTISTS
-     ENCOUNTER_CULTISTS_PEACEFUL}
-};
-
 typedef void (*GameMessageHandler)  (char* data, ssize_t dataSize, Host remotehost);
-
 typedef void (*UseResourceHandler)  (ResourceID resource, Player *user, Player *target);
 typedef void (*GiveResourceHandler) (ResourceID resource, Player *target, int count);
 typedef void (*TakeResourceHandler) (ResourceID resource, Player *target, int count);
 
+
 /*
- * State data structures
+ * Mutexes for state management
  */
-struct Player {
-    Host              associatedHost;
-    PlayerCredentials credentials;
-    SessionToken      sessionToken;
-    CharacterSheet    charSheet;
-    int               xCoord;
-    int               yCoord;
-    // How many of each ResourceID the player has
-    int               resources[RESOURCE_COUNT];
-    bool              isBanned;
-};
-struct Game {
-    // Who's turn is it
-    int     playerTurn;
-    int     maxPlayerCount;
-    // This is larger than max players to account
-    // for kicked and banned players
-    Player  players [MAX_PLAYERS_IN_GAME * 2];
-    int     playerCount;
-    char    password[MAX_CREDENTIAL_LEN];
-};
-
 #define STATE_MUTEX_COUNT 16
-
 static pthread_mutex_t gameStateLock  [STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
 static pthread_mutex_t playerStateLock[STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
 
@@ -139,17 +43,25 @@ Game *getTestGame()
     return &testGame;
 }
 
-/* H
+/* 
  * Helpers and Authentication
+ * ----------------------------
+ *  None of these have mutex locks in them,
+ *  the functions that call them are expected
+ *  to lock the game state they are modifying.
  */
-static int  isGameDataValidLength         (Opcode opcode, 
-                                           ssize_t messageSize);
-static void buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
-                                           SessionToken token);
-static int  findPlayerFromCredentials     (const Game *game, 
-                                           const PlayerCredentials *credentials);
-static int  createPlayer                  (Game *game,
-                                           PlayerCredentials *credentials);
+static void          generateSessionToken          (Player *player,
+                                                    Game *game);
+static int           isGameDataValidLength         (Opcode opcode, 
+                                                    ssize_t messageSize);
+static void          buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
+                                                    SessionToken token);
+static Player       *tryGetPlayerFromCredentials   (Game *game, 
+                                                    const PlayerCredentials *credentials);
+static Player       *createPlayer                  (Game *game,
+                                                    PlayerCredentials *credentials);
+static void          setPlayerCharSheet            (Player *player,
+                                                    CharacterSheet *charsheet);
 
 /*
  * Handlers for incoming messages from the websocket connection
@@ -170,45 +82,6 @@ static void respondToEventHandler       (char *data, ssize_t dataSize, Host remo
 //    any state changes that happened since (harder)
 static void getGameStateHandler         (char *data, ssize_t dataSize, Host remotehost);
 
-/*
- * Handlers for interacting with Player Resources.
- * Copy Paste these for different resources a player could 
- * receive, lose, or use.
- */
-void baseUseResourceHandler (ResourceID resource, Player *user, Player *target)
-{
-    // Implement code for using specific resources here
-}
-void baseGiveResourceHandler (ResourceID resource, Player *target, int count)
-{
-    // Implement code for receiving resources here, such
-    // as adding it to the player's inventory or adding 
-    // a passive effect
-}
-void baseTakeResourceHandler (ResourceID resource, Player *target, int count)
-{
-   // Implement code for removing an item from a player's
-   // inventory here, such as decreasing the count
-   // or removing a passive effect.
-}
-
-/* 
- *
- * Handlers for when a resource is used
- *      Make sure to list a handler FOR EACH existing resource ID
- *
- */
-static UseResourceHandler useResourceHandlers[RESOURCE_COUNT] = {
-    baseUseResourceHandler
-};
-// Handlers for when a resource is given to a player
-static GiveResourceHandler giveResourceHandlers[RESOURCE_COUNT] = {
-    baseGiveResourceHandler
-};
-// Handlers for when a resource is taken from a player
-static TakeResourceHandler takeResourceHandlers[RESOURCE_COUNT] = {
-    baseTakeResourceHandler
-};
 
 /*
  * Primary interpreter for incoming websocket messages
@@ -230,15 +103,25 @@ static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
     0
 };
 
+/*
+ * There's an opcode, and then
+ * serialised state data.
+ * This state data should match a
+ * corresponding data structure perfectly,
+ * or be rejected.
+ */
 static int isGameDataValidLength(Opcode opcode, ssize_t messageSize)
 {
     return messageSize == gameDataSizes[opcode];
 }
 
 /*
+ * ========================================================
+ * ======== MAIN ENTRY POINT FOR WEBSOCKET MESSAGES =======
+ * ========================================================
  * This function expects
  * Decoded websocket data and it's length
- * without the websocket headers
+ * without the websocket headers.
  */
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
 {
@@ -260,6 +143,222 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     };
 }
 
+int createGame(Game **game, GameConfig *config)
+{
+    *game = (Game*)calloc(1, sizeof(Game));
+    if ((*game) == NULL) {
+        return -1;
+    }
+    strncpy((*game)->password, config->password, MAX_CREDENTIAL_LEN);
+    (*game)->maxPlayerCount = config->maxPlayerCount;
+    return 0;
+}
+
+/*
+ * This function assumes that the player was redirected to
+ * character creation and creates a character at the next free 
+ * index in the game
+ */
+static Player *createPlayer(Game *game, PlayerCredentials *credentials)
+{
+    Player *newPlayer = &game->players[game->playerCount];
+
+    memcpy (&newPlayer->credentials, credentials, sizeof(PlayerCredentials));
+
+    // Currently, this function is only called
+    // from within a critical section within
+    // tryPlayerLogin(), so incrementing this
+    // is okay.
+    game->playerCount++;
+
+    return newPlayer;
+}
+
+void  setPlayerCharSheet (Player *player,
+                          CharacterSheet *charsheet)
+{
+    int lock = getMutexIndex(player, sizeof(Player), STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&playerStateLock[lock]);
+    memcpy (&player->charSheet, charsheet, sizeof(CharacterSheet)); 
+    pthread_mutex_unlock (&playerStateLock[lock]);
+}
+
+void setGamePassword(Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
+{
+    int lock = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&gameStateLock[lock]);
+    memset               (game->password, 
+                          0, 
+                          MAX_CREDENTIAL_LEN);
+    strncpy              (game->password, 
+                          password, 
+                          MAX_CREDENTIAL_LEN);
+    pthread_mutex_unlock (&gameStateLock[lock]);
+}
+
+/*
+ * Returns 0 on success and -1 on failure
+ */
+int tryGameLogin(Game *restrict game, const char *password)
+{
+    bool match = 0;
+    int lock = getMutexIndex(game, 
+                             sizeof(Game), 
+                             STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&gameStateLock[lock]);
+    match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
+    pthread_mutex_unlock (&gameStateLock[lock]);
+    match = -1 * (match != 0);
+    return match;
+}
+
+/*
+ * Parses an int64 token out of a HTTP
+ * message and returns it.
+ */
+long long int getTokenFromHTTP(char *http,
+                               int httpLength)
+{
+    const char    cookieName[HEADER_LENGTH] = "sessionToken=";
+    int           startIndex                = stringSearch(http, cookieName, httpLength);
+    long long int token                     = 0;
+
+    if (startIndex >= 0) {
+        startIndex += strnlen(cookieName, HEADER_LENGTH);
+        // TODO: This might overflow with specifically 
+        // malformed packets
+        token       = strtoll(&http[startIndex], NULL, 10);
+    }
+    return token;
+}
+
+/*
+ * Returns NULL when none is found
+ * It's all readonly, so it _should_ be
+ * thread safe in this specific case.
+ */
+const Player *tryGetPlayerFromToken(SessionToken token,
+                                    const Game *game)
+{
+    for (int i = 0; i < game->playerCount; i ++) {
+        if (token == game->players[i].sessionToken) {
+            return &game->players[i];
+        }
+    }
+    return NULL;
+}
+
+/*
+ * We pass in the game because the
+ * session token needs to be unique
+ * on a per game basis
+ */
+static void generateSessionToken(Player *player, Game *game)
+{
+    long long int nonce = getRandomInt();
+    int           i     = 0;
+    // Make sure the token is unique
+    while (tryGetPlayerFromToken(nonce, game) != NULL) {
+        nonce = getRandomInt();
+        i++;
+        if (i > 2) {
+            fprintf(stderr, "How the fuck? Kill it with fire.\n");
+            exit(1);
+        }
+    }
+    player->sessionToken = nonce;
+}
+
+/* 
+ * Builds the custom Cookie header that
+ * sends the session token to the client.
+ */
+static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH], 
+                                    SessionToken token)
+{
+    char headerBase [HEADER_LENGTH] = "Set-Cookie: sessionToken=";
+    char tokenString[HEADER_LENGTH] = {0};
+
+    sprintf(tokenString, "%lld\n", token);
+    strncat(headerBase, tokenString, HEADER_LENGTH - strlen(headerBase));
+    memcpy (outHeader, headerBase, HEADER_LENGTH);
+}
+
+/*
+ * returns the index of the player in the game
+ */
+static Player *tryGetPlayerFromCredentials(Game *game, 
+                                           const PlayerCredentials *credentials)
+{
+    int playerIndex   = 0;
+    int playerFound   = -1;
+    int passwordCheck = -1;
+
+    for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
+        playerFound = strncmp(credentials->name, 
+                              game->players[playerIndex].credentials.name, 
+                              MAX_CREDENTIAL_LEN); 
+        if (playerFound == 0) {
+            passwordCheck = strncmp(credentials->password, 
+                                    game->players[playerIndex].credentials.password, 
+                                    MAX_CREDENTIAL_LEN); 
+            if (passwordCheck == 0) {
+                return &game->players[playerIndex];
+            }
+        }
+    }
+    return NULL;
+}
+/*
+ * This function assumes the player had a valid
+ * game password, so it'll make them a new
+ * character if their credentials don't fit.
+ */
+int   tryPlayerLogin    (Game *restrict game,
+                         PlayerCredentials *credentials,
+                         Host remotehost)
+{
+    Player               *player        = NULL;
+    char                  sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
+
+    int lock   = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&gameStateLock[lock]);
+    player = tryGetPlayerFromCredentials(game, credentials);
+    if ( player != NULL ) {
+           generateSessionToken   (player, 
+                                   game);
+           buildSessionTokenHeader(sessionTokenHeader, 
+                                   player->sessionToken);
+           sendContent            ("./index.html", 
+                                   HTTP_FLAG_TEXT_HTML, 
+                                   remotehost,
+                                   sessionTokenHeader);
+           pthread_mutex_unlock   (&gameStateLock[lock]);
+           return 0;
+    }
+    // Player was not found in game redirect them to character creation
+    // And create a player
+    player = 
+    createPlayer            (game, 
+                             credentials);
+    generateSessionToken    (player, 
+                             game);
+    buildSessionTokenHeader (sessionTokenHeader, 
+                             player->sessionToken);
+    sendContent             ("./charsheet.html", 
+                             HTTP_FLAG_TEXT_HTML, 
+                             remotehost, 
+                             sessionTokenHeader);
+
+    pthread_mutex_unlock (&gameStateLock[lock]);
+    return -1;
+}
+
+/*
+ * ==============================================================
+ * ======= Message handling functions ===========================
+ * ==============================================================
+ */
 static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 {
     printf("Ping incoming!");
@@ -323,223 +422,47 @@ static void getGameStateHandler(char *data, ssize_t dataSize, Host remotehost)
 
 }
 
-int createGame(Game **game, GameConfig *config)
-{
-    *game = (Game*)calloc(1, sizeof(Game));
-    if ((*game) == NULL) {
-        return -1;
-    }
-    strncpy((*game)->password, config->password, MAX_CREDENTIAL_LEN);
-    (*game)->maxPlayerCount = config->maxPlayerCount;
-    return 0;
-}
-
-/*
- * This function assumes that the player was redirected to
- * character creation and creates a character at the next free 
- * index in the game
- */
-int createPlayer(Game *game, PlayerCredentials *credentials)
-{
-    Player *newPlayer = &game->players[game->playerCount];
-
-    int lock = getMutexIndex(newPlayer, sizeof(Player), STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&playerStateLock[lock]);
-    memcpy (&newPlayer->credentials, credentials, sizeof(PlayerCredentials));
-    pthread_mutex_unlock (&playerStateLock[lock]);
-
-    return game->playerCount;
-}
-
-void  setPlayerCharSheet (Player *player,
-                          CharacterSheet *charsheet)
-{
-    int lock = getMutexIndex(player, sizeof(Player), STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&playerStateLock[lock]);
-    memcpy (&player->charSheet, charsheet, sizeof(CharacterSheet)); 
-    pthread_mutex_unlock (&playerStateLock[lock]);
-}
-
-void getGamePassword(Game *restrict game, char outPassword[static MAX_CREDENTIAL_LEN])
-{
-    int lock = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    memcpy               (outPassword, 
-                          game->password, 
-                          MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (&gameStateLock[lock]);
-}
-
-void setGamePassword(Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
-{
-    int lock = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    memset               (game->password, 
-                          0, 
-                          MAX_CREDENTIAL_LEN);
-    strncpy              (game->password, 
-                          password, 
-                          MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (&gameStateLock[lock]);
-}
-
-/*
- * Returns 0 on success and -1 on failure
- */
-int tryGameLogin(Game *restrict game, const char *password)
-{
-    bool match = 0;
-    int lock = getMutexIndex(game, 
-                             sizeof(Game), 
-                             STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (&gameStateLock[lock]);
-    match = -1 * (match != 0);
-    return match;
-}
-
-long long int getTokenFromHTTP(char *http,
-                               int httpLength)
-{
-    const char    cookieName[HEADER_LENGTH] = "sessionToken=";
-    int           startIndex                = stringSearch(http, cookieName, httpLength);
-    long long int token                     = 0;
-
-    if (startIndex >= 0) {
-        startIndex += strnlen(cookieName, HEADER_LENGTH);
-        // TODO: This might overflow with specifically 
-        // malformed packets
-        token       = strtoll(&http[startIndex], NULL, 10);
-    }
-    return token;
-}
-
-/*
- * Returns NULL when none is found
- */
-Player *tryGetPlayerFromToken(SessionToken token,
-                              Game *game)
-{
-    int lock = getMutexIndex(game, 
-                             sizeof(Game), 
-                             STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    for (int i = 0; i < game->playerCount; i ++) {
-        if (token == game->players[i].sessionToken) {
-            pthread_mutex_unlock (&gameStateLock[lock]);
-            return &game->players[i];
-        }
-    }
-    pthread_mutex_unlock (&gameStateLock[lock]);
-    return NULL;
-}
-
-/*
- * We pass in the game because the
- * session token needs to be unique
- * on a per game basis
- * TODO: oh crap, what about with multiple games?
+/* ===================================================================
+ * =========== Player resources (inventory) management ===============
+ * ===================================================================
  */
 
-void generateSessionToken(Player *player, Game *game)
+/*
+ * Handlers for interacting with Player Resources.
+ * Copy Paste these for different resources a player could 
+ * receive, lose, or use.
+ */
+void baseUseResourceHandler (ResourceID resource, Player *user, Player *target)
 {
-    long long int nonce = getRandomInt();
-    int           i     = 0;
-    // Make sure the token is unique
-    while (tryGetPlayerFromToken(nonce, game) >= 0) {
-        nonce = getRandomInt();
-        i++;
-        if (i > 2) {
-            fprintf(stderr, "How the fuck? Kill it with fire.\n");
-            exit(1);
-        }
-    }
-    int lock   = (unsigned long)game % STATE_MUTEX_COUNT;
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    player->sessionToken = nonce;
-    pthread_mutex_unlock (&gameStateLock[lock]);
+    // Implement code for using specific resources here
+}
+void baseGiveResourceHandler (ResourceID resource, Player *target, int count)
+{
+    // Implement code for receiving resources here, such
+    // as adding it to the player's inventory or adding 
+    // a passive effect
+}
+void baseTakeResourceHandler (ResourceID resource, Player *target, int count)
+{
+   // Implement code for removing an item from a player's
+   // inventory here, such as decreasing the count
+   // or removing a passive effect.
 }
 
 /* 
- * Builds the custom Cookie header that
- * sends the session token to the client.
+ *
+ * Handlers for when a resource is used
+ *      Make sure to list a handler FOR EACH existing resource ID
+ *
  */
-static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH], 
-                                    SessionToken token)
-{
-    char headerBase [HEADER_LENGTH] = "Set-Cookie: sessionToken=";
-    char tokenString[HEADER_LENGTH] = {0};
-
-    sprintf(tokenString, "%lld\n", token);
-    strncat(headerBase, tokenString, HEADER_LENGTH - strlen(headerBase));
-    memcpy (outHeader, headerBase, HEADER_LENGTH);
-}
-
-/*
- * returns the index of the player in the game
- */
-static int findPlayerFromCredentials(const Game *game, 
-                                     const PlayerCredentials *credentials)
-{
-    int playerIndex   = 0;
-    int playerFound   = -1;
-    int passwordCheck = -1;
-
-    for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
-        playerFound = strncmp(credentials->name, 
-                              game->players[playerIndex].credentials.name, 
-                              MAX_CREDENTIAL_LEN); 
-        if (playerFound == 0) {
-            passwordCheck = strncmp(credentials->password, 
-                                    game->players[playerIndex].credentials.password, 
-                                    MAX_CREDENTIAL_LEN); 
-            if (passwordCheck == 0) {
-                return playerIndex;
-            }
-        }
-    }
-    return -1;
-}
-/*
- * This function assumes the player had a valid
- * game password, so it'll make them a new
- * character if their credentials don't fit.
- */
-int   tryPlayerLogin    (Game *restrict game,
-                         PlayerCredentials *credentials,
-                         Host remotehost)
-{
-    int                   playerIndex   = 0;
-    SessionToken          sessionToken  = 0;
-    char                  cookieHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
-
-    int lock   = (unsigned long)game % STATE_MUTEX_COUNT;
-    pthread_mutex_lock   (&gameStateLock[lock]);
-    if (findPlayerFromCredentials(game, credentials) >= 0) {
-           generateSessionToken   (&game->players[playerIndex], 
-                                   game);
-           buildSessionTokenHeader(cookieHeader, 
-                                   sessionToken);
-           sendContent            ("./index.html", 
-                                   HTTP_FLAG_TEXT_HTML, 
-                                   remotehost,
-                                   cookieHeader);
-           pthread_mutex_unlock   (&gameStateLock[lock]);
-           return 0;
-    }
-    // Player was not found in game redirect them to character creation
-    // And create a player
-    createPlayer            (game, credentials);
-    generateSessionToken    (&game->players[playerIndex], 
-                             game);
-    buildSessionTokenHeader (cookieHeader, 
-                             sessionToken);
-    sendContent             ("./charsheet.html", 
-                             HTTP_FLAG_TEXT_HTML, 
-                             remotehost, 
-                             cookieHeader);
-
-    pthread_mutex_unlock (&gameStateLock[lock]);
-    return -1;
-}
+static UseResourceHandler useResourceHandlers[RESOURCE_COUNT] = {
+    baseUseResourceHandler
+};
+// Handlers for when a resource is given to a player
+static GiveResourceHandler giveResourceHandlers[RESOURCE_COUNT] = {
+    baseGiveResourceHandler
+};
+// Handlers for when a resource is taken from a player
+static TakeResourceHandler takeResourceHandlers[RESOURCE_COUNT] = {
+    baseTakeResourceHandler
+};

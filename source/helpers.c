@@ -125,3 +125,17 @@ unsigned int hashDataSimple(const char *data, size_t data_len)
 
     return hash;
 }
+
+/*
+ * Expects a pointer to the
+ * first element of the HTML form
+ * as the inBuffer.
+ *
+ *             Here
+ *              V
+ * firstElement=data&secondElement=data.....
+ */
+void parseHTMLForm(char *inBuffer, char *outBuffer, ssize_t inBufferLen)
+{
+    
+}
