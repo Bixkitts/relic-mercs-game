@@ -19,6 +19,7 @@ typedef enum HTTPContentType {
     HTTP_FLAG_IMAGE_JPG,
     HTTP_FLAG_IMAGE_PNG,
     HTTP_FLAG_TEXT_JAVASCRIPT,
+    HTTP_FLAG_TEXT_CSS,
     HTTP_FLAG_COUNT
 } HTTPContentType;
 

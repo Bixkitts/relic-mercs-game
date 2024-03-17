@@ -21,13 +21,15 @@ static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] = {
     "text/html\n",
     "image/jpg\n",
     "image/png\n",
-    "text/javascript\n"
+    "text/javascript\n",
+    "text/css\n"
 };
 static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
     "html",
     "jpg",
     "png",
-    "js"
+    "js",
+    "css"
 };
 
 void sendForbiddenPacket(Host remotehost)

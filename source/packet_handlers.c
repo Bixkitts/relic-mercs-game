@@ -113,6 +113,11 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         }
         return;
     }
+    // Unauthenticated users are allowed the stylesheet
+    else if (stringSearch(data, "GET /styles.css", 16) >= 0) {
+        sendContent("./styles.css", HTTP_FLAG_TEXT_CSS, remotehost, NULL);
+        return;
+    }
     /*
      * For any other url than a blank one,
      * the remotehost needs to be authenticated
@@ -226,6 +231,7 @@ static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost
 
 static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
+    // TODO: I _think_ packetSize is capped at 1024....
     if (packetSize < 10) {
         return;
     }
