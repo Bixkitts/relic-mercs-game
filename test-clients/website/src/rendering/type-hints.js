@@ -1,4 +1,4 @@
-import { getContext } from "./canvas-getter.js"
+import { getContext } from "../canvas-getter.js"
 
 const ctx = getContext()
 

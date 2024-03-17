@@ -1,9 +1,9 @@
 import { initBuffers } from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
 import { drawCharacter } from './gl-draw-scene.js';
-import { initWASD } from './user-inputs.js';
-import { getZoom, getCamPan } from './user-inputs.js';
-import { getContext } from './canvas-getter.js'
+import { initWASD } from '../user-inputs.js';
+import { getZoom, getCamPan } from '../user-inputs.js';
+import { getContext } from '../canvas-getter.js'
 import { initShaderProgram, loadTexture } from './resource-loading.js';
 
 let deltaTime = 0;

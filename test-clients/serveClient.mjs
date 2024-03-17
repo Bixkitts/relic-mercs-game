@@ -1,8 +1,9 @@
 //thin server to test clients
 //run with "node serveClient.js"
 
-const http = require('http');
-const fs = require('fs');
+import * as http from 'http';
+import * as fs from 'fs';
+import { Stream } from 'stream';
 
 const mimes = {
     js: "text/javascript",
@@ -45,62 +46,89 @@ const apply = (res) => {
 const loadScripts = (scrobj, root, enc = "utf-8", handler = "readFileSync", opt = undefined, orir = root) => {
     console.log("root: " + root);
     let paths = fs.readdirSync(root, { recursive: true, encoding: "utf-8" });
-    for (const path of paths) {
+    function handlePath(path) {
         let cpath = (root + "/" + path).replace(/\/\//, "/");
         console.log("  - " + path);
         fs.stat(cpath, (err, stats) => {
-            if(err) throw err;
-            if(stats.isDirectory()) {
+            if (err) throw err;
+            if (stats.isDirectory()) {
                 console.log("dir")
-                loadScripts(scrobj, cpath + "/", enc, orir)
+                loadScripts(scrobj, cpath + "/", enc, handler, opt, orir);
             } else {
                 console.log("reading: " + cpath);
                 let key = cpath.split(orir)[1].replace(/^\//, "");
-                scrobj[key] = fs[handler](cpath, enc);
+                let value = null;
+                switch (handler) {
+                    case "readFileSync":
+                        value = fs.readFileSync(cpath, { encoding: enc, ...opt });
+                        break;
+                    case "createReadStream":
+                        value = fs.createReadStream(cpath, { encoding: enc, ...opt });
+                        break;
+                    case "readFile":
+                        fs.readFile(cpath, enc, (err, data) => {
+                            if (err) {
+                                console.error(err);
+                                return;
+                            }
+                            const buf = Buffer.from(data, 'binary');
+                            value = buf.buffer;
+                        })
+                }
+                scrobj[key] = value;
             }
         })
     }
+    paths.forEach(path => handlePath(path));
 }
 
 const resources = {
-    "index.js" : fs.readFileSync("./website/index.js"),
-    "index.html" : fs.readFileSync("./website/index.html")
-    //"map01.png": fs.readFileSync("./website/images/map01.png")
+    "index.js": fs.readFileSync("./website/index.js"),
+    "index.html": fs.readFileSync("./website/index.html")
 };
 
 loadScripts(resources, "./website/src");
-loadScripts(resources, "./website/images", { autoClose: false }, "createReadStream");
+loadScripts(resources, "./website/images", "base64", "readFileSync", { autoClose: false });
 
-http.createServer((req, res) => {
+/**
+ * 
+ * @param {Stream} stream 
+ * @param {*} data 
+ * @returns 
+ */
+const write = (stream, data, enc) => new Promise((resolve) => {
+    stream.write(data, enc) && resolve();
+    stream.once('drain', resolve);
+});
+
+const server = http.createServer();
+server.on('request', async (req, res) => {
     apply(res);
     let url = req.url;
     console.log(url);
     res.statusCode = 200;
     let ext = url.split(".").at(-1);
-    if(url === "/") {
+    if (url === "/") {
         res.mime("html");
         res.write(resources["index.html"]);
-        res.end(); 
+        res.end();
         return;
     }
     const cMime = mimes[ext];
     let content = resources[url.substring(1)];
-    if(cMime === undefined || content === undefined) {
+    res.mime(ext);
+    if (cMime === undefined || content === undefined) {
         res.statusCode = 404;
         res.write("fucking uhhh");
         res.end();
         return;
     }
-    res.mime(ext);
-    if(content instanceof fs.ReadStream) {
+    if (content instanceof fs.ReadStream) {
         console.log("readstream");
         content.pipe(res);
     } else {
-        if(!res.write(content, (err) => {
-            if(err) console.log(err);
-            res.end();
-        })) {
-            console.error("buffer write failure");
-        }
+        await write(res, content, ext == "png" ? "base64" : "utf-8");
+        res.end();
     }
-}).listen(80);
+})
+server.listen(80);

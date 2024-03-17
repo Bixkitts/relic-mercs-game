@@ -11,7 +11,7 @@ socket.onopen = () => {
     setInterval(sendHeartbeat, 3000);
 }
 
-socket.onerror = e => console.log('WebSocket error:', error);
+socket.onerror = e => console.log('WebSocket error:', e);
 
 /**
  * @param {ArrayBuffer} msg 
@@ -31,7 +31,7 @@ function sendHeartbeat() {
 }
 
 export function sendArgs() {
-    
+
 }
 
 function sendMessage() {
