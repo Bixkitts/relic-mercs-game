@@ -84,16 +84,22 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
      */
     if (stringSearch(data, "GET / ", 10) >= 0) {
         if (player == NULL) {
-            sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+            sendContent ("./login.html", 
+                         HTTP_FLAG_TEXT_HTML, 
+                         remotehost, 
+                         NULL);
         }
         else if (!isCharsheetValid(player)) {
             sendContent ("./charsheet.html", 
-                        HTTP_FLAG_TEXT_HTML, 
-                        remotehost, 
-                        NULL);
+                         HTTP_FLAG_TEXT_HTML, 
+                         remotehost, 
+                         NULL);
         }
         else {
-            sendContent("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+            sendContent ("./game.html", 
+                         HTTP_FLAG_TEXT_HTML, 
+                         remotehost, 
+                         NULL);
         }
         return;
     }
@@ -134,34 +140,25 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
     PlayerCredentials credentials                        = { 0 };
-    char              gamePassword  [MAX_CREDENTIAL_LEN] = { 0 };
     int               credentialIndex                    = 0;
-    int               stopIndex                          = 0;
     const char        searchKey     [MAX_CREDENTIAL_LEN] = "playerName=";
+    HTMLForm          form                               = { 0 };
 
-    // 
-    // Shitty string concatenation insanity
-    //
     credentialIndex = stringSearch(data, searchKey, packetSize);
-    // the player name is here:
-    credentialIndex += strlen(searchKey);
-    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
-    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
-    memcpy(credentials.name, &data[credentialIndex], stopIndex);
-    credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
-    credentialIndex += 1;
-    stopIndex       = charSearch(&data[credentialIndex], '&', packetSize - credentialIndex);
-    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
-    memcpy(credentials.password, &data[credentialIndex], stopIndex);
-    credentialIndex += charSearch(&data[credentialIndex], '=', packetSize - credentialIndex);
-    credentialIndex += 1;
-    stopIndex       = strnlen(&data[credentialIndex], packetSize - credentialIndex);
-    capInt(&stopIndex, MAX_CREDENTIAL_LEN);
-    memcpy(gamePassword, &data[credentialIndex], stopIndex);
 
-    if (!tryGameLogin(getTestGame(), gamePassword)) {
+    parseHTMLForm(&data[credentialIndex], &form, packetSize - credentialIndex);
+    if (form.fieldCount < 3) {
+        // something went wrong while parsing, abort and 
+        // tell the user something about their malformed data
+        return;
+    }
+    if (!tryGameLogin(getTestGame(), form.fields[2])) {
+        // TODO: Need to let the user know what's going on
+        // here
         return;
     };
+    strncpy (credentials.name, form.fields[0], MAX_CREDENTIAL_LEN);
+    strncpy (credentials.password, form.fields[1], MAX_CREDENTIAL_LEN);
     tryPlayerLogin(getTestGame(), &credentials, remotehost);
 }
 

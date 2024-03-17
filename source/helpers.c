@@ -77,7 +77,7 @@ int stringSearch(const char* text, const char* pattern, int maxLength)
     return -1;
 }
 
-int charSearch(char* text, char c, int bufLen)
+int charSearch(const char *restrict text, char c, int bufLen)
 {
     int i = 0;
     while (text[i] != c && i < bufLen) {
@@ -109,6 +109,11 @@ void capInt(int *intToCap, int maxValue)
     *intToCap = *intToCap > maxValue ? maxValue : *intToCap;
 }
 
+/*
+ * TODO: this was just copy pasted from
+ * Chat GPT, idek if it works, I need a proper simple
+ * hash algorithm for hash tables.
+ */
 unsigned int hashDataSimple(const char *data, size_t data_len) 
 {
     unsigned int hash = 0;
@@ -131,11 +136,37 @@ unsigned int hashDataSimple(const char *data, size_t data_len)
  * first element of the HTML form
  * as the inBuffer.
  *
- *             Here
- *              V
- * firstElement=data&secondElement=data.....
+ * Here
+ *  V
+ *  firstElement=data&secondElement=data.....
+ *
  */
-void parseHTMLForm(char *inBuffer, char *outBuffer, ssize_t inBufferLen)
+void parseHTMLForm(const char * inBuffer, HTMLForm *outBuffer, ssize_t inBufferLen)
 {
-    
+    // TODO: Make ABSOLUTELY sure this doesn't overflow
+    int i = 0;
+    int fieldLen = 0;
+    while (inBuffer[i] != '\0' 
+           && i < inBufferLen 
+           && outBuffer->fieldCount < HTMLFORM_MAX_FIELDS) 
+    {
+        int nextField = 0;
+        fieldLen = 0;
+        nextField = charSearch(&inBuffer[i], '=', inBufferLen - i + 1 );   
+        if ( nextField < 0 ) {
+            // no more form fields found...
+            break;
+        }
+        i        += nextField + 1;
+        fieldLen = charSearch(&inBuffer[i], '&', inBufferLen - i);
+        if ( fieldLen < 0 ) {
+            // No more '&' found, hitting
+            // the end of the buffer...
+            fieldLen = inBufferLen - i;
+        }
+
+        capInt(&fieldLen, HTMLFORM_FIELD_MAX_LEN);
+        memcpy(outBuffer->fields[outBuffer->fieldCount], &inBuffer[i], fieldLen);
+        outBuffer->fieldCount++;
+    }
 }

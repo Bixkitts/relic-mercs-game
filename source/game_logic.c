@@ -52,7 +52,7 @@ Game *getTestGame()
  */
 static void          generateSessionToken          (Player *player,
                                                     Game *game);
-static int           isGameDataValidLength         (Opcode opcode, 
+static int           isGameMessageValidLength         (Opcode opcode, 
                                                     ssize_t messageSize);
 static void          buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
                                                     SessionToken token);
@@ -108,7 +108,7 @@ static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
  * corresponding data structure perfectly,
  * or be rejected.
  */
-static int isGameDataValidLength(Opcode opcode, ssize_t messageSize)
+static int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
 {
     return messageSize == gameDataSizes[opcode];
 }
@@ -134,7 +134,7 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     printBufferInHex(data, dataSize);
 #endif 
 
-    if(isGameDataValidLength(*opcode, dataSize - sizeof(Opcode))) {
+    if(isGameMessageValidLength(*opcode, dataSize - sizeof(Opcode))) {
         // Execute the opcode, this function
         // assumes it won't segfault.
         gameMessageHandlers[*opcode](&data[sizeof(Opcode)], dataSize, remotehost);
