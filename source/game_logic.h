@@ -27,11 +27,43 @@ typedef struct PlayerCredentials {
     char password [MAX_CREDENTIAL_LEN];
 } PlayerCredentials;
 
+typedef enum PlayerBackground {
+    PLAYER_BACKGROUND_TRADER,
+    PLAYER_BACKGROUND_FARMER,
+    PLAYER_BACKGROUND_WARRIOR,
+    PLAYER_BACKGROUND_PRIEST,
+    PLAYER_BACKGROUND_CULTIST,
+    PLAYER_BACKGROUND_DIPLOMAT,
+    PLAYER_BACKGROUND_SLAVER,
+    PLAYER_BACKGROUND_MONSTERHUNTER,
+    PLAYER_BACKGROUND_CLOWN,
+    PLAYER_BACKGROUND_COUNT
+} PlayerBackground;
+
+typedef enum Factions{
+    GAME_FACTION_SLAVERS,
+    GAME_FACTION_CULTISTS,
+    GAME_FACTION_ELDERS,
+    GAME_FACTION_REBELS,
+    GAME_FACTION_MERCHANTS,
+    GAME_FACTION_BEETLES,
+    GAME_FACTION_AFTERLIFE,
+    GAME_FACTION_COUNT
+} Factions;
+
+typedef enum Gender {
+    GENDER_MALE,
+    GENDER_FEMALE,
+    GENDER_COUNT
+}Gender;
+
 typedef struct CharacterSheet {
-    bool isValid; // Is this Charsheet valid at all?
-    int  vigour;
-    int  violence;
-    int  guile;
+    bool             isValid; // Is this Charsheet valid at all?
+    Gender           gender;
+    int              vigour;
+    int              violence;
+    int              cunning;
+    PlayerBackground background;
 } CharacterSheet;
 
 // All injuries are followed immediately by their 

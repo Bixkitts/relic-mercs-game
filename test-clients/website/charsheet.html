@@ -13,12 +13,19 @@
     </div>
     <br>
     <form id="charsheetForm" action="/charsheet" method="post">
-        <label for="playerClass">Player Class:</label>
-        <input type="hidden" id="playerClassInput" name="playerClass" maxlength="32"><br>
-        <div id="optionBox">
-            <span id="leftArrow">&lt;</span>
-            <span id="selectedPlayerClass">Knight</span>
-            <span id="rightArrow">&gt;</span>
+        <label for="playerBackground">Class:</label>
+        <input type="hidden" id="playerBackgroundInput" name="playerBackground" maxlength="32">
+        <div id="optionBoxBackground">
+            <span class="charSheetArrow" id="classLeftArrow">&lt;</span>
+            <span id="selectedPlayerBackground">Knight</span>
+            <span class="charSheetArrow" id="classRightArrow">&gt;</span>
+        </div>
+        <label for="playerGender">Gender:</label>
+        <input type="hidden" id="playerGenderInput" name="playerGender" maxlength="32">
+        <div id="optionBoxGender">
+            <span class="charSheetArrow" id="genderLeftArrow">&lt;</span>
+            <span id="selectedPlayerGender">Male</span>
+            <span class="charSheetArrow" id="genderRightArrow">&gt;</span>
         </div>
         <br><br>
         <input type="submit" value="Submit">
@@ -29,4 +36,3 @@
 
 </body>
 </html>
-

@@ -85,6 +85,7 @@ input[type="submit"]:hover {
     padding: 10px;
     display: inline-block;
 }
-#leftArrow, #rightArrow {
+.charSheetArrow {
     cursor: pointer;
+    width: 30px;
 }
