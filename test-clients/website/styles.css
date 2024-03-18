@@ -81,18 +81,18 @@ input[type="submit"]:hover {
 }
 
 .optionBox {
-    display:        inline-block; 
+    display:        flex; 
     border:         1px solid #ccc;
     border-radius:  5px;
     padding:        10px;
     vertical-align: middle;
+    align-items:    center;
 }
 .charSheetArrow {
     cursor: pointer;
 }
 label {
-    display:        inline-block; 
-    vertical-align: middle;
+    margin-right: 10px;
 }
 .playerStat {
     display:        inline-block;
@@ -101,4 +101,9 @@ label {
     overflow:       hidden;
     white-space:    nowrap;
     vertical-align: middle;
+}
+.optionContainer {
+    display:        flex;
+    flex-direction: column;
+    align-items:    flex-start;
 }
