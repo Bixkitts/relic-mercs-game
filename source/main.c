@@ -31,8 +31,8 @@ int main(void)
         .password       = "hello",
         .maxPlayerCount = 4
     };
-    Game *mainGame = getTestGame();
-    createGame(&mainGame, &gameConfig);
+
+    initializeTestGame(&gameConfig);
 
     listenForTCP (localhost, masterHandler);
     return 0;

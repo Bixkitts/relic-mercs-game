@@ -151,6 +151,13 @@ int createGame(Game **game, GameConfig *config)
     (*game)->maxPlayerCount = config->maxPlayerCount;
     return 0;
 }
+int initializeTestGame(GameConfig *config)
+{
+    Game *game = getTestGame();
+    strncpy(game->password, config->password, MAX_CREDENTIAL_LEN);
+    game->maxPlayerCount = config->maxPlayerCount;
+    return 0;
+}
 
 /*
  * This function assumes that the player was redirected to
@@ -229,7 +236,7 @@ void setGamePassword(Game *restrict game, const char password[static MAX_CREDENT
  */
 int tryGameLogin(Game *restrict game, const char *password)
 {
-    bool match = 0;
+    int match = 0;
     int lock = getMutexIndex(game, 
                              sizeof(Game), 
                              STATE_MUTEX_COUNT);

@@ -80,12 +80,25 @@ input[type="submit"]:hover {
   50% { border-color: orange; }
 }
 
-#optionBox {
-    border: 1px solid #ccc;
-    padding: 10px;
-    display: inline-block;
+.optionBox {
+    display:        inline-block; 
+    border:         1px solid #ccc;
+    border-radius:  5px;
+    padding:        10px;
+    vertical-align: middle;
 }
 .charSheetArrow {
     cursor: pointer;
-    width: 30px;
+}
+label {
+    display:        inline-block; 
+    vertical-align: middle;
+}
+.playerStat {
+    display:        inline-block;
+    width:          160px; 
+    text-align:     center;
+    overflow:       hidden;
+    white-space:    nowrap;
+    vertical-align: middle;
 }

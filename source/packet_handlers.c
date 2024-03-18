@@ -23,6 +23,8 @@ enum CredentialFormFields {
 };
 
 enum CharsheetFormFields {
+    FORM_CHARSHEET_BACKGROUND,
+    FORM_CHARSHEET_GENDER,
     FORM_CHARSHEET_FIELD_COUNT
 };
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
@@ -169,11 +171,15 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     if (form.fieldCount < FORM_CREDENTIAL_FIELD_COUNT) {
         // TODO: something went wrong while parsing, abort and 
         // tell the user something about their malformed data
+        sendForbiddenPacket(remotehost); //placeholder
         return;
     }
-    if (!tryGameLogin(getTestGame(), form.fields[FORM_CREDENTIAL_GAMEPASSWORD])) {
+    if (tryGameLogin(getTestGame(), 
+                     form.fields[FORM_CREDENTIAL_GAMEPASSWORD])
+            != 0) {
         // TODO: Need to let the user know what's going on
         // here
+        sendForbiddenPacket(remotehost); //placeholder
         return;
     };
     strncpy        (credentials.name, 
@@ -194,7 +200,7 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     CharacterSheet  sheet         = {0};
     HTMLForm        form          = {0};
 
-    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerClass=";
+    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
 
     if (player == NULL) {
         // token was invalid, handle that
@@ -205,11 +211,13 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     stringSearch         (data, firstFormField, packetSize);
     if (htmlFormIndex < 0) {
         // TODO: Malformed form data, let the client know
+        sendForbiddenPacket(remotehost); //placeholder
         return;
     }
     parseHTMLForm        (&data[htmlFormIndex], &form, packetSize - htmlFormIndex);
     if (form.fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
         // TODO: Malformed form data, let the client know
+        sendForbiddenPacket(remotehost); //placeholder
         return;
     }
     validateNewCharsheet (&sheet);

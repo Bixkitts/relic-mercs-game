@@ -204,6 +204,7 @@ void          setPlayerCharSheet    (Player *player,
 
 int   createGame         (Game **game, 
                           GameConfig *config);
+int   initializeTestGame (GameConfig *config);
 // returns the ID the player got
 // Returns the pointer to global Game
 // variable.

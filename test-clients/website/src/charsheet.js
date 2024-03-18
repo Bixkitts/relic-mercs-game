@@ -54,7 +54,9 @@ function updateEventListeners(statistic) {
     });
 }
 
-// Initialize event listeners for each statistic
 for (var stat in playerStats) {
     updateEventListeners(stat);
+}
+for (var stat in playerStats) {
+    updateSelectedOption(stat);
 }
