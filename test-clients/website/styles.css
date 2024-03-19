@@ -1,37 +1,37 @@
 body {
     background-color: #f2e9e1; /* beige background */
-    font-family: 'Courier New', Courier, monospace; /* old-school font */
-    color: #462a16; /* dark brown text color */
+    font-family:      'Courier New', Courier, monospace; /* old-school font */
+    color:            #462a16; /* dark brown text color */
 }
 
 h1 {
-    font-size: 36px; /* larger header */
-    padding: 20px;
+    font-size: 36px;
+    padding:   20px;
 }
 
 
 label {
-    display: block;
-    font-size: 20px; /* larger label text */
+    display:   block;
+    font-size: 20px;
 }
 
 input[type="text"],
 input[type="password"] {
-    padding: 10px;
-    font-size: 18px; /* larger input text */
+    padding:       10px;
+    font-size:     18px;
     border-radius: 5px;
-    border: 1px solid #462a16; /* dark brown border */
+    border:        1px solid #462a16; /* dark brown border */
 }
 
 input[type="submit"] {
-    padding: 10px 20px;
-    font-size: 20px; /* larger submit button text */
-    border-radius: 5px;
-    border: none;
+    padding:          10px 20px;
+    font-size:        20px; /* larger submit button text */
+    border-radius:    5px;
+    border:           none;
     background-color: #d4ac0d; /* gold button */
-    color: #462a16; /* dark brown text */
-    cursor: pointer;
-    transition: background-color 0.3s;
+    color:            #462a16; /* dark brown text */
+    cursor:           pointer;
+    transition:       background-color 0.3s;
 }
 
 input[type="submit"]:hover {
@@ -57,13 +57,12 @@ input[type="submit"]:hover {
 }
 
 .typewriter h2 {
-  overflow: hidden; /* Ensures the content is not revealed until the animation */
-  white-space: nowrap; /* Keeps the content on a single line */
-  margin: 0 auto; /* Gives that scrolling effect as the typing happens */
-  letter-spacing: .15em; /* Adjust as needed */
-  animation: 
-    typing 3.5s steps(40, end),
-    blink-caret .75s step-end infinite;
+  overflow:       hidden;
+  white-space:    nowrap;
+  margin:         0 auto;
+  letter-spacing: .15em; 
+  animation:      typing 3.5s steps(40, end),
+                  blink-caret .75s step-end infinite;
 }
 
 /* The typing effect */
@@ -82,7 +81,7 @@ input[type="submit"]:hover {
     display:        flex; 
     align-items:    center;
     flex-direction: column;
-    text-align: center;
+    text-align:     center;
 }
 
 .titleSection {
@@ -128,8 +127,8 @@ input[type="submit"]:hover {
     width:          fit-content;
 }
 .charSheet {
-    display:    flex;
-    align-items:    center;
+    display:         flex;
+    align-items:     center;
     justify-content: center;
-    flex-direction: column;
+    flex-direction:  column;
 }
