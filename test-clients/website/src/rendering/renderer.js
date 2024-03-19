@@ -13,7 +13,7 @@ main();
 /*
  * Attempts to auto-detect resolution.
  * Maybe replace this with just a resolution
- * selection.
+ * selection, or "createElement".
  */
 function canvasInit() {
     var canvas = document.getElementById('glcanvas');
