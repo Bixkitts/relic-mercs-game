@@ -8,8 +8,6 @@
 #include "helpers.h"
 
 #define MAX_CREDENTIAL_LEN   32
-
-#define MAX_RESOURCES_IN_INV 128
 #define MAX_PLAYERS_IN_GAME  16
 
 typedef struct Resource Resource;

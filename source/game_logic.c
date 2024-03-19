@@ -151,6 +151,12 @@ typedef struct CharacterSheet {
     PlayerBackground background;
 } CharacterSheet;
 
+typedef struct Coordinates {
+    int x;
+    int y;
+    int z;
+}Coordinates;
+
 /*
  * State data structures
  */
@@ -159,11 +165,9 @@ struct Player {
     PlayerCredentials credentials;
     SessionToken      sessionToken;
     CharacterSheet    charSheet;
-    int               xCoord;
-    int               yCoord;
+    Coordinates       coords;
     // How many of each ResourceID the player has
     int               resources[RESOURCE_COUNT];
-    bool              isBanned;
 };
 struct Game {
     // Who's turn is it
@@ -378,11 +382,11 @@ static int validateNewCharsheet (CharacterSheet *sheet)
         return -1;
     }
     if (sheet->background >= PLAYER_BACKGROUND_COUNT
-        || sheet->background <= 0) {
+        || sheet->background < 0) {
         return -1;
     }
     if (sheet->gender >= GENDER_COUNT
-        || sheet->gender <= 0) {
+        || sheet->gender < 0) {
         return -1;
     }
     return 0;
