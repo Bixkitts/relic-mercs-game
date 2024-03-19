@@ -21,12 +21,6 @@ enum CredentialFormFields {
     FORM_CREDENTIAL_GAMEPASSWORD,
     FORM_CREDENTIAL_FIELD_COUNT
 };
-
-enum CharsheetFormFields {
-    FORM_CHARSHEET_BACKGROUND,
-    FORM_CHARSHEET_GENDER,
-    FORM_CHARSHEET_FIELD_COUNT
-};
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
 static void httpHandler      (char *data, ssize_t packetSize, Host remotehost);
@@ -197,7 +191,6 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
 {
     long long int   token         = getTokenFromHTTP(data, packetSize); 
     Player         *player        = tryGetPlayerFromToken(token, getTestGame());
-    CharacterSheet  sheet         = {0};
     HTMLForm        form          = {0};
 
     const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
@@ -208,24 +201,26 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
         return;
     }
     int htmlFormIndex =
-    stringSearch         (data, firstFormField, packetSize);
+    stringSearch                (data, 
+                                 firstFormField, 
+                                 packetSize);
     if (htmlFormIndex < 0) {
         // TODO: Malformed form data, let the client know
         sendForbiddenPacket(remotehost); //placeholder
         return;
     }
-    parseHTMLForm        (&data[htmlFormIndex], &form, packetSize - htmlFormIndex);
-    if (form.fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
-        // TODO: Malformed form data, let the client know
+    parseHTMLForm               (&data[htmlFormIndex], 
+                                 &form, 
+                                 packetSize - htmlFormIndex);
+    if (initCharsheetFromForm (player, &form) != 0) {
+        // The client needs to know about malformed data
         sendForbiddenPacket(remotehost); //placeholder
         return;
     }
-    validateNewCharsheet (&sheet);
-    setPlayerCharSheet   (player, &sheet);
-    sendContent          ("./game.html", 
-                          HTTP_FLAG_TEXT_HTML, 
-                          remotehost,
-                          NULL);
+    sendContent                 ("./game.html", 
+                                 HTTP_FLAG_TEXT_HTML, 
+                                 remotehost,
+                                 NULL);
 }
 
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)

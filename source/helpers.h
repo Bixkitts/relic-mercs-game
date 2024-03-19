@@ -6,6 +6,8 @@
 #define HTMLFORM_FIELD_MAX_LEN 64
 #define HTMLFORM_MAX_FIELDS    64
 
+#define ASCII_TO_INT           48
+
 typedef struct HTMLForm {
    char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
    int  fieldCount;

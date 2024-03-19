@@ -16,6 +16,177 @@
 
 #define MESSAGE_HANDLER_COUNT 6
 
+// All injuries are followed immediately by their 
+// healed counterparts.
+typedef enum {
+    INJURY_NOTHING,
+    INJURY_DEEP_CUT,
+    INJURY_BIG_SCAR,
+    INJURY_BROKEN_LEFT_LEG,
+    INJURY_BROKEN_RIGHT_LEG,
+    INJURY_BROKEN_RIGHT_ARM,
+    INJURY_BROKEN_LEFT_ARM,
+    INJURY_MISSING_LEFT_LEG,
+    INJURY_MISSING_RIGHT_LEG,
+    INJURY_MISSING_LEFT_ARM,
+    INJURY_MISSING_RIGHT_ARM,
+    INJURY_COUNT
+}InjuryType;
+
+// These ID's will be direct
+// callbacks to handle these encounters
+// serverside
+typedef enum {
+    ENCOUNTER_BANDITS,
+    ENCOUNTER_TROLLS,
+    ENCOUNTER_WOLVES,
+    ENCOUNTER_RATS,
+    ENCOUNTER_BEGGAR,
+    ENCOUNTER_DRAGONS,
+    ENCOUNTER_TREASURE_SMALL,
+    ENCOUNTER_TREASURE_LARGE,
+    ENCOUNTER_TREASURE_MAGICAL,
+    ENCOUNTER_RUINS_OLD,
+    ENCOUNTER_SPELL_TOME,
+    ENCOUNTER_CULTISTS_CANNIBAL,
+    ENCOUNTER_CULTISTS_PEACEFUL,
+    ENCOUNTER_COUNT
+}EncounterID;
+
+typedef enum {
+    ENCOUNTER_TYPE_BANDIT,
+    ENCOUNTER_TYPE_BEASTS,
+    ENCOUNTER_TYPE_MONSTROSITIES,
+    ENCOUNTER_TYPE_DRAGON,
+    ENCOUNTER_TYPE_MYSTICAL,
+    ENCOUNTER_TYPE_CULTISTS,
+    ENCOUNTER_TYPE_SLAVERS,
+    ENCOUNTER_TYPE_REFUGEES,
+    ENCOUNTER_TYPE_EXILES,
+    ENCOUNTER_TYPE_PLAGUE,
+    ENCOUNTER_TYPE_COUNT
+}EncounterTypeID;
+
+typedef enum {
+    RESOURCE_KNIFE,
+    RESOURCE_SWORD,
+    RESOURCE_AXE,
+    RESOURCE_POTION_HEAL,
+    RESOURCE_COUNT
+} ResourceID;
+
+/*
+ * Encounter Categories, and their possible encounters
+ */
+// NOTE: Every encounter category needs at least one specific
+// encounter in it.
+static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
+    {ENCOUNTER_BANDITS},                 // ENCOUNTER_TYPE_BANDIT
+    {ENCOUNTER_WOLVES,                   // ENCOUNTER_TYPE_BEASTS
+     ENCOUNTER_RATS},
+    {ENCOUNTER_TROLLS},                  // ENCOUNTER_TYPE_MONSTROSITIES
+    {ENCOUNTER_DRAGONS},                 // ENCOUNTER_TYPE_DRAGON
+    {ENCOUNTER_RUINS_OLD,                // ENCOUNTER_TYPE_MYSTICAL
+     ENCOUNTER_TREASURE_MAGICAL,
+     ENCOUNTER_SPELL_TOME},
+    {ENCOUNTER_CULTISTS_CANNIBAL,        // ENCOUNTER_TYPE_CULTISTS
+     ENCOUNTER_CULTISTS_PEACEFUL}
+};
+// This is coupled with playerBackgroundStrings
+typedef enum PlayerBackground {
+    PLAYER_BACKGROUND_TRADER,
+    PLAYER_BACKGROUND_FARMER,
+    PLAYER_BACKGROUND_WARRIOR,
+    PLAYER_BACKGROUND_PRIEST,
+    PLAYER_BACKGROUND_CULTIST,
+    PLAYER_BACKGROUND_DIPLOMAT,
+    PLAYER_BACKGROUND_SLAVER,
+    PLAYER_BACKGROUND_MONSTERHUNTER,
+    PLAYER_BACKGROUND_CLOWN,
+    PLAYER_BACKGROUND_COUNT
+} PlayerBackground;
+// This is coupled with enum PlayerBackground
+static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
+    "Trader",
+    "Farmer",
+    "Warrior",
+    "Priest",
+    "Cultist",
+    "Diplomat",
+    "Slaver",
+    "Monster+Hunter",
+    "Clown"
+};
+
+typedef enum Factions{
+    GAME_FACTION_SLAVERS,
+    GAME_FACTION_CULTISTS,
+    GAME_FACTION_ELDERS,
+    GAME_FACTION_REBELS,
+    GAME_FACTION_MERCHANTS,
+    GAME_FACTION_BEETLES,
+    GAME_FACTION_AFTERLIFE,
+    GAME_FACTION_COUNT
+} Factions;
+
+// This is coupled with playerGenderStrings
+typedef enum Gender {
+    GENDER_MALE,
+    GENDER_FEMALE,
+    GENDER_COUNT
+}Gender;
+// This is coupled with enum Gender
+static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
+    "Male",
+    "Female"
+};
+
+typedef unsigned int PlayerAttr;
+typedef struct CharacterSheet {
+    bool             isValid; // Is this Charsheet valid at all?
+    Gender           gender;
+    PlayerAttr       vigour;
+    PlayerAttr       violence;
+    PlayerAttr       cunning;
+    PlayerBackground background;
+} CharacterSheet;
+
+/*
+ * State data structures
+ */
+struct Player {
+    Host              associatedHost;
+    PlayerCredentials credentials;
+    SessionToken      sessionToken;
+    CharacterSheet    charSheet;
+    int               xCoord;
+    int               yCoord;
+    // How many of each ResourceID the player has
+    int               resources[RESOURCE_COUNT];
+    bool              isBanned;
+};
+struct Game {
+    // Who's turn is it
+    int     playerTurn;
+    int     maxPlayerCount;
+    // This is larger than max players to account
+    // for kicked and banned players
+    Player  players [MAX_PLAYERS_IN_GAME * 2];
+    int     playerCount;
+    char    password[MAX_CREDENTIAL_LEN];
+};
+/*
+ * Form Interpreting
+ */
+enum CharsheetFormFields {
+    FORM_CHARSHEET_BACKGROUND,
+    FORM_CHARSHEET_GENDER,
+    FORM_CHARSHEET_VIGOUR,
+    FORM_CHARSHEET_VIOLENCE,
+    FORM_CHARSHEET_CUNNING,
+    FORM_CHARSHEET_FIELD_COUNT
+};
+
 
 /*
  * Handler type definitions
@@ -60,6 +231,7 @@ static Player       *tryGetPlayerFromCredentials   (Game *game,
                                                     const PlayerCredentials *credentials);
 static Player       *createPlayer                  (Game *game,
                                                     PlayerCredentials *credentials);
+static int           validateNewCharsheet          (CharacterSheet *sheet);
 
 /*
  * Handlers for incoming messages from the websocket connection
@@ -196,10 +368,71 @@ void  setPlayerCharSheet (Player *player,
  * We then set the "isValid" flag in the 
  * CharacterSheet in question.
  */
-void validateNewCharsheet (CharacterSheet *charsheet)
+static int validateNewCharsheet (CharacterSheet *sheet)
 {
-    // TODO: literally anything at all
-    charsheet->isValid = true;
+    // All this math is unsigned for a reason
+    PlayerAttr playerPower = sheet->vigour
+                             + sheet->cunning
+                             + sheet->violence;
+    if (playerPower != 13) {
+        return -1;
+    }
+    if (sheet->background >= PLAYER_BACKGROUND_COUNT
+        || sheet->background <= 0) {
+        return -1;
+    }
+    if (sheet->gender >= GENDER_COUNT
+        || sheet->gender <= 0) {
+        return -1;
+    }
+    return 0;
+}
+
+/* 
+ * Returns -1 on failure,
+ * you should tell the client about malformed data.
+ */
+int initCharsheetFromForm(Player *player, const HTMLForm *form)
+{
+    int lock = getMutexIndex(player, 
+                             sizeof(Player), 
+                             STATE_MUTEX_COUNT);
+    pthread_mutex_lock   (&playerStateLock[lock]);
+    CharacterSheet *sheet = &player->charSheet;
+    if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
+        pthread_mutex_unlock   (&playerStateLock[lock]);
+        return -1;
+    }
+    while(sheet->background < PLAYER_BACKGROUND_COUNT) {
+        if (strncmp(playerBackgroundStrings[sheet->background], 
+                    form->fields[FORM_CHARSHEET_BACKGROUND], 
+                    HTMLFORM_FIELD_MAX_LEN) == 0) {
+            break;
+        }
+        sheet->background++;
+    }
+    while(sheet->gender < GENDER_COUNT) {
+        if (strncmp(playerGenderStrings[sheet->gender], 
+                    form->fields[FORM_CHARSHEET_GENDER], 
+                    HTMLFORM_FIELD_MAX_LEN) == 0) {
+            break;
+        }
+        sheet->gender++;
+    }
+    sheet->vigour   = form->fields[FORM_CHARSHEET_VIGOUR]  [0] 
+                      - ASCII_TO_INT;
+    sheet->violence = form->fields[FORM_CHARSHEET_VIOLENCE][0] 
+                      - ASCII_TO_INT;
+    sheet->cunning  = form->fields[FORM_CHARSHEET_CUNNING] [0] 
+                      - ASCII_TO_INT;
+    if (validateNewCharsheet(sheet) != 0) {
+        memset(sheet, 0, sizeof(CharacterSheet));
+        pthread_mutex_unlock   (&playerStateLock[lock]);
+        return -1;
+    }
+    sheet->isValid = true;
+    pthread_mutex_unlock   (&playerStateLock[lock]);
+    return 0;
 }
 
 /*
@@ -211,7 +444,9 @@ void validateNewCharsheet (CharacterSheet *charsheet)
 bool isCharsheetValid (const Player *player)
 {
     bool result = 0;
-    int lock = getMutexIndex(player, sizeof(Player), STATE_MUTEX_COUNT);
+    int  lock = getMutexIndex(player, 
+                              sizeof(Player), 
+                              STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&playerStateLock[lock]);
     result = player->charSheet.isValid;
     pthread_mutex_unlock (&playerStateLock[lock]);
