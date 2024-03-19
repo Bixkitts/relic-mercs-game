@@ -56,7 +56,7 @@ var playerSkills = {
         input: document.getElementById('playerViolenceInput'),
         pointPoolModifier: 1
     },
-    "guile": {
+    "cunning": {
         options: ["1", 
                   "2",
                   "3",
@@ -68,8 +68,8 @@ var playerSkills = {
                   "9",
                   "10"],
         index: 0,
-        element: document.getElementById('selectedPlayerGuile'),
-        input: document.getElementById('playerGuileInput'),
+        element: document.getElementById('selectedPlayerCunning'),
+        input: document.getElementById('playerCunningInput'),
         pointPoolModifier: 1
     },
     // Add more player statistics here as needed
