@@ -2,19 +2,17 @@ body {
     background-color: #f2e9e1; /* beige background */
     font-family: 'Courier New', Courier, monospace; /* old-school font */
     color: #462a16; /* dark brown text color */
-    text-align: center;
-    padding-top: 100px; /* center vertically */
 }
 
 h1 {
     font-size: 36px; /* larger header */
-    margin-bottom: 30px;
+    padding: 20px;
 }
+
 
 label {
     display: block;
     font-size: 20px; /* larger label text */
-    margin-bottom: 10px;
 }
 
 input[type="text"],
@@ -80,30 +78,58 @@ input[type="submit"]:hover {
   50% { border-color: orange; }
 }
 
-.optionBox {
+.centering {
     display:        flex; 
-    border:         1px solid #ccc;
-    border-radius:  5px;
+    align-items:    center;
+    flex-direction: column;
+    text-align: center;
+}
+
+.titleSection {
+    padding: 30px;
+}
+.charSheetRow {
+    display:        flex; 
     padding:        10px;
-    vertical-align: middle;
     align-items:    center;
 }
-.charSheetArrow {
-    cursor: pointer;
+.optionBox {
+    background-color: #462a16; /* dark brown */
+    color:            #f2e9e1; /* beige */
+    border:           1px solid #ccc;
+    border-radius:    5px;
+    padding:          10px;
+    margin-left:      10px;
+    user-select:      none;
 }
-label {
-    margin-right: 10px;
+.charSheetArrow {
+    cursor:      pointer;
 }
 .playerStat {
     display:        inline-block;
-    width:          160px; 
+    width:          140px; 
     text-align:     center;
+    vertical-align: middle;
     overflow:       hidden;
     white-space:    nowrap;
-    vertical-align: middle;
 }
-.optionContainer {
+.playerSkill {
+    display:        inline-block;
+    width:          50px; 
+    text-align:     center;
+    vertical-align: middle;
+    overflow:       hidden;
+    white-space:    nowrap;
+}
+.charSheetSection {
     display:        flex;
     flex-direction: column;
-    align-items:    flex-start;
+    align-items:    flex-end;
+    width:          fit-content;
+}
+.charSheet {
+    display:    flex;
+    align-items:    center;
+    justify-content: center;
+    flex-direction: column;
 }

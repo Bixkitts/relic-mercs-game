@@ -42,5 +42,5 @@ function sendMessage() {
 }
 
 const messageInput = document.getElementById('messageInput');
-document.getElementById("messageInput").onkeydown = e => { if(e.key === "Enter") sendMessage(); };
-document.getElementById("sendMessage").onclick = () => { sendMessage(); };
+//document.getElementById("messageInput").onkeydown = e => { if(e.key === "Enter") sendMessage(); };
+//document.getElementById("sendMessage").onclick = () => { sendMessage(); };

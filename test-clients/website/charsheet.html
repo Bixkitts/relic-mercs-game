@@ -7,59 +7,70 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1 id="mainTitle" class="fade-in">Relic Mercs</h1>
-    <div class="typewriter">
-    <h2>~Fill in the character sheet~</h2>
-    </div>
-    <br>
-    <form id="charsheetForm" action="/charsheet" method="post">
-        <div class="optionContainer">
-            <div class="optionBox" id="optionBoxBackground">
-                <label for="playerBackground">Background:</label>
-                <input type="hidden" id="playerBackgroundInput" name="playerBackground" maxlength="32">
-                <span class="charSheetArrow" id="backgroundLeftArrow">&lt;</span>
-                <span class="playerStat" id="selectedPlayerBackground">Blank</span>
-                <span class="charSheetArrow" id="backgroundRightArrow">&gt;</span>
-            </div>
-            <br>
-            <div class="optionBox" id="optionBoxGender">
-                <label for="playerGender">Gender:</label>
-                <input type="hidden" id="playerGenderInput" name="playerGender" maxlength="32">
-                <span class="charSheetArrow" id="genderLeftArrow">&lt;</span>
-                <span class="playerStat" id="selectedPlayerGender">Blank</span>
-                <span class="charSheetArrow" id="genderRightArrow">&gt;</span>
-            </div><br>
-            <div>
-                <span> Points To Spend: </span>
-                <span id="pointPoolCounter"> 10 </span>
-            </div><br>
-            <div class="optionBox" id="optionBoxVigour">
-                <label for="playerVigour">Vigour:</label>
-                <input type="hidden" id="playerVigourInput" name="playerVigour" maxlength="32">
-                <span class="charSheetArrow" id="vigourLeftArrow">&lt;</span>
-                <span class="playerStat" id="selectedPlayerVigour">Blank</span>
-                <span class="charSheetArrow" id="vigourRightArrow">&gt;</span>
-            </div><br>
-            <div class="optionBox" id="optionBoxViolence">
-                <label for="playerViolence">Violence:</label>
-                <input type="hidden" id="playerViolenceInput" name="playerViolence" maxlength="32">
-                <span class="charSheetArrow" id="violenceLeftArrow">&lt;</span>
-                <span class="playerStat" id="selectedPlayerViolence">Blank</span>
-                <span class="charSheetArrow" id="violenceRightArrow">&gt;</span>
-            </div><br>
-            <div class="optionBox" id="optionBoxGuile">
-                <label for="playerGuile">Guile:</label>
-                <input type="hidden" id="playerGuileInput" name="playerGuile" maxlength="32">
-                <span class="charSheetArrow" id="guileLeftArrow">&lt;</span>
-                <span class="playerStat" id="selectedPlayerGuile">Blank</span>
-                <span class="charSheetArrow" id="guileRightArrow">&gt;</span>
+    <div class="centering">
+        <div class="titleSection">
+            <h1 id="mainTitle" class="fade-in">Relic Mercs</h1>
+            <div class="typewriter">
+                <h2>~Fill in the character sheet~</h2>
             </div>
         </div>
-
-        <br><br>
-        <input type="submit" value="Submit">
-    </form>
-    <br>
+            <form id="charsheetForm" class="charSheet" action="/charsheet" method="post">
+                <div class="charSheetSection">
+                    <div class="charSheetRow">
+                        <label for="playerBackground">Background:</label>
+                        <input type="hidden" id="playerBackgroundInput" name="playerBackground" maxlength="32">
+                        <div class="optionBox">
+                            <span class="charSheetArrow" id="backgroundLeftArrow">&lt;</span>
+                            <span class="playerStat" id="selectedPlayerBackground">Blank</span>
+                            <span class="charSheetArrow" id="backgroundRightArrow">&gt;</span>
+                        </div>
+                    </div>
+                    <div class="charSheetRow">
+                        <label for="playerGender">Gender:</label>
+                        <input type="hidden" id="playerGenderInput" name="playerGender" maxlength="32">
+                        <div class="optionBox">
+                            <span class="charSheetArrow" id="genderLeftArrow">&lt;</span>
+                            <span class="playerStat" id="selectedPlayerGender">Blank</span>
+                            <span class="charSheetArrow" id="genderRightArrow">&gt;</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pointPoolSection">
+                    <span> Points To Spend: </span>
+                    <span id="pointPoolCounter"> 10 </span>
+                </div>
+                <div class="charSheetSection">
+                    <div class="charSheetRow">
+                        <label for="playerVigour">Vigour:</label>
+                        <input type="hidden" id="playerVigourInput" name="playerVigour" maxlength="32">
+                        <div class="optionBox">
+                            <span class="charSheetArrow" id="vigourLeftArrow">&lt;</span>
+                            <span class="playerSkill" id="selectedPlayerVigour">Blank</span>
+                            <span class="charSheetArrow" id="vigourRightArrow">&gt;</span>
+                        </div>
+                    </div>
+                    <div class="charSheetRow">
+                        <label for="playerViolence">Violence:</label>
+                        <input type="hidden" id="playerViolenceInput" name="playerViolence" maxlength="32">
+                        <div class="optionBox">
+                            <span class="charSheetArrow" id="violenceLeftArrow">&lt;</span>
+                            <span class="playerSkill" id="selectedPlayerViolence">Blank</span>
+                            <span class="charSheetArrow" id="violenceRightArrow">&gt;</span>
+                        </div>
+                    </div>
+                    <div class="charSheetRow">
+                        <label for="playerGuile">Guile:</label>
+                        <input type="hidden" id="playerGuileInput" name="playerGuile" maxlength="32">
+                        <div class="optionBox">
+                            <span class="charSheetArrow" id="guileLeftArrow">&lt;</span>
+                            <span class="playerSkill" id="selectedPlayerGuile">Blank</span>
+                            <span class="charSheetArrow" id="guileRightArrow">&gt;</span>
+                        </div>
+                    </div>
+                </div>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
 
     <script src="charsheet.js"></script>
 

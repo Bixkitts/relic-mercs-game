@@ -7,20 +7,26 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1 id="mainTitle" class="fade-in">Relic Mercs</h1>
-    <div class="typewriter">
-    <h2>~Login if you dare~</h2>
+    <div class="centering">
+        <div class="titleSection">
+            <h1 id="mainTitle" class="fade-in">Relic Mercs</h1>
+            <div class="typewriter">
+            <h2>~Login if you dare~</h2>
+            </div>
+        </div>
+        <div>
+        <br>
+        <form action="/login" method="post">
+            <label for="playerName">Player Name:</label><br>
+            <input type="text" id="playerName" name="playerName" maxlength="32"><br><br>
+            <label for="playerPassword">Player Password:</label><br>
+            <input type="password" id="playerPassword" name="playerPassword" maxlength="32"><br><br>
+            <label for="gamePassword">Game Password:</label><br>
+            <input type="password" id="gamePassword" name="gamePassword" maxlength="32"><br><br>
+            <input type="submit" value="Submit">
+        </form>
+        </div>
     </div>
-    <br>
-    <form action="/login" method="post">
-        <label for="playerName">Player Name:</label><br>
-        <input type="text" id="playerName" name="playerName" maxlength="32"><br><br>
-        <label for="playerPassword">Player Password:</label><br>
-        <input type="password" id="playerPassword" name="playerPassword" maxlength="32"><br><br>
-        <label for="gamePassword">Game Password:</label><br>
-        <input type="password" id="gamePassword" name="gamePassword" maxlength="32"><br><br>
-        <input type="submit" value="Submit">
-    </form>
 </body>
 </html>
 
