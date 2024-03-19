@@ -9,7 +9,29 @@ import { initShaderProgram, loadTexture } from './resource-loading.js';
 let deltaTime = 0;
 
 main();
+
+/*
+ * Attempts to auto-detect resolution.
+ * Maybe replace this with just a resolution
+ * selection.
+ */
+function canvasInit() {
+    var canvas = document.getElementById('glcanvas');
+
+    var screenWidth  = window.screen.availWidth;
+    var screenHeight = window.screen.availHeight;
+
+    var canvasWidth  = Math.floor(screenWidth / 2);
+    var canvasHeight = Math.floor(screenHeight / 2);
+
+    canvas.width  = canvasWidth;
+    canvas.height = canvasHeight;
+
+    canvas.style.width  = canvasWidth + 'px';
+    canvas.style.height = canvasHeight + 'px';
+}
 function main() {
+    canvasInit()
     const vertexShaderSource = `
             attribute vec4 aVertexPosition;
             attribute vec2 aTextureCoord; 
