@@ -75,7 +75,10 @@ var playerSkills = {
     // Add more player statistics here as needed
 };
 var pointPool        = 10;
+var pointPoolWarning = false;
 var pointPoolElement = document.getElementById('pointPoolCounter');
+var pointPoolSection = document.getElementById('pointPoolSection');
+var pointPoolEventEnabled = false;
 
 function updateSelectedStatOption(statistic) {
     var stat                 = playerStats[statistic];
@@ -114,23 +117,32 @@ function updateStatEventListeners(statistic) {
     });
 }
 
+    
 function updateSkillEventListeners(statistic) {
     var stat = playerSkills[statistic];
     
     document.getElementById(statistic + 'LeftArrow').addEventListener('click', function() {
         if (stat.index > 0) {
+            if (pointPoolWarning) {
+                pointPoolSection.classList.remove('warning');
+                pointPoolWarning = false;
+            }
             stat.index -= stat.pointPoolModifier;
             pointPool  += stat.pointPoolModifier;
+            updateSelectedSkillOption(statistic);
         }
-        updateSelectedSkillOption(statistic);
     });
     
     document.getElementById(statistic + 'RightArrow').addEventListener('click', function() {
         if (stat.index < stat.options.length - 1 && pointPool > 0) {
+            if (pointPoolWarning) {
+                pointPoolSection.classList.remove('warning');
+                pointPoolWarning = false;
+            }
             stat.index += stat.pointPoolModifier;
             pointPool  -= stat.pointPoolModifier;
+            updateSelectedSkillOption(statistic);
         }
-        updateSelectedSkillOption(statistic);
     });
 }
 
@@ -147,3 +159,10 @@ for (var stat in playerStats) {
 for (var skill in playerSkills) {
     updateSelectedSkillOption(skill);
 }
+document.getElementById('charsheetForm').addEventListener('submit', function(event) {
+    if (pointPool > 0) {
+        document.getElementById('pointPoolSection').classList.add('warning');
+        pointPoolWarning = true;
+        event.preventDefault();
+    }
+});
