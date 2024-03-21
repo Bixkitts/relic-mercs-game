@@ -312,39 +312,14 @@ before spawning the player on the board and last in the turn order.
     For example, when they move, they change their state on the server remotely.
         </li>
         <li>
-    All the other players need to fetch this state. 
-    The client that changed the state, needs to fetch this state change too because
-    the server needs to validate the state change.
+    The communication with the server is a full duplex websocket connection
         </li>
         <li>
-    The clients get updates by asking the server for state changes
-    in a loop and updating their local data with anything the server tells them.
+    The client will try to execute opcodes on the server, just as the server will
+    execute opcodes on the client to let it know of necessary state changes
         </li>
         <li>
-    They might receive lots of state changes from the server every second, but because
-    it's a turn based game there will be mostly silence waiting for the
-    player who's turn it is to do stuff.
-        </li>
-        <li>
-    Any state could theoretically change at any time, so the clients have one entry point
-    to ask the server "What's up? What's changed in which data structure?"
-    and then they need to reflect those changes clientside.
-        </li>
-        <li>
-    Or once, when loading in they ask: "I need the entire state of everything I might see"
-    (in other words, the changes they need to apply to their zeroed state on load-in)
-    The clients will have lots of methods to request specific state changes,
-    the server will see if it's okay to change and change it.
-        </li>
-        <li>
-    Everyone asking what's changed, and having permission to see the state change, 
-    will have that update sent to them (including the client that
-    requested it).
-        </li>
-        <li>
-    Client state change queries should block when nothing has changed, so
-    as not to flood the network unnecessarily and they should be capped
-    at a low tickrate for the same reason, in the case that lots of state changes are happening.
+    Server and client opcodes and handlers are assymmetric
         </li>
     </ol>
 
