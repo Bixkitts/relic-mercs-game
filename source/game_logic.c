@@ -319,8 +319,8 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
 
 int createGame(Game **game, GameConfig *config)
 {
-    *game = (Game*)calloc(1, sizeof(Game));
-    if ((*game) == NULL) {
+    *game = calloc(1, sizeof(**game));
+    if (!(*game)) {
         return -1;
     }
     strncpy((*game)->password, config->password, MAX_CREDENTIAL_LEN);

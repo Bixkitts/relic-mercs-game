@@ -153,8 +153,8 @@ void sendContent(char* dir, HTTPContentType type, Host remotehost, const char *c
     // ------ Header Over -----------//
 
     packetLen = headerLen + contentLen;
-    packet    = (char*)malloc( (headerLen * sizeof(char)) + (contentLen * sizeof(char)));
-    if (packet == NULL) {
+    packet    = malloc((headerLen * sizeof(char)) + (contentLen * sizeof(char)));
+    if (!packet) {
         printError(BB_ERR_MALLOC);
         exit(1);
     }

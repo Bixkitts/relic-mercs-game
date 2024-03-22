@@ -41,7 +41,7 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     HostCustomAttributes *customAttr = NULL;
     if (getHostCustomAttr(remotehost) == NULL) {
-        customAttr = (HostCustomAttributes*)calloc(1, sizeof(HostCustomAttributes));
+        customAttr = calloc(1, sizeof(*customAttr));
         if (customAttr == NULL) {
             printError(BB_ERR_CALLOC);
             exit(1);
@@ -257,21 +257,16 @@ static void websockHandler(char *restrict data, ssize_t packetSize, Host remoteh
         fprintf(stderr, "\nToo long websocket packet received.\n");
         return;
     }
-    if (packetSize < 8) {
+    else if (packetSize < 8) {
         fprintf(stderr, "\nToo short websocket packet received.\n");
         return;
     }
     // After this part we can freely dereference the 
     // first 8 bytes for opcodes and such.
-    char *decodedData       = (char*)calloc(packetSize, sizeof(char));
-    int   decodedDataLength = 0;
+    char  decodedData[MAX_PACKET_SIZE] = { 0 };
+    int   decodedDataLength            = 0;
 
-    if (decodedData == NULL) {
-        printError(BB_ERR_CALLOC);
-        exit(1);
-    }
     decodedDataLength =
-    decodeWebsocketMessage(decodedData, data, packetSize);
-    handleGameMessage (decodedData, decodedDataLength, remotehost);
-    free              (decodedData);
+    decodeWebsocketMessage (decodedData, data, packetSize);
+    handleGameMessage      (decodedData, decodedDataLength, remotehost);
 }

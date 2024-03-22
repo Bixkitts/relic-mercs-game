@@ -48,8 +48,8 @@ int stringSearch(const char* text, const char* pattern, int maxLength)
 {
     int textLength = strnlen(text, maxLength);
     int patLength  = strnlen(pattern, maxLength);
-    int* lps       = (int*)malloc(sizeof(int) * patLength);
-    if (lps == NULL) {
+    int* lps       = malloc(sizeof(*lps) * patLength);
+    if (!lps) {
         exit(1);
     }
 
