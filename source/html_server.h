@@ -28,6 +28,7 @@ void sendContent            (char* dir,
                              Host remotehost,
                              const char *customHeaders);
 void sendForbiddenPacket    (Host remotehost);
+void sendBadRequestPacket   (Host remotehost);
 
 // A list of files we're allowed to serve
 // with "sendContent()"

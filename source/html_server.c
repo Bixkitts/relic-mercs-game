@@ -34,12 +34,21 @@ static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
 
 void sendForbiddenPacket(Host remotehost)
 {
-    char *forbidden =
+    const char *data =
         "HTTP/1.1 301 Moved Permanently\n"
         "Location: https://http.cat/403\n"
         "Content-Type: text/html\n"
         "Content-Length: 0\n\n";
-    sendDataTCP(forbidden, strlen(forbidden), remotehost);
+    sendDataTCP(data, strlen(data), remotehost);
+    return;
+}
+void sendBadRequestPacket(Host remotehost)
+{
+    const char *data =
+        "HTTP/1.1 400 Bad Request\n"
+        "Content-Type: text/html\n"
+        "Content-Length: 0\n\n";
+    sendDataTCP(data, strlen(data), remotehost);
     return;
 }
 static const char *getContentTypeString(HTTPContentType type)

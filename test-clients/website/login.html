@@ -15,18 +15,19 @@
             </div>
         </div>
         <div>
-        <br>
-        <form action="/login" method="post">
-            <label for="playerName">Player Name:</label><br>
-            <input type="text" id="playerName" name="playerName" maxlength="32"><br><br>
-            <label for="playerPassword">Player Password:</label><br>
-            <input type="password" id="playerPassword" name="playerPassword" maxlength="32"><br><br>
-            <label for="gamePassword">Game Password:</label><br>
-            <input type="password" id="gamePassword" name="gamePassword" maxlength="32"><br><br>
-            <input type="submit" value="Submit">
-        </form>
+            <form id="loginForm">
+                <label for="playerName">Player Name:</label><br>
+                <input type="text" id="playerName" name="playerName" maxlength="32"><br><br>
+                <label for="playerPassword">Player Password:</label><br>
+                <input type="password" id="playerPassword" name="playerPassword" maxlength="32"><br><br>
+                <label for="gamePassword">Game Password:</label><br>
+                <input type="password" id="gamePassword" name="gamePassword" maxlength="32"><br><br>
+                <span id="credWarning" class="warning"> </span><br><br>
+                <input type="submit" value="Submit">
+            </form>
         </div>
     </div>
+    <script src="login.js"></script>
 </body>
 </html>
 

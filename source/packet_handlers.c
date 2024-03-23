@@ -109,9 +109,13 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         }
         return;
     }
-    // Unauthenticated users are allowed the stylesheet
+    // Unauthenticated users are allowed the stylesheet, and login script
     else if (stringSearch(data, "GET /styles.css", 16) >= 0) {
         sendContent("./styles.css", HTTP_FLAG_TEXT_CSS, remotehost, NULL);
+        return;
+    }
+    else if (stringSearch(data, "GET /login.js", 14) >= 0) {
+        sendContent("./login.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
     /*
@@ -121,6 +125,10 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
      */
     if (player == NULL) {
         sendForbiddenPacket(remotehost);
+        return;
+    }
+    else if (isFileAllowed(requestedResource, &fileTableEntry)) {
+        sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost, NULL);
         return;
     }
     else if (stringSearch(data, "GET /index.js", 12) >= 0) {
@@ -133,10 +141,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         hostAttr->player    = player;
         customAttr->handler = HANDLER_WEBSOCK;
         cacheHost             (remotehost, 0);
-        return;
-    }
-    else if (isFileAllowed(requestedResource, &fileTableEntry)) {
-        sendContent(fileTableEntry, getContentTypeEnumFromFilename(fileTableEntry), remotehost, NULL);
         return;
     }
     // TODO: Have an ignore list of files the client should not be able
@@ -173,7 +177,7 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
             != 0) {
         // TODO: Need to let the user know what's going on
         // here
-        sendForbiddenPacket(remotehost); //placeholder
+        sendBadRequestPacket(remotehost);
         return;
     };
     strncpy        (credentials.name, 
@@ -186,7 +190,7 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
                         &credentials, 
                         remotehost) < 0) {
         // Password was wrong, send them a 400 error
-        sendForbiddenPacket(remotehost);
+        sendBadRequestPacket(remotehost);
     }
 }
 
