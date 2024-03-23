@@ -3,3 +3,5 @@ All image assets for the project can be assumed to be directly made by me,
 
 Following is a list of credits/licenses for the files in this directory:
 -----------------------------------------------------------------------
+
+- @Waterkonijn on Telegram for "BirdFont88.bmp", Beerware
