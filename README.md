@@ -21,7 +21,7 @@ I aim to provide a simple client as a test/example within this project however.
 - cmake --build .
 ### Running The Server:
 - Run the server with: ./relicServer. You need permissions for https/port 443 (I do sudo).
-- Connect with client browser to https://SERVER_IP/game
+- Connect with client browser to https://SERVER_IP/
 ### Frontend Test Server
 There's also a node server for frontend testing in the test-clients folder, if you're so inclined.
 ## Code Organisation
