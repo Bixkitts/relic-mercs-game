@@ -227,12 +227,14 @@ Game *getTestGame()
  */
 static void          generateSessionToken          (Player *player,
                                                     Game *game);
-static int           isGameMessageValidLength         (Opcode opcode, 
+static int           isGameMessageValidLength      (Opcode opcode, 
                                                     ssize_t messageSize);
 static void          buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
                                                     SessionToken token);
-static Player       *tryGetPlayerFromCredentials   (Game *game, 
-                                                    const PlayerCredentials *credentials);
+static Player       *tryGetPlayerFromPlayername    (Game *game, 
+                                                    const char *credentials);
+static int           isPlayerPasswordValid         (const Player *restrict player,
+                                                    const char *password);
 static Player       *createPlayer                  (Game *game,
                                                     PlayerCredentials *credentials);
 static int           validateNewCharsheet          (CharacterSheet *sheet);
@@ -561,32 +563,42 @@ static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH],
 /*
  * returns the index of the player in the game
  */
-static Player *tryGetPlayerFromCredentials(Game *game, 
-                                           const PlayerCredentials *credentials)
+static Player *tryGetPlayerFromPlayername(Game *game, 
+                                           const char *playername)
 {
     int playerIndex   = 0;
     int playerFound   = -1;
-    int passwordCheck = -1;
 
     for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
-        playerFound = strncmp(credentials->name, 
+        playerFound = strncmp(playername, 
                               game->players[playerIndex].credentials.name, 
                               MAX_CREDENTIAL_LEN); 
         if (playerFound == 0) {
-            passwordCheck = strncmp(credentials->password, 
-                                    game->players[playerIndex].credentials.password, 
-                                    MAX_CREDENTIAL_LEN); 
-            if (passwordCheck == 0) {
-                return &game->players[playerIndex];
-            }
+            return &game->players[playerIndex];
         }
     }
     return NULL;
+}
+
+static int isPlayerPasswordValid(const Player *restrict player,
+                                 const char *password)
+{
+    int passwordCheck = 0;
+    passwordCheck = strncmp(password, 
+                            player->credentials.password, 
+                            MAX_CREDENTIAL_LEN); 
+    return passwordCheck == 0;
 }
 /*
  * This function assumes the player had a valid
  * game password, so it'll make them a new
  * character if their credentials don't fit.
+ *
+ * returns 0 if the client successfully logged in
+ * and took control of some player, new or pre-existing
+ *
+ * returns -1 when the player exists but the
+ * password was wrong
  */
 int   tryPlayerLogin    (Game *restrict game,
                          PlayerCredentials *credentials,
@@ -597,18 +609,25 @@ int   tryPlayerLogin    (Game *restrict game,
 
     int lock   = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&gameStateLock[lock]);
-    player = tryGetPlayerFromCredentials(game, credentials);
+    player = tryGetPlayerFromPlayername(game, credentials->name);
     if ( player != NULL ) {
-           generateSessionToken   (player, 
-                                   game);
-           buildSessionTokenHeader(sessionTokenHeader, 
-                                   player->sessionToken);
-           sendContent            ("./game.html", 
-                                   HTTP_FLAG_TEXT_HTML, 
-                                   remotehost,
-                                   sessionTokenHeader);
-           pthread_mutex_unlock   (&gameStateLock[lock]);
-           return 0;
+        if (isPlayerPasswordValid(player, credentials->password)) {
+            generateSessionToken   (player, 
+                                    game);
+            buildSessionTokenHeader(sessionTokenHeader, 
+                                    player->sessionToken);
+            sendContent            ("./game.html", 
+                                    HTTP_FLAG_TEXT_HTML, 
+                                    remotehost,
+                                    sessionTokenHeader);
+            pthread_mutex_unlock   (&gameStateLock[lock]);
+            return 0;
+        }
+        else {
+            // Player exists, but the password was wrong
+            pthread_mutex_unlock   (&gameStateLock[lock]);
+            return -1;
+        }
     }
     // Player was not found in game redirect them to character creation
     // And create a player
@@ -625,7 +644,7 @@ int   tryPlayerLogin    (Game *restrict game,
                              sessionTokenHeader);
 
     pthread_mutex_unlock (&gameStateLock[lock]);
-    return -1;
+    return 0;
 }
 
 /*

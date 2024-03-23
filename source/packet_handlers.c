@@ -182,9 +182,12 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     strncpy        (credentials.password, 
                     form.fields[FORM_CREDENTIAL_PLAYERPASSWORD], 
                     MAX_CREDENTIAL_LEN);
-    tryPlayerLogin (getTestGame(), 
-                    &credentials, 
-                    remotehost);
+    if (tryPlayerLogin (getTestGame(), 
+                        &credentials, 
+                        remotehost) < 0) {
+        // Password was wrong, send them a 400 error
+        sendForbiddenPacket(remotehost);
+    }
 }
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
