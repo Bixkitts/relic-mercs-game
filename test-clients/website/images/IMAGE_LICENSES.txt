@@ -1,0 +1,5 @@
+All image assets for the project can be assumed to be directly made by me,
+@Bixkitts, unless otherwise listed here.
+
+Following is a list of credits/licenses for the files in this directory:
+-----------------------------------------------------------------------
