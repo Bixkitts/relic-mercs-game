@@ -175,8 +175,6 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     if (tryGameLogin(getTestGame(), 
                      form.fields[FORM_CREDENTIAL_GAMEPASSWORD])
             != 0) {
-        // TODO: Need to let the user know what's going on
-        // here
         sendBadRequestPacket(remotehost);
         return;
     };
@@ -189,7 +187,6 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     if (tryPlayerLogin (getTestGame(), 
                         &credentials, 
                         remotehost) < 0) {
-        // Password was wrong, send them a 400 error
         sendBadRequestPacket(remotehost);
     }
 }

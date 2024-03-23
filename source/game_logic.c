@@ -346,7 +346,7 @@ static Player *createPlayer(Game *game, PlayerCredentials *credentials)
 {
     Player *newPlayer = &game->players[game->playerCount];
 
-    memcpy (&newPlayer->credentials, credentials, sizeof(PlayerCredentials));
+    memcpy (&newPlayer->credentials, credentials, sizeof(*credentials));
 
     // Currently, this function is only called
     // from within a critical section within
@@ -360,7 +360,7 @@ static Player *createPlayer(Game *game, PlayerCredentials *credentials)
 void  setPlayerCharSheet (Player *player,
                           CharacterSheet *charsheet)
 {
-    int lock = getMutexIndex(player, sizeof(Player), STATE_MUTEX_COUNT);
+    int lock = getMutexIndex(player, sizeof(*player), STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&playerStateLock[lock]);
     memcpy (&player->charSheet, charsheet, sizeof(CharacterSheet)); 
     pthread_mutex_unlock (&playerStateLock[lock]);
@@ -401,7 +401,7 @@ static int validateNewCharsheet (CharacterSheet *sheet)
 int initCharsheetFromForm(Player *player, const HTMLForm *form)
 {
     int lock = getMutexIndex(player, 
-                             sizeof(Player), 
+                             sizeof(*player), 
                              STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&playerStateLock[lock]);
     CharacterSheet *sheet = &player->charSheet;
@@ -425,12 +425,15 @@ int initCharsheetFromForm(Player *player, const HTMLForm *form)
         }
         sheet->gender++;
     }
-    sheet->vigour   = form->fields[FORM_CHARSHEET_VIGOUR]  [0] 
-                      - ASCII_TO_INT;
-    sheet->violence = form->fields[FORM_CHARSHEET_VIOLENCE][0] 
-                      - ASCII_TO_INT;
-    sheet->cunning  = form->fields[FORM_CHARSHEET_CUNNING] [0] 
-                      - ASCII_TO_INT;
+    // TODO: This math only works as long as chargen stat limits
+    // are EXACTLY 10. Just do string to int.
+    sheet->vigour   = (form->fields[FORM_CHARSHEET_VIGOUR]  [0] 
+                      - ASCII_TO_INT) + (9 * (form->fields[FORM_CHARSHEET_VIGOUR] [1] != 0));
+    sheet->violence = (form->fields[FORM_CHARSHEET_VIOLENCE][0] 
+                      - ASCII_TO_INT) + (9 * (form->fields[FORM_CHARSHEET_VIOLENCE] [1] != 0));
+    sheet->cunning  = (form->fields[FORM_CHARSHEET_CUNNING] [0] 
+                      - ASCII_TO_INT) + (9 * (form->fields[FORM_CHARSHEET_CUNNING] [1] != 0));
+
     if (validateNewCharsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(CharacterSheet));
         pthread_mutex_unlock   (&playerStateLock[lock]);
