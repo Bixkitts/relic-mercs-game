@@ -16,14 +16,18 @@ function initPositionBuffer(gl)
 {
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    const positions = [1.618, -1.0, 0.0,   // Mesh for map 
-                      -1.618, -1.0, 0.0, 
-                      1.618, 1.0, 0.0, 
-                      -1.618, 1.0, 0.0,
-                      1.0, 1.0, 0.0,  // Mesh for square
-                      -1.0, 1.0, 0.0,
+    const positions = [-1.618, -1.0, 0.0,   // Mesh for map 
+                      1.618, -1.0, 0.0, 
+                      -1.618, 1.0, 0.0, 
+                      1.618, 1.0, 0.0,
+                      -1.0, -1.0, 0.0,  // Mesh for square
                       1.0, -1.0, 0.0,
-                      -1.0, -1.0, 0.0];
+                      -1.0, 1.0, 0.0,
+                      1.0, 1.0, 0.0,
+                      -1.0, -0.0, 0.0,  // Mesh for characters
+                      1.0, -0.0, 0.0,   // needs different origin
+                      -1.0, 2.0, 0.0,   // for rotation
+                      1.0, 2.0, 0.0];
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
   
@@ -55,8 +59,9 @@ function initIndexBuffer(gl)
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-    const indices = [0, 1, 2, 1, 2, 3, 
-                     4, 5, 6, 5, 6, 7];
+    const indices = [0, 1, 2,  1, 2,  3, 
+                     4, 5, 6,  5, 6,  7,
+                     8, 9, 10, 9, 10, 11];
 
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
                   new Uint16Array(indices),
@@ -71,6 +76,8 @@ function initTextureBuffer(gl)
   gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
   const textureCoordinates = [
+    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
     0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0
   ];
 

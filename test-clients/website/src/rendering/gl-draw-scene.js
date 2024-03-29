@@ -17,6 +17,7 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    // TODO: maybe move the projection matrix out of here
     const fieldOfView      = (45 * Math.PI) / 180; // in radians
     const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const zNear            = 0.1;
@@ -24,11 +25,6 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
     const projectionMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-    const scaleMatrix     = mat4.create();
-
-    mat4.scale (scaleMatrix,
-                    modelViewMatrix,
-                    [1.0, 1.0, 1.0]);
 
     setPositionAttribute (gl, buffers, programInfo);
     setTextureAttribute  (gl, buffers, programInfo);
@@ -42,7 +38,7 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
                         projectionMatrix);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
-                        scaleMatrix);
+                        modelViewMatrix);
 
     // Texture shit
     gl.activeTexture(gl.TEXTURE0);
@@ -65,29 +61,33 @@ export function drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix)
  * @param {mat4} modelViewMatrix 
  * @param {Array<number>} pos 
  */
-export function drawCharacter(gl, programInfo, modelViewMatrix, pos) 
+export function drawCharacter(gl, zoomLevel, programInfo, texture, modelViewMatrix, pos) 
 {
+    mat4.translate (modelViewMatrix,
+                    modelViewMatrix,
+                    pos);
+    mat4.rotate    (modelViewMatrix,
+                    modelViewMatrix,
+                    (Math.PI * ((1 - zoomLevel) * 0.3) + 0.4),
+                    [1, 0, 0]);
+    mat4.scale     (modelViewMatrix,
+                    modelViewMatrix,
+                    [0.05, 0.05, 0.05],);
 
-    mat4.rotate(modelViewMatrix,
-                modelViewMatrix,
-                (Math.PI / 2) - ((camZoom + 3) * 0.5),
-                [1, 0, 0]);
-    mat4.scale(modelViewMatrix,
-                modelViewMatrix,
-                [0.06, 0.1, 0.1],);
-    mat4.translate(modelViewMatrix,
-                   modelViewMatrix,
-                   pos);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
                         modelViewMatrix);
+    // texture shit
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture  (gl.TEXTURE_2D, texture);
+    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+
     {
-        const offset      = 0;
+        const offset      = 24;
         const type        = gl.UNSIGNED_SHORT;
         const vertexCount = 6;
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
-
 }
 
 function setPositionAttribute(gl, buffers, programInfo) {

@@ -21,7 +21,7 @@ int main(void)
     printf("RUNNING SLOW DEBUG VERSION\n");
 #endif
     enableTLS    ();
-    localhost = createHost("0.0.0.0", 443);
+    localhost = createHost("0.0.0.0", 7676);
 
     createAllowedFileTable();
 

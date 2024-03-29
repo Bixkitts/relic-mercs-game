@@ -1,5 +1,5 @@
-const websocketUrl = 'wss://5.147.206.132:443';
-const socket = new WebSocket(websocketUrl);
+const websocketUrl = 'wss://remotehost:7676';
+const socket       = new WebSocket(websocketUrl);
 socket.binaryType = "arraybuffer";
 
 export function getSocket() {

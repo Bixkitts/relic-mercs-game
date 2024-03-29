@@ -8,6 +8,12 @@
 
 #define ASCII_TO_INT           48
 
+#ifdef DEBUG
+#define DEBUG_TEMP    // We'll use this to put in temporary testing stuff.
+                      // Preferably don't commit things with DEBUG_TEMP.
+                      // TODO: Find a way to automate this.
+#endif
+
 typedef struct HTMLForm {
    char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
    int  fieldCount;

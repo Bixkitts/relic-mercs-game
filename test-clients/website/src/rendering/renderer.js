@@ -6,7 +6,8 @@ import { getZoom, getCamPan } from '../user-inputs.js';
 import { getContext } from '../canvas-getter.js'
 import { initShaderProgram, loadTexture } from './resource-loading.js';
 
-let deltaTime = 0;
+const gl        = getContext();
+let   deltaTime = 0;
 
 main();
 
@@ -29,9 +30,51 @@ function canvasInit() {
 
     canvas.style.width  = canvasWidth + 'px';
     canvas.style.height = canvasHeight + 'px';
+
+    gl.viewport(0, 0, canvas.width, canvas.height);
 }
+
+/*
+ *
+ *  Was copy pasted from chat gpt,
+ *  make it work in our setup
+ */
+function rayPlaneIntersection(rayDir, planeNormal) {
+    // Assuming the ray starts from the origin (0, 0, 0)
+    // and extends infinitely in the direction of rayDir
+
+    // Assuming the plane passes through the origin (0, 0, 0)
+    // If not, you'll need to adjust the plane's distance from the origin
+
+    // Calculate the dot product of the ray direction and the plane normal
+    let dotProduct = rayDir.x * planeNormal.x +
+                     rayDir.y * planeNormal.y +
+                     rayDir.z * planeNormal.z;
+
+    // If the dot product is close to zero, the ray is parallel to the plane
+    // and does not intersect
+    if (Math.abs(dotProduct) < 1e-6) {
+        // Return null to indicate no intersection
+        return null;
+    }
+
+    // Calculate the distance from the origin to the plane along the ray direction
+    // This distance is proportional to the dot product
+    let distance = -1 * dotProduct;
+
+    // Calculate the intersection point
+    let intersectionPoint = {
+        x: rayDir.x * distance,
+        y: rayDir.y * distance,
+        z: rayDir.z * distance
+    };
+
+    return intersectionPoint;
+}
+
 function main() {
     canvasInit()
+    initWASD();
     const vertexShaderSource = `
             attribute vec4 aVertexPosition;
             attribute vec2 aTextureCoord; 
@@ -56,8 +99,6 @@ function main() {
             }
           `;
 
-    const gl = getContext();
-    initWASD();
 
     if (gl === null) {
         return;
@@ -67,7 +108,9 @@ function main() {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
-    const texture = loadTexture(gl, "map01.png");
+    const mapTexture       = loadTexture(gl, "map01.png");
+    const charTexture       = loadTexture(gl, "player-test.png");
+
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -89,84 +132,54 @@ function main() {
     // Call the routine that builds all the
     // objects we'll be drawing.
     const buffers = initBuffers(gl);
-    let then = 0;
-
-    let pos = [0.0, 0.0, 0.0];
-    // Draw the scene repeatedly
-
-    const fpscap = 50;
-    document.sperframe = 1 / fpscap;
-    const msperframe = 1000 / fpscap;
+    let   then    = 0;
+    const fpscap  = 50;
+    document.sperframe = (1000 / fpscap);
     // setInterval(() => {
     //     requestAnimationFrame(render);
     // }, msperframe);
     document.fps = 0;
     setInterval(() => {
         document.lastFps = document.fps
-        //console.log(document.fps);
+        //console.log(document.fps)
         document.fps = 0;
     }, 1000)
 
     function render(now) {
         document.fps++;
-        now *= 0.001; // convert to seconds
         deltaTime = now - then;
         const wait = document.sperframe - deltaTime;
         then = now;
 
-        const camPan = getCamPan(deltaTime);
-        const camZoom = getZoom(deltaTime);
+        const camPan  = getCamPan (deltaTime);
+        const camZoom = getZoom   (deltaTime);
 
-        let s = Math.sin(Math.PI / (camZoom + 4) * 0.5);
-        let c = Math.cos(Math.PI / (camZoom + 4) * 0.5);
-        let crotvec = [0, -c, s];
-        const eye = [camPan[0], camPan[1], -2];
-        const target = [camPan[0], camPan[1], 0];
-        const up = [0, 1, 0];  
-        const camera = mat4.create();
-        mat4.lookAt(camera, eye, target, up);
-        mat4.invert(camera, camera);
-        //0.8660254037844386 0.5000000000000001
-        //0.43596792373595283 0.8999622044693668
-
-        // camera[5] *= c;
-        // camera[6] -= s;
-        // camera[9] -= s;
-        // camera[10] *= c;
-
-        /* 0: -1 0  0   0
-               0 1  0   0
-               0 0 -1   0
-​               0 0 -2.5 1*/
-
-        /* 1: -1 0                    0                  0
-​               0 0.5                 -0.8660253882408142 0
-​               0 -0.8660253882408142 -0.5                0
-​               0 0                   -2.5                1 */
-
-        /* 2: -1 0                   0                   0
-        ​       0 0.9003360271453857  -0.4351954162120819 0
-        ​       0 -0.4351954162120819 -0.9003360271453857 0
-        ​       0 0                   -0.511320948600769  1 */
-        const modelViewMatrix = mat4.clone(camera);
-        // mat4.translate(modelViewMatrix,
-        //     modelViewMatrix,
-        //     [0.0, 0.0, camZoom]);
-
-        // mat4.rotate(modelViewMatrix,
-        //     modelViewMatrix,
-        //     Math.PI / (camZoom + 4) * 0.5,
-        //     [1, 0, 0]);
-
-        // mat4.translate(modelViewMatrix,
-        //     modelViewMatrix,
-        //     camPan);
-
-        drawMapPlane(gl, programInfo, buffers, texture, modelViewMatrix);
-        //pos[0] += 1 * deltaTime;
-        //drawCharacter(gl, programInfo, modelViewMatrix, pos);
-        setTimeout(() => requestAnimationFrame(render), Math.max(0, wait * 1000))
-        //requestAnimationFrame(render);
+        // the camera world position is decided here
+        const modelViewMatrix = mat4.create();
+        mat4.translate (modelViewMatrix,
+                        modelViewMatrix,
+                        [0.0, 0.0, (camZoom - 1.2) * 2]);
+        mat4.rotate    (modelViewMatrix,
+                        modelViewMatrix,
+                        Math.PI * ((1 - camZoom) * 0.3),
+                        [-1, 0, 0]);
+        mat4.translate (modelViewMatrix,
+                        modelViewMatrix,
+                        camPan);
+        drawMapPlane  (gl, 
+                       programInfo, 
+                       buffers, 
+                       mapTexture, 
+                       modelViewMatrix);
+        // We'll use this to move the character around
+        const pos = [0.0, 0.0, 0.0125];
+        drawCharacter (gl, 
+                       camZoom, 
+                       programInfo, 
+                       charTexture, 
+                       modelViewMatrix, 
+                       pos);
+        setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
     requestAnimationFrame(render);
 

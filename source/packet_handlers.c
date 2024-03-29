@@ -84,16 +84,28 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     long long int  token     = getTokenFromHTTP     (data, packetSize);
     const Player  *player    = tryGetPlayerFromToken(token, game);
 
+#ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
+    token = 696969;
+#endif
     /*
      * Direct the remotehost to the login, character creation
      * or game depending on their session token.
      */
     if (stringSearch(data, "GET / ", 10) >= 0) {
         if (player == NULL) {
+#ifndef DEBUG
             sendContent ("./login.html", 
                          HTTP_FLAG_TEXT_HTML, 
                          remotehost, 
                          NULL);
+#endif
+#ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
+            sendContent ("./game.html", 
+                         HTTP_FLAG_TEXT_HTML, 
+                         remotehost, 
+                         NULL);
+#endif
+
         }
         else if (!isCharsheetValid(player)) {
             sendContent ("./charsheet.html", 
@@ -123,7 +135,11 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
      * the remotehost needs to be authenticated
      * otherwise we're not sending anything at all.
      */
-    if (player == NULL) {
+    if (player == NULL
+#ifdef DEBUG_TEMP
+        && token != 696969
+#endif
+            ) {
         sendForbiddenPacket(remotehost);
         return;
     }
