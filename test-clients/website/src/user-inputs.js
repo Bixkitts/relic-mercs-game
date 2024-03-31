@@ -1,6 +1,8 @@
 import { getContext, getCanvas } from './canvas-getter.js'
 import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
+import { getProjectionMatrix } from './rendering/renderer.js';
+import { getModelViewMatrix } from './rendering/renderer.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -34,14 +36,8 @@ globalThis.unfuck   = () => {
 }
 let   pressed          = [0, 0, 0];
 const gl               = getContext();
-const fieldOfView      = (45 * Math.PI) / 180;
-const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
-const zNear            = 0.1; const zFar = 100.0;
-const projectionMatrix = mat4.create();
-mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
 let mouseInCanvas   = false;
-let modelViewMatrix = mat4.create();
 
 function keyPressed(e, coef) {
     if (mouseInCanvas) {
@@ -88,36 +84,47 @@ export function initWASD() {
         if (e.button === 2) pressed[mouse.right] = true;
         console.log(mouseInCanvas);
         if (mouseInCanvas && pressed[mouse.left]) {
+            const projectionMatrix = getProjectionMatrix();
+            const modelViewMatrix  = getModelViewMatrix();
+            const rect             = canvas.getBoundingClientRect();
+            const mouseX           = event.clientX - rect.left;
+            const mouseY           = event.clientY - rect.top;
 
-            const x = e.pageX - canvas.offsetLeft;
-            const y = e.pageY - canvas.offsetTop;
+            // Display mouse coordinates
+            console.log("Mouse X:", mouseX, "Mouse Y:", mouseY);
+            // -------------Edder's Shit here----------------------
+            const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;
+            const ndcY = 1 - (mouseY * 2.0) / gl.canvas.height;
+            const rayClip = vec4.fromValues(ndcX,
+                                            ndcY,
+                                            -1, 1);
+            let ndcToView = mat4.create();
+            mat4.invert   (ndcToView, projectionMatrix);
 
-            const ndcX = (x / gl.canvas.width) * 2 - 1;
-            const ndcY = 1 - (y / gl.canvas.height) * 2;
-            const vec = [
-                ndcX,
-                ndcY,
-                -1, 1
-            ];
-            let matt = mat4.clone(modelViewMatrix);
-            mat4.multiply(matt, matt, projectionMatrix);
+            let rayEye = vec4.create();
+            vec4.transformMat4(rayEye, rayClip, ndcToView);
 
-            mat4.invert(matt, matt);
-            let ov = [0, 0, 0, 1];
-            mat4.transformMat4(ov, vec, matt);
-            console.log("#######")
-            printMat4(modelViewMatrix);
+            let viewToWorld = mat4.create();
+            mat4.invert   (viewToWorld, modelViewMatrix);
 
-            const ab = new ArrayBuffer(18);
-            const dataView = new DataView(ab);
+            let rayWorld = vec3.create();
+            vec3.transformMat4 (rayWorld, rayEye, viewToWorld);
+            vec3.normalize     (rayWorld, rayWorld);
 
-            dataView.setInt16(0, 1, true);
-            dataView.setFloat64(2, ov[0], true);
-            dataView.setFloat64(10, ov[1], true);
+            console.log("Ray Vector:", rayWorld);
+           // console.log("#######")
+           // printMat4(modelViewMatrix);
 
-            getSocket().send(ab);
-            console.log(vec + " # " + ov);
-            console.log(e);
+           // const ab = new ArrayBuffer(18);
+           // const dataView = new DataView(ab);
+
+           // dataView.setInt16(0, 1, true);
+           // dataView.setFloat64(2, ov[0], true);
+           // dataView.setFloat64(10, ov[1], true);
+
+           // getSocket().send(ab);
+           // console.log(vec + " # " + ov);
+           // console.log(e);
         }
     }
     document.onmousedown = e => mouseDown(e)
@@ -135,6 +142,10 @@ export function initWASD() {
         const res = -Math.sign(e.deltaY) * zoomFactor;
         scrollDelta += res;
     }
+}
+
+export function clickToWorldspaceRay() {
+
 }
 
 export function getCamPan(deltaTime) {

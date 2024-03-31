@@ -22,39 +22,34 @@ export function loadTexture(gl, url) {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
-    // Because images have to be downloaded over the internet
-    // they might take a moment until they are ready.
-    // Until then put a single pixel in the texture so we can
-    // use it immediately. When the image has finished downloading
-    // we'll update the texture with the contents of the image.
-    const level = 0;
+    const level          = 0;
     const internalFormat = gl.RGBA;
-    const width = 1;
-    const height = 1;
-    const border = 0;
-    const srcFormat = gl.RGBA;
-    const srcType = gl.UNSIGNED_BYTE;
-    const pixel = new Uint8Array([0, 0, 255, 255]); // opaque blue
-    gl.texImage2D(gl.TEXTURE_2D,
-        level,
-        internalFormat,
-        width,
-        height,
-        border,
-        srcFormat,
-        srcType,
-        pixel,);
+    const width          = 1;
+    const height         = 1;
+    const border         = 0;
+    const srcFormat      = gl.RGBA;
+    const srcType        = gl.UNSIGNED_BYTE;
+    const pixel          = new Uint8Array([0, 0, 255, 255]);
+    gl.texImage2D (gl.TEXTURE_2D,
+                   level,
+                   internalFormat,
+                   width,
+                   height,
+                   border,
+                   srcFormat,
+                   srcType,
+                   pixel,);
 
+    // Texture will be solid blue until the image actually loads
     const image = new Image();
     image.onload = () => {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(
-            gl.TEXTURE_2D,
-            level,
-            internalFormat,
-            srcFormat,
-            srcType,
-            image,
+        gl.bindTexture (gl.TEXTURE_2D, texture);
+        gl.texImage2D  (gl.TEXTURE_2D,
+                        level,
+                        internalFormat,
+                        srcFormat,
+                        srcType,
+                        image,
         );
 
         // WebGL1 has different requirements for power of 2 images
@@ -86,14 +81,13 @@ function isPowerOf2(value) {
  * @returns 
  */
 export function initShaderProgram(gl, vsSource, fsSource) {
-    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+    const vertexShader   = loadShader(gl, gl.VERTEX_SHADER, vsSource);
     const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    const shaderProgram  = gl.createProgram();
 
-    const shaderProgram = gl.createProgram();
-
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
+    gl.attachShader (shaderProgram, vertexShader);
+    gl.attachShader (shaderProgram, fragmentShader);
+    gl.linkProgram  (shaderProgram);
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
         alert(`Unable to initialize the shader program: ${gl.getProgramInfoLog(shaderProgram)}`);
