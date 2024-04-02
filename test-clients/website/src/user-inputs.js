@@ -3,6 +3,8 @@ import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
 import { getProjectionMatrix } from './rendering/renderer.js';
 import { getModelViewMatrix } from './rendering/renderer.js';
+// TODO: test function, need to support multiple characters
+import { setCharacterPos } from './rendering/renderer.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -84,47 +86,15 @@ export function initWASD() {
         if (e.button === 2) pressed[mouse.right] = true;
         console.log(mouseInCanvas);
         if (mouseInCanvas && pressed[mouse.left]) {
-            const projectionMatrix = getProjectionMatrix();
-            const modelViewMatrix  = getModelViewMatrix();
             const rect             = canvas.getBoundingClientRect();
+            // TODO: event is deprecated
             const mouseX           = event.clientX - rect.left;
             const mouseY           = event.clientY - rect.top;
 
             // Display mouse coordinates
             console.log("Mouse X:", mouseX, "Mouse Y:", mouseY);
-            // -------------Edder's Shit here----------------------
-            const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;
-            const ndcY = 1 - (mouseY * 2.0) / gl.canvas.height;
-            const rayClip = vec4.fromValues(ndcX,
-                                            ndcY,
-                                            -1, 1);
-            let ndcToView = mat4.create();
-            mat4.invert   (ndcToView, projectionMatrix);
-
-            let rayEye = vec4.create();
-            vec4.transformMat4(rayEye, rayClip, ndcToView);
-
-            let viewToWorld = mat4.create();
-            mat4.invert   (viewToWorld, modelViewMatrix);
-
-            let rayWorld = vec3.create();
-            vec3.transformMat4 (rayWorld, rayEye, viewToWorld);
-            vec3.normalize     (rayWorld, rayWorld);
-
-            console.log("Ray Vector:", rayWorld);
-           // console.log("#######")
-           // printMat4(modelViewMatrix);
-
-           // const ab = new ArrayBuffer(18);
-           // const dataView = new DataView(ab);
-
-           // dataView.setInt16(0, 1, true);
-           // dataView.setFloat64(2, ov[0], true);
-           // dataView.setFloat64(10, ov[1], true);
-
-           // getSocket().send(ab);
-           // console.log(vec + " # " + ov);
-           // console.log(e);
+            const worldCoords = clickToWorldCoord(mouseX, mouseY);
+            setCharacterPos(worldCoords);
         }
     }
     document.onmousedown = e => mouseDown(e)
@@ -143,9 +113,77 @@ export function initWASD() {
         scrollDelta += res;
     }
 }
+function rayPlaneIntersection(rayOrigin, rayDirection, planePoint, planeNormal) {
+    // Calculate the denominator of the intersection formula
+    console.log("plane:", planePoint);
+    let denominator = vec3.dot(planeNormal, rayDirection);
 
-export function clickToWorldspaceRay() {
+    // If denominator is 0, ray and plane are parallel, no intersection
+    if (Math.abs(denominator) < 1e-6) {
+        return null;
+    }
 
+    // Calculate the parameter t of the intersection formula
+    let t = vec3.dot(vec3.subtract(vec3.create(), planePoint, rayOrigin), planeNormal) / denominator;
+
+    // If t is negative, intersection is behind the ray's origin
+    if (t < 0) {
+        return null;
+    }
+
+    // Calculate the intersection point using the parameter t
+    let intersectionPoint = vec3.scaleAndAdd(vec3.create(), rayOrigin, rayDirection, t);
+
+    return intersectionPoint;
+}
+
+function clickToWorldCoord(mouseX, mouseY) {
+    const projectionMatrix = getProjectionMatrix();
+    const modelViewMatrix  = getModelViewMatrix();
+    // -------------Edder's Shit here----------------------
+    const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;
+    const ndcY = 1 - (mouseY * 2.0) / gl.canvas.height;
+    const rayClip = vec4.fromValues(ndcX,
+                                    ndcY,
+                                    -0.001, 1);
+    let ndcToView = mat4.create();
+    mat4.invert   (ndcToView, projectionMatrix);
+
+    let rayEye = vec4.create();
+    vec4.transformMat4(rayEye, rayClip, ndcToView);
+
+    let viewToWorld = mat4.create();
+    mat4.invert   (viewToWorld, modelViewMatrix);
+
+    let rayWorld = vec3.create();
+    vec3.transformMat4 (rayWorld, rayEye, viewToWorld);
+
+    let camPos = vec3.create();
+    vec3.set(camPos, viewToWorld[12], viewToWorld[13], viewToWorld[14]);
+    console.log("CamPos:", camPos);
+
+    console.log("Ray Vector World:", rayWorld);
+    let rayRelative = vec3.subtract(vec3.create(), rayWorld, camPos);
+    console.log("Ray Vector Relative:", rayRelative);
+    const iPoint = rayPlaneIntersection(camPos, rayRelative, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
+
+    console.log("intersection:", iPoint);
+
+    return iPoint
+
+   // console.log("#######")
+   // printMat4(modelViewMatrix);
+
+   // const ab = new ArrayBuffer(18);
+   // const dataView = new DataView(ab);
+
+   // dataView.setInt16(0, 1, true);
+   // dataView.setFloat64(2, ov[0], true);
+   // dataView.setFloat64(10, ov[1], true);
+
+   // getSocket().send(ab);
+   // console.log(vec + " # " + ov);
+   // console.log(e);
 }
 
 export function getCamPan(deltaTime) {

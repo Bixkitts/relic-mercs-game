@@ -35,6 +35,10 @@ export function getModelViewMatrix() {
     return modelViewMatrix;
 }
 
+export function getCamWorldPos() {
+
+}
+
 
 document.getElementById('fullscreenButton').addEventListener('click', toggleFullScreen);
 main();
@@ -114,6 +118,13 @@ function createProgramInfo(gl, shaderProgram) {
     return programInfo;
 }
 
+// TODO: test function, need to support multiple characters
+// and interpolate movement
+let charPos = [0.0, 0.0, 0.0125];
+export function setCharacterPos(coords) {
+    charPos[0] = coords[0];
+    charPos[1] = coords[1];
+}
 function startRenderLoop(programInfo) {
     let   then        = 0;
     const mapTexture  = loadTexture(gl, "map01.png");
@@ -129,21 +140,22 @@ function startRenderLoop(programInfo) {
         const camPan          = getCamPan (deltaTime);
         const camZoom         = getZoom   (deltaTime);
 
-        let tempMatrix = mat4.create();
-        modelViewMatrix = doCameraTransforms(tempMatrix, camZoom, camPan);
+        modelViewMatrix = doCameraTransforms(mat4.create(), camZoom, camPan);
+
+        let locModelViewMatrix = mat4.create();
+        mat4.copy(locModelViewMatrix, modelViewMatrix);
 
         drawMapPlane  (gl, 
                        programInfo, 
                        mapTexture, 
-                       modelViewMatrix);
+                       locModelViewMatrix);
         // We'll use this to move the character around
-        const pos = [0.0, 0.0, 0.0125];
         drawCharacter (gl, 
                        camZoom, 
                        programInfo, 
                        charTexture, 
-                       modelViewMatrix, 
-                       pos);
+                       locModelViewMatrix, 
+                       charPos);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
@@ -194,19 +206,8 @@ function canvasInit() {
  *  make it work in our setup
  */
 function rayPlaneIntersection(rayDir, planeNormal) {
-    // Assuming the ray starts from the origin (0, 0, 0)
-    // and extends infinitely in the direction of rayDir
-
-    // Assuming the plane passes through the origin (0, 0, 0)
-    // If not, you'll need to adjust the plane's distance from the origin
-
-    // Calculate the dot product of the ray direction and the plane normal
-    let dotProduct = rayDir.x * planeNormal.x +
-                     rayDir.y * planeNormal.y +
-                     rayDir.z * planeNormal.z;
-
-    // If the dot product is close to zero, the ray is parallel to the plane
-    // and does not intersect
+    let dotProduct = Vec3.dot(rayDir, planeNormal);
+    // intersection
     if (Math.abs(dotProduct) < 1e-6) {
         // Return null to indicate no intersection
         return null;
@@ -298,7 +299,7 @@ function toggleFullScreen() {
         }
     }
 }
-document.addEventListener('fullscreenchange', function(event) {
+document.addEventListener('fullscreenchange', function() {
     screenResUpdate();
     if (!document.fullscreenElement) {
         canvas.width  = canvasWidth;
