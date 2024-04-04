@@ -1,10 +1,9 @@
-import { getContext, getCanvas } from './canvas-getter.js'
+import { getGLContext, getCanvas } from './canvas-getter.js'
+import { getPlayers } from './game-logic.js';
 import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
 import { getProjectionMatrix } from './rendering/renderer.js';
 import { getModelViewMatrix } from './rendering/renderer.js';
-// TODO: test function, need to support multiple characters
-import { setCharacterPos } from './rendering/renderer.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -37,7 +36,7 @@ globalThis.unfuck   = () => {
     pressed = [0, 0, 0];
 }
 let   pressed          = [0, 0, 0];
-const gl               = getContext();
+const gl               = getGLContext();
 
 let mouseInCanvas   = false;
 

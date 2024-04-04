@@ -1,6 +1,6 @@
-import { getContext } from "../canvas-getter.js"
+import { getGLContext } from "../canvas-getter.js"
 
-const ctx = getContext()
+const ctx = getGLContext()
 
 export class ProgramInfo {
     constructor() {

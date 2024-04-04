@@ -17,6 +17,6 @@ export function getCanvas() {
 /**
  * @returns {WebGLRenderingContext}
  */
-export function getContext() {
+export function getGLContext() {
     return context;
 }

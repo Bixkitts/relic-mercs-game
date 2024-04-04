@@ -1,12 +1,12 @@
 import { initBuffers } from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
-import { drawCharacter } from './gl-draw-scene.js';
+import { drawPlayers } from './gl-draw-scene.js';
 import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
-import { getContext } from '../canvas-getter.js'
+import { getGLContext } from '../canvas-getter.js'
 import { initShaderProgram, loadTexture } from './resource-loading.js';
 
-const gl           = getContext();
+const gl           = getGLContext();
 let   deltaTime    = 0;
 const canvas       = document.getElementById('glcanvas');
 
@@ -118,19 +118,32 @@ function createProgramInfo(gl, shaderProgram) {
     return programInfo;
 }
 
-// TODO: test function, need to support multiple characters
-// and interpolate movement
-let charPos = [0.0, 0.0, 0.0125];
-export function setCharacterPos(coords) {
-    charPos[0] = coords[0];
-    charPos[1] = coords[1];
+// Define an array to hold callback functions
+let renderCallbacks = [];
+
+// Function to subscribe to the onRender event
+export function subscribeToRender(callback) {
+    renderCallbacks.push(callback);
 }
+
+// Function to unsubscribe from the onRender event
+export function unsubscribeFromRender(callback) {
+    const index = renderCallbacks.indexOf(callback);
+    if (index !== -1) {
+        renderCallbacks.splice(index, 1);
+    }
+}
+
 function startRenderLoop(programInfo) {
     let   then        = 0;
     const mapTexture  = loadTexture(gl, "map01.png");
-    const charTexture = loadTexture(gl, "player-test.png");
     requestAnimationFrame(render);
     function render(now) {
+
+        renderCallbacks.forEach(callback => {
+            callback(deltaTime);
+        });
+
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         document.fps++;
         deltaTime = now - then;
@@ -149,13 +162,10 @@ function startRenderLoop(programInfo) {
                        programInfo, 
                        mapTexture, 
                        locModelViewMatrix);
-        // We'll use this to move the character around
-        drawCharacter (gl, 
+        drawPlayers   (gl, 
                        camZoom, 
                        programInfo, 
-                       charTexture, 
-                       locModelViewMatrix, 
-                       charPos);
+                       locModelViewMatrix); 
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
