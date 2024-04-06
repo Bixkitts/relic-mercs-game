@@ -83,7 +83,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     Game          *game      = getTestGame();
     long long int  token     = getTokenFromHTTP     (data, packetSize);
     const Player  *player    = tryGetPlayerFromToken(token, game);
-
+#undef DEBUG_TEMP
 #ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
     token = 696969;
 #endif
@@ -93,7 +93,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
      */
     if (stringSearch(data, "GET / ", 10) >= 0) {
         if (player == NULL) {
-#ifndef DEBUG
+#ifndef DEBUG_TEMP
             sendContent ("./login.html", 
                          HTTP_FLAG_TEXT_HTML, 
                          remotehost, 
@@ -112,6 +112,14 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
                          HTTP_FLAG_TEXT_HTML, 
                          remotehost, 
                          NULL);
+        }
+        else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
+            sendWebSocketResponse (data, packetSize, remotehost);
+            HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+            hostAttr->player    = player;
+            customAttr->handler = HANDLER_WEBSOCK;
+            cacheHost             (remotehost, 0);
+            return;
         }
         else {
             sendContent ("./game.html", 
@@ -149,14 +157,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     }
     else if (stringSearch(data, "GET /index.js", 12) >= 0) {
         sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
-        return;
-    }
-    else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
-        sendWebSocketResponse (data, packetSize, remotehost);
-        HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
-        hostAttr->player    = player;
-        customAttr->handler = HANDLER_WEBSOCK;
-        cacheHost             (remotehost, 0);
         return;
     }
     // TODO: Have an ignore list of files the client should not be able

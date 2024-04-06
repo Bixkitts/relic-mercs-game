@@ -90,8 +90,6 @@ export function initWASD() {
             const mouseX           = event.clientX - rect.left;
             const mouseY           = event.clientY - rect.top;
 
-            // Display mouse coordinates
-            console.log("Mouse X:", mouseX, "Mouse Y:", mouseY);
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
             setCharacterPos(worldCoords);
         }
@@ -159,14 +157,10 @@ function clickToWorldCoord(mouseX, mouseY) {
 
     let camPos = vec3.create();
     vec3.set(camPos, viewToWorld[12], viewToWorld[13], viewToWorld[14]);
-    console.log("CamPos:", camPos);
 
-    console.log("Ray Vector World:", rayWorld);
     let rayRelative = vec3.subtract(vec3.create(), rayWorld, camPos);
-    console.log("Ray Vector Relative:", rayRelative);
     const iPoint = rayPlaneIntersection(camPos, rayRelative, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
 
-    console.log("intersection:", iPoint);
 
     return iPoint
 

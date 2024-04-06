@@ -40,7 +40,6 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
         mat4.translate (modelViewMatrix,
                         modelViewMatrix,
                         player.position,);
-        console.log("player.position:", player.position);
         mat4.rotate    (modelViewMatrix,
                         modelViewMatrix,
                         (Math.PI * ((1 - camZoom) * 0.3) + 0.4),
