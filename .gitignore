@@ -52,3 +52,7 @@ Mkfile.old
 dkms.conf
 .vscode/settings.json
 .gitignore
+
+# Certificates and keys
+*.crt
+*.key
