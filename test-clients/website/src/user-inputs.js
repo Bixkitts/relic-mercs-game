@@ -4,6 +4,8 @@ import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
 import { getProjectionMatrix } from './rendering/renderer.js';
 import { getModelViewMatrix } from './rendering/renderer.js';
+import { rayPlaneIntersection } from './helpers';
+import { sendMovePacket } from './networking.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -91,7 +93,10 @@ export function initWASD() {
             const mouseY           = event.clientY - rect.top;
 
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
-            setCharacterPos(worldCoords);
+            // Get Own player here and MOVE() them
+            const players = getPlayers();
+            players[0].move(worldCoords[0], worldCoords[1]);
+            sendMovePacket(worldCoords[0], worldCoords[1]);
         }
     }
     document.onmousedown = e => mouseDown(e)
@@ -109,29 +114,6 @@ export function initWASD() {
         const res = -Math.sign(e.deltaY) * zoomFactor;
         scrollDelta += res;
     }
-}
-function rayPlaneIntersection(rayOrigin, rayDirection, planePoint, planeNormal) {
-    // Calculate the denominator of the intersection formula
-    console.log("plane:", planePoint);
-    let denominator = vec3.dot(planeNormal, rayDirection);
-
-    // If denominator is 0, ray and plane are parallel, no intersection
-    if (Math.abs(denominator) < 1e-6) {
-        return null;
-    }
-
-    // Calculate the parameter t of the intersection formula
-    let t = vec3.dot(vec3.subtract(vec3.create(), planePoint, rayOrigin), planeNormal) / denominator;
-
-    // If t is negative, intersection is behind the ray's origin
-    if (t < 0) {
-        return null;
-    }
-
-    // Calculate the intersection point using the parameter t
-    let intersectionPoint = vec3.scaleAndAdd(vec3.create(), rayOrigin, rayDirection, t);
-
-    return intersectionPoint;
 }
 
 function clickToWorldCoord(mouseX, mouseY) {
@@ -161,22 +143,7 @@ function clickToWorldCoord(mouseX, mouseY) {
     let rayRelative = vec3.subtract(vec3.create(), rayWorld, camPos);
     const iPoint = rayPlaneIntersection(camPos, rayRelative, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
 
-
     return iPoint
-
-   // console.log("#######")
-   // printMat4(modelViewMatrix);
-
-   // const ab = new ArrayBuffer(18);
-   // const dataView = new DataView(ab);
-
-   // dataView.setInt16(0, 1, true);
-   // dataView.setFloat64(2, ov[0], true);
-   // dataView.setFloat64(10, ov[1], true);
-
-   // getSocket().send(ab);
-   // console.log(vec + " # " + ov);
-   // console.log(e);
 }
 
 export function getCamPan(deltaTime) {

@@ -18,36 +18,38 @@ export class Player {
         this.image    = loadTexture(getGLContext(), image);
     }
     move(targetX, targetY) {
-        let currentX = this.position[0];
-        let currentY = this.position[1];
+        this.position[0] = targetX;
+        this.position[1] = targetY;
+    //    let currentX = this.position[0];
+    //    let currentY = this.position[1];
 
-        // Calculate distance and direction to move
-        let deltaX = targetX - currentX;
-        let deltaY = targetY - currentY;
-        let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    //    // Calculate distance and direction to move
+    //    let deltaX = targetX - currentX;
+    //    let deltaY = targetY - currentY;
+    //    let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        // Calculate speed (units per millisecond)
-        let speed = 0.001; // Adjust as needed
-        let totalTime = distance / speed;
+    //    // Calculate speed (units per millisecond)
+    //    let speed = 0.001; // Adjust as needed
+    //    let totalTime = distance / speed;
 
-        let startTime = null;
+    //    let startTime = null;
 
-        const moveCallback = (deltaTime) => {
-            if (!startTime) startTime = deltaTime;
+    //    const moveCallback = (deltaTime) => {
+    //        if (!startTime) startTime = deltaTime;
 
-            let elapsedTime = deltaTime - startTime;
+    //        let elapsedTime = deltaTime - startTime;
 
-            if (elapsedTime < totalTime) {
-                let fraction = elapsedTime / totalTime;
-                this.position[0] = currentX + deltaX * fraction;
-                this.position[1] = currentY + deltaY * fraction;
-            } else {
-                // Player reached target position, unsubscribe from render
-                unsubscribeFromRender(moveCallback);
-            }
-        };
+    //        if (elapsedTime < totalTime) {
+    //            let fraction = elapsedTime / totalTime;
+    //            this.position[0] = currentX + deltaX * fraction;
+    //            this.position[1] = currentY + deltaY * fraction;
+    //        } else {
+    //            // Player reached target position, unsubscribe from render
+    //            unsubscribeFromRender(moveCallback);
+    //        }
+    //    };
 
-        subscribeToRender(moveCallback);
+    //    subscribeToRender(moveCallback);
     }
 }
 

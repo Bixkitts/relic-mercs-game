@@ -85,6 +85,9 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 /*
  * Make sure outData is larger than inData
  */
+/*
+ * Appends a 2 byte websocket header to the start
+ */
 int encodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 {
     const int headerSize = 2;

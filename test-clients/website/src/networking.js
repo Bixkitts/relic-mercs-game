@@ -31,6 +31,17 @@ function sendHeartbeat() {
     socket.send(ab);
 }
 
+export function sendMovePacket(coordX, coordY) {
+    const ab       = new ArrayBuffer(18);
+    const dataView = new DataView(ab);
+
+    dataView.setInt16   (0, 1, true);
+    dataView.setFloat64 (2, coordX, true);
+    dataView.setFloat64 (10, coordY, true);
+
+    socket.send(ab);
+}
+
 export function sendArgs() {
 
 }
@@ -43,5 +54,3 @@ function sendMessage() {
 }
 
 const messageInput = document.getElementById('messageInput');
-//document.getElementById("messageInput").onkeydown = e => { if(e.key === "Enter") sendMessage(); };
-//document.getElementById("sendMessage").onclick = () => { sendMessage(); };

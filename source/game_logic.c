@@ -672,12 +672,14 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
     // Here we respond to the clients,
     // telling them all who moved and where.
     Opcode responseOpcode = 0x0001;
-    char   gameResponseData[(sizeof(struct MovePlayerData) 
-                            + sizeof(Opcode))] = { 0 };
-    memcpy (&gameResponseData, &responseOpcode, sizeof(Opcode));
-    memcpy (&gameResponseData[sizeof(Opcode)], 
+    char   gameResponseData[(sizeof(*moveData) 
+                            + sizeof(responseOpcode))] = { 0 };
+    memcpy (&gameResponseData, 
+            &responseOpcode, 
+            sizeof(Opcode));
+    memcpy (&gameResponseData[sizeof(responseOpcode)], 
             moveData, 
-            sizeof(struct MovePlayerData));
+            sizeof(*moveData));
 
 
     char multicastBuffer   [(sizeof(struct MovePlayerData) 
