@@ -658,41 +658,45 @@ int   tryPlayerLogin    (Game *restrict game,
 static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 {
     printf("Ping incoming!");
+    Opcode responseOpcode = 0x00;
+    char   responseBuffer[sizeof(responseOpcode)
+                          + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+    int packetSize =
+    encodeWebsocketMessage (responseBuffer,
+                            (char*)&responseOpcode,
+                            sizeof(responseOpcode));
+    sendDataTCP            (responseBuffer,
+                            packetSize,
+                            remotehost);
 }
 
 static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 {
     struct MovePlayerData *moveData = (struct MovePlayerData*)data; 
-#ifdef DEBUG
-    printBufferInHex(data, dataSize);
-#endif 
-    printf("\nxCoord: %f\n", moveData->xCoord);
-    printf("\nyCoord: %f\n", moveData->yCoord);
 
     // Here we respond to the clients,
     // telling them all who moved and where.
-    Opcode responseOpcode = 0x0001;
+    Opcode responseOpcode = 0x01;
     char   gameResponseData[(sizeof(*moveData) 
                             + sizeof(responseOpcode))] = { 0 };
-    memcpy (&gameResponseData, 
+    memcpy (gameResponseData, 
             &responseOpcode, 
-            sizeof(Opcode));
-    memcpy (&gameResponseData[sizeof(responseOpcode)], 
+            sizeof(responseOpcode));
+    memcpy (&(gameResponseData[sizeof(responseOpcode)]), 
             moveData, 
             sizeof(*moveData));
 
 
-    char multicastBuffer   [(sizeof(struct MovePlayerData) 
-                            + sizeof(Opcode)) 
+    char multicastBuffer   [sizeof(*moveData) 
+                            + sizeof(responseOpcode)
                             + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+    int packetSize =
     encodeWebsocketMessage (multicastBuffer, 
                             gameResponseData, 
-                            sizeof(struct MovePlayerData) 
-                            + sizeof(Opcode));
+                            sizeof(*moveData) 
+                            + sizeof(responseOpcode));
     multicastTCP           (multicastBuffer, 
-                            (sizeof(struct MovePlayerData) 
-                            + sizeof(Opcode)) 
-                            + WEBSOCKET_HEADER_SIZE_MAX, 
+                            packetSize, 
                             0);
 }
 static void endTurnHandler(char *data, ssize_t dataSize, Host remotehost)

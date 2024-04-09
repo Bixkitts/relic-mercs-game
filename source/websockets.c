@@ -91,10 +91,10 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 int encodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 {
     const int headerSize = 2;
-    outData[0] = 0x81; // FIN websocket header
+    outData[0] = 0x82; // FIN websocket header
     outData[1] = (unsigned char)dataSize & 0b01111111; // Payload size
 
-    memcpy(&outData[2], inData, dataSize);
+    memcpy(&outData[headerSize], inData, dataSize);
     return dataSize + headerSize;
 }
 

@@ -1,18 +1,23 @@
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
-const socket        = new WebSocket(websocketUrl);
-socket.binaryType = "arraybuffer";
+let   socket;
+
+window.onload = function() {
+    socket            = new WebSocket(websocketUrl);
+    socket.binaryType = "arraybuffer";
+    socket.onmessage  = e => handleIncoming(e.data);
+    socket.onopen = () => {
+        console.log('WebSocket connection established');
+        setInterval(sendHeartbeat, 3000);
+    }
+
+    socket.onerror = e => console.log('WebSocket error:', e);
+}
 
 export function getSocket() {
     return socket;
 }
 
-socket.onopen = () => {
-    console.log('WebSocket connection established');
-    setInterval(sendHeartbeat, 3000);
-}
-
-socket.onerror = e => console.log('WebSocket error:', e);
 
 /**
  * @param {ArrayBuffer} msg 
@@ -21,7 +26,6 @@ function handleIncoming(msg) {
     console.log('Received: ', msg.byteLength);
 }
 
-socket.onmessage = e => handleIncoming(e.data);
 
 function sendHeartbeat() {
     console.log('Sending heartbeat...');
@@ -46,11 +50,11 @@ export function sendArgs() {
 
 }
 
-function sendMessage() {
-    const message = messageInput.value;
-    socket.send(message);
-    console.log('Message sent:', message);
-    messageInput.value = '';
-}
-
-const messageInput = document.getElementById('messageInput');
+//function sendMessage() {
+//    const message = messageInput.value;
+//    socket.send(message);
+//    console.log('Message sent:', message);
+//    messageInput.value = '';
+//}
+//
+//const messageInput = document.getElementById('messageInput');
