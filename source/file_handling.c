@@ -81,6 +81,9 @@ int getFileData(const char *dir, char **buffer)
     return file_stat.st_size;
 }
 
+/*
+ * TODO: rewrite this spaghetti
+ */
 int listFiles(char *outArray)
 {
     DIR *d = NULL;
@@ -94,7 +97,10 @@ int listFiles(char *outArray)
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
           if (dir->d_type == DT_REG)
           {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-3, "./%s", dir->d_name);
+              snprintf(&outArray[i * MAX_FILENAME_LEN], 
+              MAX_DIRNAME_LEN + MAX_FILENAME_LEN-3, 
+              "./%s", 
+              dir->d_name);
               i++;
           }
         }
@@ -105,33 +111,45 @@ int listFiles(char *outArray)
     d = opendir("./src");
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-8, "./src/%s", dir->d_name);
-              i++;
-          }
+            if (dir->d_type == DT_REG)
+            {
+                snprintf(&outArray[i * MAX_FILENAME_LEN], 
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN-8, 
+                         "./src/%s", 
+                         dir->d_name);
+                i++;
+            }
         }
         closedir(d);
     }
     d = opendir("./images");
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-10, "./images/%s", dir->d_name);
-              i++;
-          }
+            if (dir->d_type == DT_REG)
+            {
+                // This produceses a potential overflow error, but it's
+                // okay as long as I don't personally cause an overflow
+                // with long filenames
+                snprintf(&outArray[i * MAX_FILENAME_LEN], 
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 10, 
+                         "./images/%s", 
+                         dir->d_name);
+                i++;
+            }
         }
     }
     closedir(d);
     d = opendir("./src/rendering");
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-          if (dir->d_type == DT_REG)
-          {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], MAX_FILENAME_LEN-17, "./src/rendering/%s", dir->d_name);
-              i++;
-          }
+            if (dir->d_type == DT_REG)
+            {
+                snprintf(&outArray[i * MAX_FILENAME_LEN], 
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN-17, 
+                         "./src/rendering/%s", 
+                         dir->d_name);
+                i++;
+            }
         }
     }
     closedir(d);

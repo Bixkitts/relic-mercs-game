@@ -31,7 +31,6 @@ void capInt           (int *intToCap, int maxValue);
 
 void printBufferInHex (char *data, int size);
 int  getMutexIndex    (const void *object, 
-                       unsigned long size, 
                        int mutexCount);
 void parseHTMLForm    (const char * inBuffer, 
                        HTMLForm *outBuffer, 

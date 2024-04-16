@@ -155,7 +155,7 @@ void sendContent(char* dir, HTTPContentType type, Host remotehost, const char *c
     if (customHeaders != NULL) {
         strncat(header, customHeaders, HEADER_PACKET_LENGTH - headerLen);
     }
-    strncat(header, "\n", 1);
+    strncat(header, "\n", 2);
 
     headerLen = strnlen (header, HEADER_PACKET_LENGTH);
 

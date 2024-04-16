@@ -18,7 +18,7 @@
 
 // All injuries are followed immediately by their 
 // healed counterparts.
-typedef enum {
+enum {
     INJURY_NOTHING,
     INJURY_DEEP_CUT,
     INJURY_BIG_SCAR,
@@ -36,7 +36,7 @@ typedef enum {
 // These ID's will be direct
 // callbacks to handle these encounters
 // serverside
-typedef enum {
+enum EncounterID{
     ENCOUNTER_BANDITS,
     ENCOUNTER_TROLLS,
     ENCOUNTER_WOLVES,
@@ -51,9 +51,9 @@ typedef enum {
     ENCOUNTER_CULTISTS_CANNIBAL,
     ENCOUNTER_CULTISTS_PEACEFUL,
     ENCOUNTER_COUNT
-}EncounterID;
+};
 
-typedef enum {
+enum EncounterTypeID{
     ENCOUNTER_TYPE_BANDIT,
     ENCOUNTER_TYPE_BEASTS,
     ENCOUNTER_TYPE_MONSTROSITIES,
@@ -65,15 +65,26 @@ typedef enum {
     ENCOUNTER_TYPE_EXILES,
     ENCOUNTER_TYPE_PLAGUE,
     ENCOUNTER_TYPE_COUNT
-}EncounterTypeID;
+};
 
-typedef enum {
+enum ResourceID{
     RESOURCE_KNIFE,
     RESOURCE_SWORD,
     RESOURCE_AXE,
     RESOURCE_POTION_HEAL,
     RESOURCE_COUNT
-} ResourceID;
+};
+
+/*
+ * ALWAYS store this as the first element of a struct.
+ * It denotes the type of the object server side so
+ * that when a type-agnostic NetID is resolved to an object,
+ * we can know it's type
+ */
+enum NetObjectType {
+    NET_TYPE_PLAYER,
+    NET_TYPE_COUNT
+};
 
 /*
  * Encounter Categories, and their possible encounters
@@ -118,6 +129,11 @@ static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIEL
     "Clown"
 };
 
+// maybe replace this with a resizing version if
+// we ever need more networked objects than this?
+#define NETIDS_MAX 2048
+static unsigned long long netIDs[NETIDS_MAX] = { 0 };
+
 typedef enum Factions{
     GAME_FACTION_SLAVERS,
     GAME_FACTION_CULTISTS,
@@ -130,7 +146,7 @@ typedef enum Factions{
 } Factions;
 
 // This is coupled with playerGenderStrings
-typedef enum Gender {
+enum Gender {
     GENDER_MALE,
     GENDER_FEMALE,
     GENDER_COUNT
@@ -142,14 +158,14 @@ static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
 };
 
 typedef unsigned int PlayerAttr;
-typedef struct CharacterSheet {
+struct CharacterSheet {
     bool             isValid; // Is this Charsheet valid at all?
-    Gender           gender;
+    enum Gender      gender;
     PlayerAttr       vigour;
     PlayerAttr       violence;
     PlayerAttr       cunning;
     PlayerBackground background;
-} CharacterSheet;
+};
 
 typedef struct Coordinates {
     int x;
@@ -157,17 +173,15 @@ typedef struct Coordinates {
     int z;
 }Coordinates;
 
-/*
- * State data structures
- */
 struct Player {
-    Host              associatedHost;
-    PlayerCredentials credentials;
-    SessionToken      sessionToken;
-    CharacterSheet    charSheet;
-    Coordinates       coords;
+    enum NetObjectType       netType;
+    Host                     associatedHost;
+    struct PlayerCredentials credentials;
+    SessionToken             sessionToken;
+    struct CharacterSheet    charSheet;
+    Coordinates              coords;
     // How many of each ResourceID the player has
-    int               resources[RESOURCE_COUNT];
+    int                      resources[RESOURCE_COUNT];
 };
 struct Game {
     // Who's turn is it
@@ -179,6 +193,7 @@ struct Game {
     int     playerCount;
     char    password[MAX_CREDENTIAL_LEN];
 };
+
 /*
  * Form Interpreting
  */
@@ -191,14 +206,13 @@ enum CharsheetFormFields {
     FORM_CHARSHEET_FIELD_COUNT
 };
 
-
 /*
  * Handler type definitions
  */
 typedef void (*GameMessageHandler)  (char* data, ssize_t dataSize, Host remotehost);
-typedef void (*UseResourceHandler)  (ResourceID resource, Player *user, Player *target);
-typedef void (*GiveResourceHandler) (ResourceID resource, Player *target, int count);
-typedef void (*TakeResourceHandler) (ResourceID resource, Player *target, int count);
+typedef void (*UseResourceHandler)  (enum ResourceID resource, Player *user, Player *target);
+typedef void (*GiveResourceHandler) (enum ResourceID resource, Player *target, int count);
+typedef void (*TakeResourceHandler) (enum ResourceID resource, Player *target, int count);
 
 
 /*
@@ -231,12 +245,12 @@ static int           isGameMessageValidLength      (Opcode opcode,
                                                     ssize_t messageSize);
 static void          buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
                                                     SessionToken token);
-static Player       *tryGetPlayerFromPlayername    (Game *game, 
+static struct Player *tryGetPlayerFromPlayername    (Game *game, 
                                                     const char *credentials);
 static int           isPlayerPasswordValid         (const Player *restrict player,
                                                     const char *password);
-static Player       *createPlayer                  (Game *game,
-                                                    PlayerCredentials *credentials);
+static struct Player *createPlayer                  (Game *game,
+                                                    struct PlayerCredentials *credentials);
 static int           validateNewCharsheet          (CharacterSheet *sheet);
 
 /*
@@ -342,7 +356,7 @@ int initializeTestGame(GameConfig *config)
  * character creation and creates a character at the next free 
  * index in the game
  */
-static Player *createPlayer(Game *game, PlayerCredentials *credentials)
+static struct Player *createPlayer(Game *game, struct PlayerCredentials *credentials)
 {
     Player *newPlayer = &game->players[game->playerCount];
 
@@ -357,10 +371,15 @@ static Player *createPlayer(Game *game, PlayerCredentials *credentials)
     return newPlayer;
 }
 
-void  setPlayerCharSheet (Player *player,
-                          CharacterSheet *charsheet)
+static void clearPlayer(Player *restrict player)
 {
-    int lock = getMutexIndex(player, sizeof(*player), STATE_MUTEX_COUNT);
+    memset(player, 0, sizeof(*player));
+}
+
+void  setPlayerCharSheet (struct Player *player,
+                          struct CharacterSheet *charsheet)
+{
+    int lock = getMutexIndex(player, STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&playerStateLock[lock]);
     memcpy (&player->charSheet, charsheet, sizeof(CharacterSheet)); 
     pthread_mutex_unlock (&playerStateLock[lock]);
@@ -374,7 +393,7 @@ void  setPlayerCharSheet (Player *player,
  * We then set the "isValid" flag in the 
  * CharacterSheet in question.
  */
-static int validateNewCharsheet (CharacterSheet *sheet)
+static int validateNewCharsheet (struct CharacterSheet *sheet)
 {
     // All this math is unsigned for a reason
     PlayerAttr playerPower = sheet->vigour
@@ -398,15 +417,13 @@ static int validateNewCharsheet (CharacterSheet *sheet)
  * Returns -1 on failure,
  * you should tell the client about malformed data.
  */
-int initCharsheetFromForm(Player *player, const HTMLForm *form)
+int initCharsheetFromForm(struct Player *player, const HTMLForm *form)
 {
-    int lock = getMutexIndex(player, 
-                             sizeof(*player), 
-                             STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&playerStateLock[lock]);
+    int lock = getMutexIndex(player, STATE_MUTEX_COUNT);
+    pthread_mutex_lock(&playerStateLock[lock]);
     CharacterSheet *sheet = &player->charSheet;
     if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
-        pthread_mutex_unlock   (&playerStateLock[lock]);
+        pthread_mutex_unlock(&playerStateLock[lock]);
         return -1;
     }
     while(sheet->background < PLAYER_BACKGROUND_COUNT) {
@@ -436,11 +453,11 @@ int initCharsheetFromForm(Player *player, const HTMLForm *form)
 
     if (validateNewCharsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(CharacterSheet));
-        pthread_mutex_unlock   (&playerStateLock[lock]);
+        pthread_mutex_unlock(&playerStateLock[lock]);
         return -1;
     }
     sheet->isValid = true;
-    pthread_mutex_unlock   (&playerStateLock[lock]);
+    pthread_mutex_unlock(&playerStateLock[lock]);
     return 0;
 }
 
@@ -450,21 +467,19 @@ int initCharsheetFromForm(Player *player, const HTMLForm *form)
  * see "validateNewCharsheet()"
  * for vibe-checking hackers
  */
-bool isCharsheetValid (const Player *player)
+bool isCharsheetValid (const struct Player *player)
 {
     bool result = 0;
-    int  lock = getMutexIndex(player, 
-                              sizeof(Player), 
-                              STATE_MUTEX_COUNT);
+    int  lock = getMutexIndex(player, STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&playerStateLock[lock]);
     result = player->charSheet.isValid;
     pthread_mutex_unlock (&playerStateLock[lock]);
     return result;
 }
 
-void setGamePassword(Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
+void setGamePassword(struct Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
 {
-    int lock = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
+    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&gameStateLock[lock]);
     memset               (game->password, 
                           0, 
@@ -478,12 +493,10 @@ void setGamePassword(Game *restrict game, const char password[static MAX_CREDENT
 /*
  * Returns 0 on success and -1 on failure
  */
-int tryGameLogin(Game *restrict game, const char *password)
+int tryGameLogin(struct Game *restrict game, const char *password)
 {
     int match = 0;
-    int lock = getMutexIndex(game, 
-                             sizeof(Game), 
-                             STATE_MUTEX_COUNT);
+    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
     pthread_mutex_lock   (&gameStateLock[lock]);
     match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
     pthread_mutex_unlock (&gameStateLock[lock]);
@@ -516,8 +529,8 @@ long long int getTokenFromHTTP(char *http,
  * It's all readonly, so it _should_ be
  * thread safe in this specific case...
  */
-Player *tryGetPlayerFromToken(SessionToken token,
-                              Game *game)
+struct Player *tryGetPlayerFromToken(SessionToken token,
+                                     struct Game *restrict game)
 {
     for (int i = 0; i < game->playerCount; i ++) {
         if (token == game->players[i].sessionToken) {
@@ -532,7 +545,8 @@ Player *tryGetPlayerFromToken(SessionToken token,
  * session token needs to be unique
  * on a per game basis
  */
-static void generateSessionToken(Player *player, Game *game)
+static void generateSessionToken(struct Player *restrict player, 
+                                 struct Game *restrict game)
 {
     long long int nonce = getRandomInt();
     int           i     = 0;
@@ -566,8 +580,8 @@ static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH],
 /*
  * returns the index of the player in the game
  */
-static Player *tryGetPlayerFromPlayername(Game *game, 
-                                           const char *playername)
+static struct Player *tryGetPlayerFromPlayername(struct Game *game, 
+                                                 const char *playername)
 {
     int playerIndex   = 0;
     int playerFound   = -1;
@@ -583,7 +597,7 @@ static Player *tryGetPlayerFromPlayername(Game *game,
     return NULL;
 }
 
-static int isPlayerPasswordValid(const Player *restrict player,
+static int isPlayerPasswordValid(const struct Player *restrict player,
                                  const char *password)
 {
     int passwordCheck = 0;
@@ -603,15 +617,15 @@ static int isPlayerPasswordValid(const Player *restrict player,
  * returns -1 when the player exists but the
  * password was wrong
  */
-int   tryPlayerLogin    (Game *restrict game,
-                         PlayerCredentials *credentials,
+int   tryPlayerLogin    (struct Game *restrict game,
+                         struct PlayerCredentials *restrict credentials,
                          Host remotehost)
 {
     Player               *player        = NULL;
     char                  sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
 
-    int lock   = getMutexIndex(game, sizeof(Game), STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
+    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
+    pthread_mutex_lock(&gameStateLock[lock]);
     player = tryGetPlayerFromPlayername(game, credentials->name);
     if ( player != NULL ) {
         if (isPlayerPasswordValid(player, credentials->password)) {
@@ -646,7 +660,7 @@ int   tryPlayerLogin    (Game *restrict game,
                              remotehost, 
                              sessionTokenHeader);
 
-    pthread_mutex_unlock (&gameStateLock[lock]);
+    pthread_mutex_unlock(&gameStateLock[lock]);
     return 0;
 }
 
@@ -734,17 +748,17 @@ static void getGameStateHandler(char *data, ssize_t dataSize, Host remotehost)
  * Copy Paste these for different resources a player could 
  * receive, lose, or use.
  */
-void baseUseResourceHandler (ResourceID resource, Player *user, Player *target)
+void baseUseResourceHandler (enum ResourceID resource, Player *user, Player *target)
 {
     // Implement code for using specific resources here
 }
-void baseGiveResourceHandler (ResourceID resource, Player *target, int count)
+void baseGiveResourceHandler (enum ResourceID resource, Player *target, int count)
 {
     // Implement code for receiving resources here, such
     // as adding it to the player's inventory or adding 
     // a passive effect
 }
-void baseTakeResourceHandler (ResourceID resource, Player *target, int count)
+void baseTakeResourceHandler (enum ResourceID resource, Player *target, int count)
 {
    // Implement code for removing an item from a player's
    // inventory here, such as decreasing the count

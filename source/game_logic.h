@@ -22,10 +22,10 @@ typedef struct GameConfig {
     int  maxPlayerCount;
 } GameConfig;
 
-typedef struct PlayerCredentials {
+struct PlayerCredentials {
     char name     [MAX_CREDENTIAL_LEN];
     char password [MAX_CREDENTIAL_LEN];
-} PlayerCredentials;
+};
 
 /*
  * Primary entry point for interpreting
@@ -48,13 +48,13 @@ int          tryGameLogin           (Game *restrict game,
 // to character creator when there isn't an
 // existing one.
 int          tryPlayerLogin         (Game *restrict game,
-                                     PlayerCredentials *credentials,
+                                     struct PlayerCredentials *restrict credentials,
                                      Host remotehost);
 
 long long int getTokenFromHTTP      (char *http,
                                      int httpLength);
 Player *tryGetPlayerFromToken       (SessionToken token,
-                                     Game *game);
+                                     Game *restrict game);
 // Character sheet setup stuff
 int  initCharsheetFromForm       (Player *charsheet, 
                                   const HTMLForm *form);

@@ -29,9 +29,16 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
     }
 }
 
-int getMutexIndex(const void *object, unsigned long size, int mutexCount)
+/* 
+ * Assume you have an array of mutexes,
+ * this function will give you back an index to use for
+ * locking the memory while working on a specific object.
+ * Different systems should use their own managed pools of mutexes
+ * for better optimisation
+ */
+int getMutexIndex(const void *object, int mutexCount)
 {
-    return ((unsigned long)object / size) % mutexCount;
+    return ((unsigned long)object) % mutexCount;
 }
 
 void printBufferInHex(char *data, int size)

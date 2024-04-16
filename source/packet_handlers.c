@@ -169,10 +169,10 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
-    PlayerCredentials credentials                        = { 0 };
-    int               credentialIndex                    = 0;
-    const char        firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
-    HTMLForm          form                               = { 0 };
+    struct PlayerCredentials credentials                        = { 0 };
+    int                      credentialIndex                    = 0;
+    const char               firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
+    HTMLForm                 form                               = { 0 };
 
     credentialIndex = 
 
