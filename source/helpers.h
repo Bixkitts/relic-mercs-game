@@ -2,6 +2,7 @@
 #define BB_HELPERS
 
 #include <stdio.h>
+#include <pthread.h>
 
 #define HTMLFORM_FIELD_MAX_LEN 64
 #define HTMLFORM_MAX_FIELDS    64
@@ -14,10 +15,10 @@
                       // TODO: Find a way to automate this.
 #endif
 
-typedef struct HTMLForm {
+struct HTMLForm {
    char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
    int  fieldCount;
-} HTMLForm;
+};
 /* Helper functions */
 
 // returns the index of the first occurence of the pattern or -1 on failure.
@@ -30,12 +31,32 @@ int  charSearch       (const char *restrict text, char c, int bufLen);
 void capInt           (int *intToCap, int maxValue);
 
 void printBufferInHex (char *data, int size);
-int  getMutexIndex    (const void *object, 
-                       int mutexCount);
 void parseHTMLForm    (const char * inBuffer, 
-                       HTMLForm *outBuffer, 
+                       struct HTMLForm *outBuffer, 
                        ssize_t inBufferLen);
+void checkDataSizes   ();
 
 long long int getRandomInt();
+
+/*
+ * Thread related stuff here
+ * ----------------------------
+ */
+typedef struct MutexArray MutexArray;
+
+// Initialise this struct
+// manually with a pointer
+// to an array of mutexes
+// and how many there are
+struct MutexArray {
+    pthread_mutex_t *mutexes;
+    int              size;
+};
+void               initMutexArray   (struct MutexArray *array, 
+                                     const int size);
+pthread_mutex_t   *threadlockObject (const void *restrict object, 
+                                     const struct MutexArray *restrict array);
+
+
 
 #endif

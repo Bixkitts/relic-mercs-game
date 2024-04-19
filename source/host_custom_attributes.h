@@ -6,10 +6,10 @@
 
 // Store all custom data you need to attach to a host 
 // in this struct
-typedef struct HostCustomAttributes {
-    HandlerEnum  handler;  // Which handler should be called when receiving a 
+struct HostCustomAttributes {
+    enum Handler  handler;  // Which handler should be called when receiving a 
                            // packet from this host
-    const Player *player;  // Which player this host controls
-}HostCustomAttributes;
+    const struct Player *player;  // Which player this host controls
+};
 
 #endif

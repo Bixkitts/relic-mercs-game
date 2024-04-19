@@ -19,6 +19,7 @@ int main(void)
     printf("\n-----------------------------------\n");
 #ifdef DEBUG
     printf("RUNNING SLOW DEBUG VERSION\n");
+    checkDataSizes();
 #endif
     enableTLS    ();
     localhost = createHost("0.0.0.0", 7676);
@@ -27,7 +28,7 @@ int main(void)
 
     // TODO: Make a web interface for creating and
     // joining multiple games.
-    GameConfig gameConfig = {
+    struct GameConfig gameConfig = {
         .password       = "hello",
         .maxPlayerCount = 4
     };

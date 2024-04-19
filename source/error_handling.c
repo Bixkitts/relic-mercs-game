@@ -8,7 +8,7 @@ static const char errStrings[BB_ERR_COUNT][BB_ERROR_STRLEN] = {
     "\nfile not found\n"
 };
 
-void printError(ErrorString string)
+void printError(enum ErrorString string)
 {
     fprintf(stderr, "%s", errStrings[string]);
 }

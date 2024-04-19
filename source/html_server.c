@@ -51,7 +51,7 @@ void sendBadRequestPacket(Host remotehost)
     sendDataTCP(data, strlen(data), remotehost);
     return;
 }
-static const char *getContentTypeString(HTTPContentType type)
+static const char *getContentTypeString(enum HTTPContentType type)
 {
     return contentTypeStrings[type];
 }
@@ -78,7 +78,7 @@ bool isFileAllowed(const char* inName, char** outDir)
  * Assumes NUL terminated string,
  * parses file extension
  */
-HTTPContentType getContentTypeEnumFromFilename(char* name)
+enum HTTPContentType getContentTypeEnumFromFilename(char* name)
 {
     int extensionIndex =
     charSearch(&name[1], '.', MAX_FILENAME_LEN) + 2;
@@ -117,7 +117,10 @@ void createAllowedFileTable(void)
 #endif
 }
 
-void sendContent(char* dir, HTTPContentType type, Host remotehost, const char *customHeaders)
+void sendContent(char* dir, 
+                 enum HTTPContentType type, 
+                 Host remotehost, 
+                 const char *customHeaders)
 {
     char          header   [HEADER_PACKET_LENGTH] = { 0 };
     unsigned long headerLen                       = 0;

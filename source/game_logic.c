@@ -18,7 +18,7 @@
 
 // All injuries are followed immediately by their 
 // healed counterparts.
-enum {
+enum InjuryType{
     INJURY_NOTHING,
     INJURY_DEEP_CUT,
     INJURY_BIG_SCAR,
@@ -31,7 +31,7 @@ enum {
     INJURY_MISSING_LEFT_ARM,
     INJURY_MISSING_RIGHT_ARM,
     INJURY_COUNT
-}InjuryType;
+};
 
 // These ID's will be direct
 // callbacks to handle these encounters
@@ -81,7 +81,7 @@ enum ResourceID{
  * that when a type-agnostic NetID is resolved to an object,
  * we can know it's type
  */
-enum NetObjectType {
+enum NetObjType {
     NET_TYPE_PLAYER,
     NET_TYPE_COUNT
 };
@@ -129,10 +129,13 @@ static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIEL
     "Clown"
 };
 
-// maybe replace this with a resizing version if
-// we ever need more networked objects than this?
+/* maybe replace this with a resizing version if
+ * we ever need more networked objects than this?
+ * Remember to lock netIDs before touching it.
+ */
 #define NETIDS_MAX 2048
-static unsigned long long netIDs[NETIDS_MAX] = { 0 };
+static pthread_mutex_t netIDmutex = PTHREAD_MUTEX_INITIALIZER;
+static void *netIDs[NETIDS_MAX] = { 0 };
 
 typedef enum Factions{
     GAME_FACTION_SLAVERS,
@@ -167,31 +170,32 @@ struct CharacterSheet {
     PlayerBackground background;
 };
 
-typedef struct Coordinates {
+struct Coordinates {
     int x;
     int y;
     int z;
-}Coordinates;
+};
 
 struct Player {
-    enum NetObjectType       netType;
+    enum NetObjType          netType;
     Host                     associatedHost;
     struct PlayerCredentials credentials;
     SessionToken             sessionToken;
     struct CharacterSheet    charSheet;
-    Coordinates              coords;
+    struct Coordinates       coords;
     // How many of each ResourceID the player has
     int                      resources[RESOURCE_COUNT];
 };
+
 struct Game {
     // Who's turn is it
-    int     playerTurn;
-    int     maxPlayerCount;
+    int            playerTurn;
+    int            maxPlayerCount;
     // This is larger than max players to account
     // for kicked and banned players
-    Player  players [MAX_PLAYERS_IN_GAME * 2];
-    int     playerCount;
-    char    password[MAX_CREDENTIAL_LEN];
+    struct Player  players [MAX_PLAYERS_IN_GAME * 2];
+    int            playerCount;
+    char           password[MAX_CREDENTIAL_LEN];
 };
 
 /*
@@ -210,24 +214,28 @@ enum CharsheetFormFields {
  * Handler type definitions
  */
 typedef void (*GameMessageHandler)  (char* data, ssize_t dataSize, Host remotehost);
-typedef void (*UseResourceHandler)  (enum ResourceID resource, Player *user, Player *target);
-typedef void (*GiveResourceHandler) (enum ResourceID resource, Player *target, int count);
-typedef void (*TakeResourceHandler) (enum ResourceID resource, Player *target, int count);
+typedef void (*UseResourceHandler)  (enum ResourceID resource, struct Player *user, struct Player *target);
+typedef void (*GiveResourceHandler) (enum ResourceID resource, struct Player *target, int count);
+typedef void (*TakeResourceHandler) (enum ResourceID resource, struct Player *target, int count);
 
 
 /*
  * Mutexes for state management
  */
 #define STATE_MUTEX_COUNT 16
-static pthread_mutex_t gameStateLock  [STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
-static pthread_mutex_t playerStateLock[STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
+static pthread_mutex_t gameStateMutexesRaw  [STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
+static pthread_mutex_t playerStateMutexesRaw[STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
+static struct MutexArray gameStateMutexes = 
+{gameStateMutexesRaw, STATE_MUTEX_COUNT};
+static struct MutexArray playerStateMutexes = 
+{playerStateMutexesRaw, STATE_MUTEX_COUNT};
 
 /*
  * Not thread safe, the test game should be
  * written to once on init
  */
-static Game testGame = { 0 };
-Game *getTestGame()
+static struct Game testGame = { 0 };
+struct Game *getTestGame()
 {
     return &testGame;
 }
@@ -239,29 +247,40 @@ Game *getTestGame()
  *  the functions that call them are expected
  *  to lock the game state they are modifying.
  */
-static void          generateSessionToken          (Player *player,
-                                                    Game *game);
-static int           isGameMessageValidLength      (Opcode opcode, 
-                                                    ssize_t messageSize);
-static void          buildSessionTokenHeader       (char outHeader[static HEADER_LENGTH], 
-                                                    SessionToken token);
-static struct Player *tryGetPlayerFromPlayername    (Game *game, 
-                                                    const char *credentials);
-static int           isPlayerPasswordValid         (const Player *restrict player,
-                                                    const char *password);
-static struct Player *createPlayer                  (Game *game,
-                                                    struct PlayerCredentials *credentials);
-static int           validateNewCharsheet          (CharacterSheet *sheet);
+static void           
+generateSessionToken        (struct Player *player,
+                             struct Game *game);
+static int            
+isGameMessageValidLength    (Opcode opcode, 
+                             ssize_t messageSize);
+static void           
+buildSessionTokenHeader     (char outHeader[static HEADER_LENGTH], 
+                             SessionToken token);
+static struct Player 
+*tryGetPlayerFromPlayername (struct Game *game, 
+                             const char *credentials);
+static int            
+isPlayerPasswordValid       (const struct Player *restrict player,
+                             const char *password);
+static struct Player 
+*createPlayer               (struct Game *game,
+                             struct PlayerCredentials *credentials);
+static int            
+validateNewCharsheet        (struct CharacterSheet *sheet);
+static void         
+*resolveNetIDToObj          (const unsigned long long netID,
+                             enum NetObjType type);
 
 /*
  * Handlers for incoming messages from the websocket connection
  */
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
-struct MovePlayerData {
-    double xCoord;
-    double yCoord;
+struct MoveObjOnMapData {
+    unsigned long long netID; 
+    double             xCoord;
+    double             yCoord;
 };
-static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
+static void moveObjOnMapHandler         (char *data, ssize_t dataSize, Host remotehost);
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
 // Player chose a response to an encounter
 static void respondToEventHandler       (char *data, ssize_t dataSize, Host remotehost);
@@ -279,14 +298,14 @@ static void getGameStateHandler         (char *data, ssize_t dataSize, Host remo
  */
 static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     pingHandler,
-    movePlayerHandler, 
+    moveObjOnMapHandler, 
     endTurnHandler,           
     respondToEventHandler, 
     getGameStateHandler         
 };
 static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
     0,
-    sizeof(struct MovePlayerData),
+    sizeof(struct MoveObjOnMapData),
     0,
     0,
     0,
@@ -333,7 +352,7 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     };
 }
 
-int createGame(Game **game, GameConfig *config)
+int createGame(struct Game **game, struct GameConfig *config)
 {
     *game = calloc(1, sizeof(**game));
     if (!(*game)) {
@@ -343,9 +362,9 @@ int createGame(Game **game, GameConfig *config)
     (*game)->maxPlayerCount = config->maxPlayerCount;
     return 0;
 }
-int initializeTestGame(GameConfig *config)
+int initializeTestGame(struct GameConfig *config)
 {
-    Game *game = getTestGame();
+    struct Game *game = getTestGame();
     strncpy(game->password, config->password, MAX_CREDENTIAL_LEN);
     game->maxPlayerCount = config->maxPlayerCount;
     return 0;
@@ -356,9 +375,9 @@ int initializeTestGame(GameConfig *config)
  * character creation and creates a character at the next free 
  * index in the game
  */
-static struct Player *createPlayer(Game *game, struct PlayerCredentials *credentials)
+static struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
 {
-    Player *newPlayer = &game->players[game->playerCount];
+    struct Player *newPlayer = &game->players[game->playerCount];
 
     memcpy (&newPlayer->credentials, credentials, sizeof(*credentials));
 
@@ -371,7 +390,7 @@ static struct Player *createPlayer(Game *game, struct PlayerCredentials *credent
     return newPlayer;
 }
 
-static void clearPlayer(Player *restrict player)
+static void clearPlayer(struct Player *restrict player)
 {
     memset(player, 0, sizeof(*player));
 }
@@ -379,10 +398,11 @@ static void clearPlayer(Player *restrict player)
 void  setPlayerCharSheet (struct Player *player,
                           struct CharacterSheet *charsheet)
 {
-    int lock = getMutexIndex(player, STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&playerStateLock[lock]);
-    memcpy (&player->charSheet, charsheet, sizeof(CharacterSheet)); 
-    pthread_mutex_unlock (&playerStateLock[lock]);
+    pthread_mutex_t *lock = 
+    threadlockObject(player, &playerStateMutexes);
+                                           
+    memcpy (&player->charSheet, charsheet, sizeof(*charsheet)); 
+    pthread_mutex_unlock (lock);
 }
 
 /*
@@ -390,8 +410,6 @@ void  setPlayerCharSheet (struct Player *player,
  * parsed out of a html form,
  * but we need to make sure it's
  * not fudged somehow by the client.
- * We then set the "isValid" flag in the 
- * CharacterSheet in question.
  */
 static int validateNewCharsheet (struct CharacterSheet *sheet)
 {
@@ -417,13 +435,14 @@ static int validateNewCharsheet (struct CharacterSheet *sheet)
  * Returns -1 on failure,
  * you should tell the client about malformed data.
  */
-int initCharsheetFromForm(struct Player *player, const HTMLForm *form)
+int initCharsheetFromForm(struct Player *player, 
+                          const struct HTMLForm *form)
 {
-    int lock = getMutexIndex(player, STATE_MUTEX_COUNT);
-    pthread_mutex_lock(&playerStateLock[lock]);
-    CharacterSheet *sheet = &player->charSheet;
+    pthread_mutex_t *lock = 
+    threadlockObject(player, &playerStateMutexes);
+    struct CharacterSheet *sheet = &player->charSheet;
     if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
-        pthread_mutex_unlock(&playerStateLock[lock]);
+        pthread_mutex_unlock(lock);
         return -1;
     }
     while(sheet->background < PLAYER_BACKGROUND_COUNT) {
@@ -452,12 +471,12 @@ int initCharsheetFromForm(struct Player *player, const HTMLForm *form)
                       - ASCII_TO_INT) + (9 * (form->fields[FORM_CHARSHEET_CUNNING] [1] != 0));
 
     if (validateNewCharsheet(sheet) != 0) {
-        memset(sheet, 0, sizeof(CharacterSheet));
-        pthread_mutex_unlock(&playerStateLock[lock]);
+        memset(sheet, 0, sizeof(*sheet));
+        pthread_mutex_unlock(lock);
         return -1;
     }
     sheet->isValid = true;
-    pthread_mutex_unlock(&playerStateLock[lock]);
+    pthread_mutex_unlock(lock);
     return 0;
 }
 
@@ -470,24 +489,24 @@ int initCharsheetFromForm(struct Player *player, const HTMLForm *form)
 bool isCharsheetValid (const struct Player *player)
 {
     bool result = 0;
-    int  lock = getMutexIndex(player, STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&playerStateLock[lock]);
+    pthread_mutex_t *lock = 
+    threadlockObject(player, &playerStateMutexes);
     result = player->charSheet.isValid;
-    pthread_mutex_unlock (&playerStateLock[lock]);
+    pthread_mutex_unlock (lock);
     return result;
 }
 
 void setGamePassword(struct Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
 {
-    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
+    pthread_mutex_t *lock = 
+    threadlockObject(game, &gameStateMutexes);
     memset               (game->password, 
                           0, 
                           MAX_CREDENTIAL_LEN);
     strncpy              (game->password, 
                           password, 
                           MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (&gameStateLock[lock]);
+    pthread_mutex_unlock (lock);
 }
 
 /*
@@ -496,10 +515,10 @@ void setGamePassword(struct Game *restrict game, const char password[static MAX_
 int tryGameLogin(struct Game *restrict game, const char *password)
 {
     int match = 0;
-    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
-    pthread_mutex_lock   (&gameStateLock[lock]);
+    pthread_mutex_t *lock = 
+    threadlockObject(game, &gameStateMutexes);
     match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (&gameStateLock[lock]);
+    pthread_mutex_unlock (lock);
     match = -1 * (match != 0);
     return match;
 }
@@ -621,11 +640,11 @@ int   tryPlayerLogin    (struct Game *restrict game,
                          struct PlayerCredentials *restrict credentials,
                          Host remotehost)
 {
-    Player               *player        = NULL;
+    struct Player        *player        = NULL;
     char                  sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
 
-    int lock = getMutexIndex(game, STATE_MUTEX_COUNT);
-    pthread_mutex_lock(&gameStateLock[lock]);
+    pthread_mutex_t *lock = 
+    threadlockObject(game, &gameStateMutexes);
     player = tryGetPlayerFromPlayername(game, credentials->name);
     if ( player != NULL ) {
         if (isPlayerPasswordValid(player, credentials->password)) {
@@ -637,12 +656,12 @@ int   tryPlayerLogin    (struct Game *restrict game,
                                     HTTP_FLAG_TEXT_HTML, 
                                     remotehost,
                                     sessionTokenHeader);
-            pthread_mutex_unlock   (&gameStateLock[lock]);
+            pthread_mutex_unlock   (lock);
             return 0;
         }
         else {
             // Player exists, but the password was wrong
-            pthread_mutex_unlock   (&gameStateLock[lock]);
+            pthread_mutex_unlock   (lock);
             return -1;
         }
     }
@@ -660,7 +679,7 @@ int   tryPlayerLogin    (struct Game *restrict game,
                              remotehost, 
                              sessionTokenHeader);
 
-    pthread_mutex_unlock(&gameStateLock[lock]);
+    pthread_mutex_unlock(lock);
     return 0;
 }
 
@@ -684,9 +703,33 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
                             remotehost);
 }
 
-static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
+/*
+ * Returns an object of the corresponding NetObjType,
+ * or NULL if: 
+ * - The netID is invalid
+ * - A valid netID resolves to an object of the wrong type
+ */
+static void *resolveNetIDToObj(const unsigned long long netID,
+                               enum NetObjType type)
 {
-    struct MovePlayerData *moveData = (struct MovePlayerData*)data; 
+    if (netID >= NETIDS_MAX) {
+        return NULL;
+    }
+    pthread_mutex_lock(&netIDmutex);
+    const void *retObj     = netIDs[netID];
+    if (retObj == NULL) {
+        pthread_mutex_unlock(&netIDmutex);
+        return NULL;
+    }
+    enum NetObjType retObjType = *(enum NetObjType *)(retObj);
+    void *ret = (void*)(((unsigned long long)retObj) * (retObjType == type));
+    pthread_mutex_unlock(&netIDmutex);
+    return ret;    
+}
+
+static void moveObjOnMapHandler(char *data, ssize_t dataSize, Host remotehost)
+{
+    struct MoveObjOnMapData *moveData = (struct MoveObjOnMapData*)data; 
 
     // Here we respond to the clients,
     // telling them all who moved and where.
@@ -748,17 +791,23 @@ static void getGameStateHandler(char *data, ssize_t dataSize, Host remotehost)
  * Copy Paste these for different resources a player could 
  * receive, lose, or use.
  */
-void baseUseResourceHandler (enum ResourceID resource, Player *user, Player *target)
+void baseUseResourceHandler (enum ResourceID resource, 
+                             struct Player *user, 
+                             struct Player *target)
 {
     // Implement code for using specific resources here
 }
-void baseGiveResourceHandler (enum ResourceID resource, Player *target, int count)
+void baseGiveResourceHandler (enum ResourceID resource, 
+                              struct Player *target, 
+                              int count)
 {
     // Implement code for receiving resources here, such
     // as adding it to the player's inventory or adding 
     // a passive effect
 }
-void baseTakeResourceHandler (enum ResourceID resource, Player *target, int count)
+void baseTakeResourceHandler (enum ResourceID resource, 
+                              struct Player *target, 
+                              int count)
 {
    // Implement code for removing an item from a player's
    // inventory here, such as decreasing the count

@@ -39,7 +39,7 @@ static PacketHandler handlers[HANDLER_COUNT] = {
 
 void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    HostCustomAttributes *customAttr = NULL;
+    struct HostCustomAttributes *customAttr = NULL;
     if (getHostCustomAttr(remotehost) == NULL) {
         customAttr = calloc(1, sizeof(*customAttr));
         if (customAttr == NULL) {
@@ -49,7 +49,7 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         setHostCustomAttr(remotehost, (void*)customAttr);
     }
     else {
-        customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+        customAttr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
     }
 #ifdef DEBUG
     printf("\nReceived data:");
@@ -72,7 +72,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     int   stringLen               = charSearch(startingPoint, ' ', packetSize - 5);
     char *fileTableEntry          = NULL;
 
-    HostCustomAttributes *customAttr = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+    struct HostCustomAttributes *customAttr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
 
     if (stringLen < 0 || stringLen > MAX_FILENAME_LEN){
         return;
@@ -80,9 +80,9 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     memcpy(requestedResource, startingPoint, stringLen);
 
-    Game          *game      = getTestGame();
-    long long int  token     = getTokenFromHTTP     (data, packetSize);
-    const Player  *player    = tryGetPlayerFromToken(token, game);
+    struct Game         *game   = getTestGame();
+    long long int        token  = getTokenFromHTTP     (data, packetSize);
+    const struct Player *player = tryGetPlayerFromToken(token, game);
 #undef DEBUG_TEMP
 #ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
     token = 696969;
@@ -115,7 +115,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         }
         else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
             sendWebSocketResponse (data, packetSize, remotehost);
-            HostCustomAttributes *hostAttr  = (HostCustomAttributes*)getHostCustomAttr(remotehost);
+            struct HostCustomAttributes *hostAttr  = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
             hostAttr->player    = player;
             customAttr->handler = HANDLER_WEBSOCK;
             cacheHost             (remotehost, 0);
@@ -172,7 +172,7 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     struct PlayerCredentials credentials                        = { 0 };
     int                      credentialIndex                    = 0;
     const char               firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
-    HTMLForm                 form                               = { 0 };
+    struct HTMLForm          form                               = { 0 };
 
     credentialIndex = 
 
@@ -209,9 +209,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    long long int   token         = getTokenFromHTTP(data, packetSize); 
-    Player         *player        = tryGetPlayerFromToken(token, getTestGame());
-    HTMLForm        form          = {0};
+    long long int    token         = getTokenFromHTTP(data, packetSize); 
+    struct Player   *player        = tryGetPlayerFromToken(token, getTestGame());
+    struct HTMLForm  form          = {0};
 
     const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
 

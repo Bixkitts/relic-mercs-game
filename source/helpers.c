@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,12 @@
 #include <openssl/rand.h>
 
 #include "helpers.h"
+#include "error_handling.h"
+
+
+
+static inline int getMutexIndex(const void *object, 
+                                const int mutexCount);
 
 static void stringSearch_computeLps(const char* pattern, int m, int* lps) 
 {
@@ -36,9 +43,26 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
  * Different systems should use their own managed pools of mutexes
  * for better optimisation
  */
-int getMutexIndex(const void *object, int mutexCount)
+static inline int getMutexIndex(const void *object, 
+                                const int mutexCount)
 {
     return ((unsigned long)object) % mutexCount;
+}
+
+/*
+ * This function makes sure the data types we use are the
+ * correct length for interpreting incoming websocket packets.
+ * This is ONLY to be run in debug mode and exists because I don't
+ * want to consult the C standard for guarenteed type sizes, 
+ * or make/find custom fixed length types for all data coming in.
+ */
+void checkDataSizes() {
+    if (sizeof(double) != 8
+        || sizeof(int) != 4
+        || sizeof(long long) != 8) {
+        fprintf(stderr, "ERROR: Unexpected data sizes for serialization, exiting...\n");
+        exit(1);
+    }
 }
 
 void printBufferInHex(char *data, int size)
@@ -148,7 +172,7 @@ unsigned int hashDataSimple(const char *data, size_t data_len)
  *  firstElement=data&secondElement=data.....
  *
  */
-void parseHTMLForm(const char * inBuffer, HTMLForm *outBuffer, ssize_t inBufferLen)
+void parseHTMLForm(const char * inBuffer, struct HTMLForm *outBuffer, ssize_t inBufferLen)
 {
     // TODO: Make ABSOLUTELY sure this doesn't overflow
     int i = 0;
@@ -176,4 +200,18 @@ void parseHTMLForm(const char * inBuffer, HTMLForm *outBuffer, ssize_t inBufferL
         memcpy(outBuffer->fields[outBuffer->fieldCount], &inBuffer[i], fieldLen);
         outBuffer->fieldCount++;
     }
+}
+
+/*
+ * Returns the mutex that it locks
+ * so it can be unlocked with 
+ * pthread_mutex_unlock
+ */
+pthread_mutex_t *threadlockObject(const void *restrict object, 
+                                  const struct MutexArray *restrict array)
+{
+    int index = 0;
+    index = getMutexIndex(object, array->size); 
+    pthread_mutex_lock(&array->mutexes[index]);
+    return &array->mutexes[index];
 }

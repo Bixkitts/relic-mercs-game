@@ -3,13 +3,13 @@
 
 #define BB_ERROR_STRLEN 64
 
-typedef enum {
+enum ErrorString{
     BB_ERR_MALLOC,
     BB_ERR_CALLOC,
     BB_ERR_FILE_NOT_FOUND,
     BB_ERR_COUNT
-} ErrorString;
+};
 
-void printError(ErrorString string);
+void printError(enum ErrorString string);
 
 #endif

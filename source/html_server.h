@@ -14,17 +14,17 @@
 #define STATUS_LENGTH          32
 
 
-typedef enum HTTPContentType {
+enum HTTPContentType {
     HTTP_FLAG_TEXT_HTML,
     HTTP_FLAG_IMAGE_JPG,
     HTTP_FLAG_IMAGE_PNG,
     HTTP_FLAG_TEXT_JAVASCRIPT,
     HTTP_FLAG_TEXT_CSS,
     HTTP_FLAG_COUNT
-} HTTPContentType;
+};
 
 void sendContent            (char* dir, 
-                             HTTPContentType type, 
+                             enum HTTPContentType type, 
                              Host remotehost,
                              const char *customHeaders);
 void sendForbiddenPacket    (Host remotehost);
@@ -35,6 +35,6 @@ void sendBadRequestPacket   (Host remotehost);
 void createAllowedFileTable (void);
 bool isFileAllowed          (const char* inDir, char **outDir);
 
-HTTPContentType getContentTypeEnumFromFilename(char* name);
+enum HTTPContentType getContentTypeEnumFromFilename(char* name);
 
 #endif
