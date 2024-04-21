@@ -201,17 +201,3 @@ void parseHTMLForm(const char * inBuffer, struct HTMLForm *outBuffer, ssize_t in
         outBuffer->fieldCount++;
     }
 }
-
-/*
- * Returns the mutex that it locks
- * so it can be unlocked with 
- * pthread_mutex_unlock
- */
-pthread_mutex_t *threadlockObject(const void *restrict object, 
-                                  const struct MutexArray *restrict array)
-{
-    int index = 0;
-    index = getMutexIndex(object, array->size); 
-    pthread_mutex_lock(&array->mutexes[index]);
-    return &array->mutexes[index];
-}

@@ -177,7 +177,11 @@ struct Coordinates {
 };
 
 struct Player {
+    // netType needs to stay at offset 0.
+    // It's metadata about the object type
+    // for uid/netid resolving.
     enum NetObjType          netType;
+    pthread_mutex_t          threadlock;
     Host                     associatedHost;
     struct PlayerCredentials credentials;
     SessionToken             sessionToken;
@@ -188,14 +192,15 @@ struct Player {
 };
 
 struct Game {
+    pthread_mutex_t threadlock;
     // Who's turn is it
-    int            playerTurn;
-    int            maxPlayerCount;
+    int             playerTurn;
+    int             maxPlayerCount;
     // This is larger than max players to account
     // for kicked and banned players
-    struct Player  players [MAX_PLAYERS_IN_GAME * 2];
-    int            playerCount;
-    char           password[MAX_CREDENTIAL_LEN];
+    struct Player   players [MAX_PLAYERS_IN_GAME * 2];
+    int             playerCount;
+    char            password[MAX_CREDENTIAL_LEN];
 };
 
 /*
@@ -217,18 +222,6 @@ typedef void (*GameMessageHandler)  (char* data, ssize_t dataSize, Host remoteho
 typedef void (*UseResourceHandler)  (enum ResourceID resource, struct Player *user, struct Player *target);
 typedef void (*GiveResourceHandler) (enum ResourceID resource, struct Player *target, int count);
 typedef void (*TakeResourceHandler) (enum ResourceID resource, struct Player *target, int count);
-
-
-/*
- * Mutexes for state management
- */
-#define STATE_MUTEX_COUNT 16
-static pthread_mutex_t gameStateMutexesRaw  [STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
-static pthread_mutex_t playerStateMutexesRaw[STATE_MUTEX_COUNT] = { PTHREAD_MUTEX_INITIALIZER };
-static struct MutexArray gameStateMutexes = 
-{gameStateMutexesRaw, STATE_MUTEX_COUNT};
-static struct MutexArray playerStateMutexes = 
-{playerStateMutexesRaw, STATE_MUTEX_COUNT};
 
 /*
  * Not thread safe, the test game should be
@@ -360,6 +353,11 @@ int createGame(struct Game **game, struct GameConfig *config)
     }
     strncpy((*game)->password, config->password, MAX_CREDENTIAL_LEN);
     (*game)->maxPlayerCount = config->maxPlayerCount;
+
+    pthread_mutexattr_t threadlock_att;
+    pthread_mutexattr_init (&threadlock_att);
+    pthread_mutex_init     (&(*game)->threadlock, &threadlock_att);
+
     return 0;
 }
 int initializeTestGame(struct GameConfig *config)
@@ -379,6 +377,12 @@ static struct Player *createPlayer(struct Game *game, struct PlayerCredentials *
 {
     struct Player *newPlayer = &game->players[game->playerCount];
 
+    // Threadlock initialisation...
+    pthread_mutexattr_t threadlock_att;
+    pthread_mutexattr_init (&threadlock_att);
+    pthread_mutex_init     (&newPlayer->threadlock, &threadlock_att);
+
+    // Credentials...
     memcpy (&newPlayer->credentials, credentials, sizeof(*credentials));
 
     // Currently, this function is only called
@@ -398,11 +402,9 @@ static void clearPlayer(struct Player *restrict player)
 void  setPlayerCharSheet (struct Player *player,
                           struct CharacterSheet *charsheet)
 {
-    pthread_mutex_t *lock = 
-    threadlockObject(player, &playerStateMutexes);
-                                           
+    pthread_mutex_lock(&player->threadlock);                           
     memcpy (&player->charSheet, charsheet, sizeof(*charsheet)); 
-    pthread_mutex_unlock (lock);
+    pthread_mutex_unlock (&player->threadlock);
 }
 
 /*
@@ -438,11 +440,10 @@ static int validateNewCharsheet (struct CharacterSheet *sheet)
 int initCharsheetFromForm(struct Player *player, 
                           const struct HTMLForm *form)
 {
-    pthread_mutex_t *lock = 
-    threadlockObject(player, &playerStateMutexes);
+    pthread_mutex_lock(&player->threadlock);                           
     struct CharacterSheet *sheet = &player->charSheet;
     if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
-        pthread_mutex_unlock(lock);
+        pthread_mutex_unlock(&player->threadlock);
         return -1;
     }
     while(sheet->background < PLAYER_BACKGROUND_COUNT) {
@@ -472,11 +473,11 @@ int initCharsheetFromForm(struct Player *player,
 
     if (validateNewCharsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(*sheet));
-        pthread_mutex_unlock(lock);
+        pthread_mutex_unlock(&player->threadlock);
         return -1;
     }
     sheet->isValid = true;
-    pthread_mutex_unlock(lock);
+    pthread_mutex_unlock(&player->threadlock);
     return 0;
 }
 
@@ -486,27 +487,25 @@ int initCharsheetFromForm(struct Player *player,
  * see "validateNewCharsheet()"
  * for vibe-checking hackers
  */
-bool isCharsheetValid (const struct Player *player)
+bool isCharsheetValid (struct Player *restrict player)
 {
     bool result = 0;
-    pthread_mutex_t *lock = 
-    threadlockObject(player, &playerStateMutexes);
+    pthread_mutex_lock(&player->threadlock);
     result = player->charSheet.isValid;
-    pthread_mutex_unlock (lock);
+    pthread_mutex_unlock(&player->threadlock);
     return result;
 }
 
 void setGamePassword(struct Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
 {
-    pthread_mutex_t *lock = 
-    threadlockObject(game, &gameStateMutexes);
+    pthread_mutex_lock   (&game->threadlock);
     memset               (game->password, 
                           0, 
                           MAX_CREDENTIAL_LEN);
     strncpy              (game->password, 
                           password, 
                           MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (lock);
+    pthread_mutex_unlock (&game->threadlock);
 }
 
 /*
@@ -515,10 +514,9 @@ void setGamePassword(struct Game *restrict game, const char password[static MAX_
 int tryGameLogin(struct Game *restrict game, const char *password)
 {
     int match = 0;
-    pthread_mutex_t *lock = 
-    threadlockObject(game, &gameStateMutexes);
+    pthread_mutex_lock   (&game->threadlock);
     match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (lock);
+    pthread_mutex_unlock (&game->threadlock);
     match = -1 * (match != 0);
     return match;
 }
@@ -643,8 +641,7 @@ int   tryPlayerLogin    (struct Game *restrict game,
     struct Player        *player        = NULL;
     char                  sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
 
-    pthread_mutex_t *lock = 
-    threadlockObject(game, &gameStateMutexes);
+    pthread_mutex_lock(&game->threadlock);
     player = tryGetPlayerFromPlayername(game, credentials->name);
     if ( player != NULL ) {
         if (isPlayerPasswordValid(player, credentials->password)) {
@@ -656,12 +653,12 @@ int   tryPlayerLogin    (struct Game *restrict game,
                                     HTTP_FLAG_TEXT_HTML, 
                                     remotehost,
                                     sessionTokenHeader);
-            pthread_mutex_unlock   (lock);
+            pthread_mutex_unlock   (&game->threadlock);
             return 0;
         }
         else {
             // Player exists, but the password was wrong
-            pthread_mutex_unlock   (lock);
+            pthread_mutex_unlock   (&game->threadlock);
             return -1;
         }
     }
@@ -679,7 +676,7 @@ int   tryPlayerLogin    (struct Game *restrict game,
                              remotehost, 
                              sessionTokenHeader);
 
-    pthread_mutex_unlock(lock);
+    pthread_mutex_unlock(&game->threadlock);
     return 0;
 }
 

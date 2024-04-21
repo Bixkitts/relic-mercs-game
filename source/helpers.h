@@ -38,25 +38,4 @@ void checkDataSizes   ();
 
 long long int getRandomInt();
 
-/*
- * Thread related stuff here
- * ----------------------------
- */
-typedef struct MutexArray MutexArray;
-
-// Initialise this struct
-// manually with a pointer
-// to an array of mutexes
-// and how many there are
-struct MutexArray {
-    pthread_mutex_t *mutexes;
-    int              size;
-};
-void               initMutexArray   (struct MutexArray *array, 
-                                     const int size);
-pthread_mutex_t   *threadlockObject (const void *restrict object, 
-                                     const struct MutexArray *restrict array);
-
-
-
 #endif

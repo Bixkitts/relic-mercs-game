@@ -67,7 +67,7 @@ int
 initCharsheetFromForm   (struct Player *charsheet, 
                          const struct HTMLForm *form);
 bool 
-isCharsheetValid        (const struct Player *player);
+isCharsheetValid        (struct Player *restrict player);
 // Note: use initCharsheetFromForm.
 void 
 setPlayerCharSheet      (struct Player *player,
