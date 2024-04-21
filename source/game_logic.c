@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -76,17 +77,6 @@ enum ResourceID{
 };
 
 /*
- * ALWAYS store this as the first element of a struct.
- * It denotes the type of the object server side so
- * that when a type-agnostic NetID is resolved to an object,
- * we can know it's type
- */
-enum NetObjType {
-    NET_TYPE_PLAYER,
-    NET_TYPE_COUNT
-};
-
-/*
  * Encounter Categories, and their possible encounters
  */
 // NOTE: Every encounter category needs at least one specific
@@ -104,7 +94,7 @@ static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
      ENCOUNTER_CULTISTS_PEACEFUL}
 };
 // This is coupled with playerBackgroundStrings
-typedef enum PlayerBackground {
+enum PlayerBackground {
     PLAYER_BACKGROUND_TRADER,
     PLAYER_BACKGROUND_FARMER,
     PLAYER_BACKGROUND_WARRIOR,
@@ -115,7 +105,7 @@ typedef enum PlayerBackground {
     PLAYER_BACKGROUND_MONSTERHUNTER,
     PLAYER_BACKGROUND_CLOWN,
     PLAYER_BACKGROUND_COUNT
-} PlayerBackground;
+};
 // This is coupled with enum PlayerBackground
 static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
     "Trader",
@@ -129,15 +119,41 @@ static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIEL
     "Clown"
 };
 
-/* maybe replace this with a resizing version if
+
+
+/*
+ * These encode the ranges of NetIDs that correspond
+ * to those objects
+ */
+enum NetObjType {
+    NET_TYPE_NULL,
+    NET_TYPE_PLAYER,
+    NET_TYPE_GAME,
+    NET_TYPE_COUNT
+};
+/*
+ * NetID ranges corresponding to object types
+ */
+static int netIDRanges[NET_TYPE_COUNT] = {0, 32, 34};
+/*
+ * Maybe replace this with a resizing version if
  * we ever need more networked objects than this?
  * Remember to lock netIDs before touching it.
+ *
+ * NOTE: this needs a logical to physical type mapping
+ * if we start working with thousands and thousands of
+ * dynamic objects. That won't happen to me though :D
  */
 #define NETIDS_MAX 2048
-static pthread_mutex_t netIDmutex = PTHREAD_MUTEX_INITIALIZER;
-static void *netIDs[NETIDS_MAX] = { 0 };
+// Lock this before touching netIDs
+static pthread_mutex_t   netIDmutex         = PTHREAD_MUTEX_INITIALIZER;
+static void             *netIDs[NETIDS_MAX] = { 0 };
 
-typedef enum Factions{
+typedef long long NetID;
+
+
+
+enum Factions{
     GAME_FACTION_SLAVERS,
     GAME_FACTION_CULTISTS,
     GAME_FACTION_ELDERS,
@@ -146,7 +162,7 @@ typedef enum Factions{
     GAME_FACTION_BEETLES,
     GAME_FACTION_AFTERLIFE,
     GAME_FACTION_COUNT
-} Factions;
+};
 
 // This is coupled with playerGenderStrings
 enum Gender {
@@ -162,12 +178,12 @@ static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
 
 typedef unsigned int PlayerAttr;
 struct CharacterSheet {
-    bool             isValid; // Is this Charsheet valid at all?
-    enum Gender      gender;
-    PlayerAttr       vigour;
-    PlayerAttr       violence;
-    PlayerAttr       cunning;
-    PlayerBackground background;
+    bool                  isValid; // Is this Charsheet valid at all?
+    enum Gender           gender;
+    PlayerAttr            vigour;
+    PlayerAttr            violence;
+    PlayerAttr            cunning;
+    enum PlayerBackground background;
 };
 
 struct Coordinates {
@@ -177,10 +193,7 @@ struct Coordinates {
 };
 
 struct Player {
-    // netType needs to stay at offset 0.
-    // It's metadata about the object type
-    // for uid/netid resolving.
-    enum NetObjType          netType;
+    NetID                    netID;
     pthread_mutex_t          threadlock;
     Host                     associatedHost;
     struct PlayerCredentials credentials;
@@ -192,15 +205,20 @@ struct Player {
 };
 
 struct Game {
-    pthread_mutex_t threadlock;
-    // Who's turn is it
-    int             playerTurn;
-    int             maxPlayerCount;
+    NetID              netID;
+    pthread_mutex_t    threadlock;
+    int                playerTurn;
+    int                maxPlayerCount;
     // This is larger than max players to account
     // for kicked and banned players
-    struct Player   players [MAX_PLAYERS_IN_GAME * 2];
-    int             playerCount;
-    char            password[MAX_CREDENTIAL_LEN];
+    struct Player      players [MAX_PLAYERS_IN_GAME * 2];
+    int                playerCount;
+    char               password[MAX_CREDENTIAL_LEN];
+};
+
+union GameObject {
+    struct Player player;
+    struct Game   game;
 };
 
 /*
@@ -261,17 +279,22 @@ static struct Player
 static int            
 validateNewCharsheet        (struct CharacterSheet *sheet);
 static void         
-*resolveNetIDToObj          (const unsigned long long netID,
+*resolveNetIDToObj          (const NetID netID,
                              enum NetObjType type);
+static NetID
+createNetID                 (enum NetObjType, 
+                             void *object);
+static void
+clearNetID                  (const NetID netID);
 
 /*
  * Handlers for incoming messages from the websocket connection
  */
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
 struct MoveObjOnMapData {
-    unsigned long long netID; 
-    double             xCoord;
-    double             yCoord;
+    NetID     netID; 
+    double    xCoord;
+    double    yCoord;
 };
 static void moveObjOnMapHandler         (char *data, ssize_t dataSize, Host remotehost);
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
@@ -525,12 +548,12 @@ int tryGameLogin(struct Game *restrict game, const char *password)
  * Parses an int64 token out of a HTTP
  * message and returns it, or 0 on failure.
  */
-long long int getTokenFromHTTP(char *http,
+long long getTokenFromHTTP(char *http,
                                int httpLength)
 {
     const char    cookieName[HEADER_LENGTH] = "sessionToken=";
     int           startIndex                = stringSearch(http, cookieName, httpLength);
-    long long int token                     = 0;
+    long long     token                     = 0;
 
     if (startIndex >= 0) {
         startIndex += strnlen(cookieName, HEADER_LENGTH);
@@ -706,8 +729,7 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
  * - The netID is invalid
  * - A valid netID resolves to an object of the wrong type
  */
-static void *resolveNetIDToObj(const unsigned long long netID,
-                               enum NetObjType type)
+static void *resolveNetIDToObj(const NetID netID, enum NetObjType type)
 {
     if (netID >= NETIDS_MAX) {
         return NULL;
@@ -718,10 +740,39 @@ static void *resolveNetIDToObj(const unsigned long long netID,
         pthread_mutex_unlock(&netIDmutex);
         return NULL;
     }
-    enum NetObjType retObjType = *(enum NetObjType *)(retObj);
-    void *ret = (void*)(((unsigned long long)retObj) * (retObjType == type));
+    bool  isCorrectType = ((netID < netIDRanges[type]) && (netID >= netIDRanges[type-1]));
+    void *ret           = (void*)(((unsigned long long)retObj) * isCorrectType);
     pthread_mutex_unlock(&netIDmutex);
     return ret;    
+}
+
+/*
+ * Returns the NetID it finds free,
+ * or -1 on failure
+ */
+static NetID createNetID (enum NetObjType type, 
+                          void *object)
+{
+    NetID i = netIDRanges[type-1];
+    while(netIDs[i] != NULL) {
+        i++;
+        if (i >= netIDRanges[type]) {
+            return -1;
+        }
+    }
+    return i;
+}
+/*
+ * Expects a NetID smaller than NETID_MAX
+ *
+ * Currently just sets the pointer at
+ * that NetID to NULL.
+ * Do this to prevent the object from being
+ * resolved from a NetID e.g. if it's being deleted.
+ */
+static void clearNetID (const NetID netID)
+{
+
 }
 
 static void moveObjOnMapHandler(char *data, ssize_t dataSize, Host remotehost)
