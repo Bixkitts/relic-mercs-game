@@ -8,7 +8,6 @@ import { unsubscribeFromRender } from './rendering/renderer.js';
 // on Z axis
 const playerZHeight = 0.0125;
 
-// Define a class for player
 export class Player {
     constructor(x, y, vigour, violence, cunning, image) {
         this.position = vec3.fromValues(x, y, playerZHeight);
