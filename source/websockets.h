@@ -8,5 +8,5 @@ void  sendWebSocketResponse   (char *httpString, ssize_t packetSize, Host remote
 
 int   decodeWebsocketMessage  (char *outData, char *inData, ssize_t dataSize);
 // returns size of entire websocket packet including header
-int   encodeWebsocketMessage  (char *outData, char *inData, ssize_t dataSize);
+int   writeWebsocketHeader  (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX], ssize_t dataSize);
 #endif

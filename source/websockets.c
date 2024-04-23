@@ -83,19 +83,24 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 }
 
 /*
- * Make sure outData is larger than inData
+ * inOutData needs to be a buffer
+ * with WEBSOCKET_HEADER_SIZE_MAX free space
+ *
+ * Returns the size of the websocket header
+ * written to the buffer in bytes.
  */
-/*
- * Appends a 2 byte websocket header to the start
- */
-int encodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
+int writeWebsocketHeader
+(char inOutData[static WEBSOCKET_HEADER_SIZE_MAX], 
+ ssize_t dataSize)
 {
+    // In the future this will vary, but is
+    // 2 bytes while we're sending under 
+    // 128 bytes of data
     const int headerSize = 2;
-    outData[0] = 0x82; // FIN websocket header
-    outData[1] = (unsigned char)dataSize & 0b01111111; // Payload size
+    inOutData[WEBSOCKET_HEADER_SIZE_MAX-2] = 0x82; // FIN websocket header
+    inOutData[WEBSOCKET_HEADER_SIZE_MAX-1] = (unsigned char)dataSize & 0b01111111; // Payload size
 
-    memcpy(&outData[headerSize], inData, dataSize);
-    return dataSize + headerSize;
+    return headerSize;
 }
 
 static int generateAcceptCode(unsigned char *outCode, char *inCode, ssize_t codeLen)
