@@ -9,15 +9,26 @@
 
 #define MAX_CREDENTIAL_LEN   32
 #define MAX_PLAYERS_IN_GAME  16
+#define MAX_GAMES            16
+#define MAX_PLAYERS          MAX_PLAYERS_IN_GAME * MAX_GAMES
+/*
+ * Maximum amount of networked
+ * objects/states
+ */
+#define MAX_NETOBJS          MAX_GAMES       \
+                             + MAX_PLAYERS
 
 struct Resouce;
 struct Player;
 struct Game;
 struct CharacterSheet;
 
+extern const char testGameName[];
+
 typedef long long int SessionToken;
 
 struct GameConfig {
+    char name    [MAX_CREDENTIAL_LEN];
     char password[MAX_CREDENTIAL_LEN];
     int  maxPlayerCount;
 };
@@ -62,26 +73,25 @@ getTokenFromHTTP        (char *http,
 struct Player 
 *tryGetPlayerFromToken  (SessionToken token,
                          struct Game *restrict game);
+struct Game 
+*getGameFromName        (const char name[static MAX_CREDENTIAL_LEN]);
 // Character sheet setup stuff
 int  
 initCharsheetFromForm   (struct Player *charsheet, 
                          const struct HTMLForm *form);
 bool 
-isCharsheetValid        (struct Player *restrict player);
+isCharsheetValid        (const struct Player *restrict player);
 // Note: use initCharsheetFromForm.
 void 
 setPlayerCharSheet      (struct Player *player,
                          struct CharacterSheet *charsheet);
 /* --------------------------------------------- */
 
-int   createGame         (struct Game **game, 
-                          struct GameConfig *config);
-int   initializeTestGame (struct GameConfig *config);
+int   createGame         (struct GameConfig *config);
 // returns the ID the player got
 // Returns the pointer to global Game
 // variable.
 // Not thread safe, set this exactly once
 // in the main thread.
-struct Game *getTestGame        ();
-int          getPlayerCount     (const struct Game *game);
+int   getPlayerCount     (const struct Game *game);
 #endif

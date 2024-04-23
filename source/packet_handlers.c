@@ -80,31 +80,19 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     memcpy(requestedResource, startingPoint, stringLen);
 
-    struct Game         *game   = getTestGame();
-    long long int        token  = getTokenFromHTTP     (data, packetSize);
+    struct Game  *game    = getGameFromName  (testGameName);
+    SessionToken  token   = getTokenFromHTTP (data, packetSize);
     const struct Player *player = tryGetPlayerFromToken(token, game);
-#undef DEBUG_TEMP
-#ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
-    token = 696969;
-#endif
     /*
      * Direct the remotehost to the login, character creation
      * or game depending on their session token.
      */
     if (stringSearch(data, "GET / ", 10) >= 0) {
         if (player == NULL) {
-#ifndef DEBUG_TEMP
             sendContent ("./login.html", 
                          HTTP_FLAG_TEXT_HTML, 
                          remotehost, 
                          NULL);
-#endif
-#ifdef DEBUG_TEMP // TODO BEFORE PUSH: I just need to test rendering functions
-            sendContent ("./game.html", 
-                         HTTP_FLAG_TEXT_HTML, 
-                         remotehost, 
-                         NULL);
-#endif
 
         }
         else if (!isCharsheetValid(player)) {
@@ -143,11 +131,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
      * the remotehost needs to be authenticated
      * otherwise we're not sending anything at all.
      */
-    if (player == NULL
-#ifdef DEBUG_TEMP
-        && token != 696969
-#endif
-            ) {
+    if (player == NULL) {
         sendForbiddenPacket(remotehost);
         return;
     }
@@ -188,7 +172,7 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
         sendForbiddenPacket(remotehost); //placeholder
         return;
     }
-    if (tryGameLogin(getTestGame(), 
+    if (tryGameLogin(getGameFromName(testGameName), 
                      form.fields[FORM_CREDENTIAL_GAMEPASSWORD])
             != 0) {
         sendBadRequestPacket(remotehost);
@@ -200,7 +184,7 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     strncpy        (credentials.password, 
                     form.fields[FORM_CREDENTIAL_PLAYERPASSWORD], 
                     MAX_CREDENTIAL_LEN);
-    if (tryPlayerLogin (getTestGame(), 
+    if (tryPlayerLogin (getGameFromName(testGameName), 
                         &credentials, 
                         remotehost) < 0) {
         sendBadRequestPacket(remotehost);
@@ -209,9 +193,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    long long int    token         = getTokenFromHTTP(data, packetSize); 
-    struct Player   *player        = tryGetPlayerFromToken(token, getTestGame());
-    struct HTMLForm  form          = {0};
+    SessionToken     token  = getTokenFromHTTP(data, packetSize); 
+    struct Player   *player = tryGetPlayerFromToken(token, getGameFromName(testGameName));
+    struct HTMLForm  form   = {0};
 
     const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
 

@@ -36,19 +36,6 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
     }
 }
 
-/* 
- * Assume you have an array of mutexes,
- * this function will give you back an index to use for
- * locking the memory while working on a specific object.
- * Different systems should use their own managed pools of mutexes
- * for better optimisation
- */
-static inline int getMutexIndex(const void *object, 
-                                const int mutexCount)
-{
-    return ((unsigned long)object) % mutexCount;
-}
-
 /*
  * This function makes sure the data types we use are the
  * correct length for interpreting incoming websocket packets.
@@ -108,6 +95,13 @@ int stringSearch(const char* text, const char* pattern, int maxLength)
     return -1;
 }
 
+/*
+ * Assumes non-null string
+ */
+bool isEmptyString(const char *string)
+{
+    return string[0] == '\0';    
+}
 int charSearch(const char *restrict text, char c, int bufLen)
 {
     int i = 0;

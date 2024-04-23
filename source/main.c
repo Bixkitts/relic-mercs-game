@@ -29,11 +29,12 @@ int main(void)
     // TODO: Make a web interface for creating and
     // joining multiple games.
     struct GameConfig gameConfig = {
+        .name           = "test game",
         .password       = "hello",
         .maxPlayerCount = 4
     };
 
-    initializeTestGame(&gameConfig);
+    createGame(&gameConfig);
 
     listenForTCP (localhost, masterHandler);
     return 0;

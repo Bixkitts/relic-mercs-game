@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #define HTMLFORM_FIELD_MAX_LEN 64
 #define HTMLFORM_MAX_FIELDS    64
@@ -35,6 +36,7 @@ void parseHTMLForm    (const char * inBuffer,
                        struct HTMLForm *outBuffer, 
                        ssize_t inBufferLen);
 void checkDataSizes   ();
+bool isEmptyString    (const char *string);
 
 long long int getRandomInt();
 

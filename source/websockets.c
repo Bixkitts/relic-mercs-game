@@ -89,7 +89,8 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
  * Returns the size of the websocket header
  * written to the buffer in bytes.
  */
-int writeWebsocketHeader
+int 
+writeWebsocketHeader
 (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX], 
  ssize_t dataSize)
 {
@@ -97,8 +98,8 @@ int writeWebsocketHeader
     // 2 bytes while we're sending under 
     // 128 bytes of data
     const int headerSize = 2;
-    inOutData[WEBSOCKET_HEADER_SIZE_MAX-2] = 0x82; // FIN websocket header
-    inOutData[WEBSOCKET_HEADER_SIZE_MAX-1] = (unsigned char)dataSize & 0b01111111; // Payload size
+    inOutData[0] = 0x82; // FIN websocket header
+    inOutData[1] = (unsigned char)dataSize & 0b01111111; // Payload size
 
     return headerSize;
 }
@@ -200,5 +201,6 @@ static int compute_sha1(const char *data, size_t data_len, unsigned char *digest
 
     // Clean up the message digest context
     EVP_MD_CTX_free(mdctx);
+    return 0;
 }
 
