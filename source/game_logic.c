@@ -89,6 +89,7 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
  *  the functions that call them are expected
  *  to lock the game state they are modifying.
  */
+// TODO: move these to validator.h
 static int            
 isGameMessageValidLength    (Opcode opcode, 
                              ssize_t messageSize);

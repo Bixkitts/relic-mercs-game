@@ -36,12 +36,14 @@ function sendHeartbeat() {
 }
 
 export function sendMovePacket(coordX, coordY) {
-    const ab       = new ArrayBuffer(18);
+    const ab       = new ArrayBuffer(26);
     const dataView = new DataView(ab);
+    const netID    = 69n;
 
     dataView.setInt16   (0, 1, true);
-    dataView.setFloat64 (2, coordX, true);
-    dataView.setFloat64 (10, coordY, true);
+    dataView.setBigInt64(2, netID, true);
+    dataView.setFloat64 (10, coordX, true);
+    dataView.setFloat64 (18, coordY, true);
 
     socket.send(ab);
 }
