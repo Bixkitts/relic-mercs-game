@@ -1,0 +1,14 @@
+This text file is a list of things that are to be directly
+implemented next, in case I stop working on this for a few days
+or someone wants to know what needs to be done next.
+
+The list is as follows:
+
+- Player movement seems to be properly replicating.
+  Actually validate it and make sure there are good
+  helpers in place to handle the websocket opcodes
+  before moving on to other opcode handlers.
+- Get the player turns working to the most basic level,
+  in that only the player who's turn it is can use 
+  movement
+- Make the multicasts concurrent and not terrible
