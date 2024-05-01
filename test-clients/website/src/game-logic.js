@@ -54,7 +54,7 @@ export class Player {
 
 // Test values
 let players = [
-    new Player(0, 0.0, 0.0, 1, 2, 3, "playerTest.png"),
+    new Player(0.0, 0.0, 1, 2, 3, "playerTest.png"),
 ];
 export function getPlayers() {
     return players;
