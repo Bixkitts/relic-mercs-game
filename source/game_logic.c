@@ -8,105 +8,22 @@
 #include <pthread.h>
 
 #include "bbnetlib.h"
-#include "host_custom_attributes.h"
 #include "error_handling.h"
 #include "helpers.h"
 #include "websockets.h"
-#include "html_server.h"
 #include "game_logic.h"
 #include "net_ids.h"
 
 #define MESSAGE_HANDLER_COUNT 6
 
-// All injuries are followed immediately by their 
-// healed counterparts.
-enum InjuryType{
-    INJURY_NOTHING,
-    INJURY_DEEP_CUT,
-    INJURY_BIG_SCAR,
-    INJURY_BROKEN_LEFT_LEG,
-    INJURY_BROKEN_RIGHT_LEG,
-    INJURY_BROKEN_RIGHT_ARM,
-    INJURY_BROKEN_LEFT_ARM,
-    INJURY_MISSING_LEFT_LEG,
-    INJURY_MISSING_RIGHT_LEG,
-    INJURY_MISSING_LEFT_ARM,
-    INJURY_MISSING_RIGHT_ARM,
-    INJURY_COUNT
-};
-
-// These ID's will be direct
-// callbacks to handle these encounters
-// serverside
-enum EncounterID{
-    ENCOUNTER_BANDITS,
-    ENCOUNTER_TROLLS,
-    ENCOUNTER_WOLVES,
-    ENCOUNTER_RATS,
-    ENCOUNTER_BEGGAR,
-    ENCOUNTER_DRAGONS,
-    ENCOUNTER_TREASURE_SMALL,
-    ENCOUNTER_TREASURE_LARGE,
-    ENCOUNTER_TREASURE_MAGICAL,
-    ENCOUNTER_RUINS_OLD,
-    ENCOUNTER_SPELL_TOME,
-    ENCOUNTER_CULTISTS_CANNIBAL,
-    ENCOUNTER_CULTISTS_PEACEFUL,
-    ENCOUNTER_COUNT
-};
-
-enum EncounterTypeID{
-    ENCOUNTER_TYPE_BANDIT,
-    ENCOUNTER_TYPE_BEASTS,
-    ENCOUNTER_TYPE_MONSTROSITIES,
-    ENCOUNTER_TYPE_DRAGON,
-    ENCOUNTER_TYPE_MYSTICAL,
-    ENCOUNTER_TYPE_CULTISTS,
-    ENCOUNTER_TYPE_SLAVERS,
-    ENCOUNTER_TYPE_REFUGEES,
-    ENCOUNTER_TYPE_EXILES,
-    ENCOUNTER_TYPE_PLAGUE,
-    ENCOUNTER_TYPE_COUNT
-};
-
-enum ResourceID{
-    RESOURCE_KNIFE,
-    RESOURCE_SWORD,
-    RESOURCE_AXE,
-    RESOURCE_POTION_HEAL,
-    RESOURCE_COUNT
-};
-
 /*
- * Encounter Categories, and their possible encounters
+ * Networked data structures
+ * like Player or Game
+ * are private to this translation
+ * unit so we can make sure we
+ * manage concurrent access correctly
  */
-// NOTE: Every encounter category needs at least one specific
-// encounter in it.
-static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
-    {ENCOUNTER_BANDITS},                 // ENCOUNTER_TYPE_BANDIT
-    {ENCOUNTER_WOLVES,                   // ENCOUNTER_TYPE_BEASTS
-     ENCOUNTER_RATS},
-    {ENCOUNTER_TROLLS},                  // ENCOUNTER_TYPE_MONSTROSITIES
-    {ENCOUNTER_DRAGONS},                 // ENCOUNTER_TYPE_DRAGON
-    {ENCOUNTER_RUINS_OLD,                // ENCOUNTER_TYPE_MYSTICAL
-     ENCOUNTER_TREASURE_MAGICAL,
-     ENCOUNTER_SPELL_TOME},
-    {ENCOUNTER_CULTISTS_CANNIBAL,        // ENCOUNTER_TYPE_CULTISTS
-     ENCOUNTER_CULTISTS_PEACEFUL}
-};
-// This is coupled with playerBackgroundStrings
-enum PlayerBackground {
-    PLAYER_BACKGROUND_TRADER,
-    PLAYER_BACKGROUND_FARMER,
-    PLAYER_BACKGROUND_WARRIOR,
-    PLAYER_BACKGROUND_PRIEST,
-    PLAYER_BACKGROUND_CULTIST,
-    PLAYER_BACKGROUND_DIPLOMAT,
-    PLAYER_BACKGROUND_SLAVER,
-    PLAYER_BACKGROUND_MONSTERHUNTER,
-    PLAYER_BACKGROUND_CLOWN,
-    PLAYER_BACKGROUND_COUNT
-};
+
 // This is coupled with enum PlayerBackground
 static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
     "Trader",
@@ -120,84 +37,17 @@ static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIEL
     "Clown"
 };
 
-enum Factions{
-    GAME_FACTION_SLAVERS,
-    GAME_FACTION_CULTISTS,
-    GAME_FACTION_ELDERS,
-    GAME_FACTION_REBELS,
-    GAME_FACTION_MERCHANTS,
-    GAME_FACTION_BEETLES,
-    GAME_FACTION_AFTERLIFE,
-    GAME_FACTION_COUNT
-};
-
-// This is coupled with playerGenderStrings
-enum Gender {
-    GENDER_MALE,
-    GENDER_FEMALE,
-    GENDER_COUNT
-}Gender;
 // This is coupled with enum Gender
 static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
     "Male",
     "Female"
 };
 
-typedef unsigned int PlayerAttr;
-struct CharacterSheet {
-    bool                  isValid; // Is this Charsheet valid at all?
-    enum Gender           gender;
-    PlayerAttr            vigour;
-    PlayerAttr            violence;
-    PlayerAttr            cunning;
-    enum PlayerBackground background;
-};
-
-struct Coordinates {
-    int x;
-    int y;
-    int z;
-};
 
 pthread_mutex_t netObjMutexes[MAX_NETOBJS] = {0};
 
-struct Player {
-    NetID                    netID;
-    pthread_mutex_t         *threadlock;
-    Host                     associatedHost;
-    struct PlayerCredentials credentials;
-    SessionToken             sessionToken;
-    struct CharacterSheet    charSheet;
-    struct Coordinates       coords;
-    // How many of each ResourceID the player has
-    int                      resources[RESOURCE_COUNT];
-};
 
 const char testGameName[MAX_CREDENTIAL_LEN] = "test game";
-struct Game {
-    NetID              netID;
-    pthread_mutex_t   *threadlock;
-    char               name    [MAX_CREDENTIAL_LEN];
-    char               password[MAX_CREDENTIAL_LEN];
-    int                playerTurn;
-    int                maxPlayerCount;
-    // This is larger than max players to account
-    // for kicked and banned players
-    struct Player      players [MAX_PLAYERS_IN_GAME * 2];
-    int                playerCount;
-};
-
-/*
- * Form Interpreting
- */
-enum CharsheetFormFields {
-    FORM_CHARSHEET_BACKGROUND,
-    FORM_CHARSHEET_GENDER,
-    FORM_CHARSHEET_VIGOUR,
-    FORM_CHARSHEET_VIOLENCE,
-    FORM_CHARSHEET_CUNNING,
-    FORM_CHARSHEET_FIELD_COUNT
-};
 
 /*
  * Handler type definitions
@@ -239,24 +89,9 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
  *  the functions that call them are expected
  *  to lock the game state they are modifying.
  */
-static void           
-generateSessionToken        (struct Player *player,
-                             struct Game *game);
 static int            
 isGameMessageValidLength    (Opcode opcode, 
                              ssize_t messageSize);
-static void           
-buildSessionTokenHeader     (char outHeader[static HEADER_LENGTH], 
-                             SessionToken token);
-static struct Player 
-*tryGetPlayerFromPlayername (struct Game *game, 
-                             const char *credentials);
-static int            
-isPlayerPasswordValid       (const struct Player *restrict player,
-                             const char *password);
-static struct Player 
-*createPlayer               (struct Game *game,
-                             struct PlayerCredentials *credentials);
 static int            
 validateNewCharsheet        (struct CharacterSheet *sheet);
 
@@ -341,12 +176,12 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     };
 }
 
-int createGame(struct GameConfig *config)
+struct Game *createGame(struct GameConfig *config)
 {
     const char name[MAX_CREDENTIAL_LEN] = {0};
     struct Game *game = getGameFromName(name);
     if (game == NULL) {
-        return -1;
+        return NULL;
     }
 
     game->netID      = createNetID(NET_TYPE_GAME);
@@ -363,7 +198,7 @@ int createGame(struct GameConfig *config)
     game->maxPlayerCount = config->maxPlayerCount;
 
     pthread_mutex_unlock(game->threadlock);
-    return 0;
+    return game;
 }
 
 void deleteGame(struct Game *game)
@@ -380,7 +215,7 @@ void deleteGame(struct Game *game)
  * character creation and creates a character at the next free 
  * index in the game
  */
-static struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
+struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
 {
     struct Player *newPlayer = &game->players[game->playerCount];
     newPlayer->netID      = createNetID(NET_TYPE_PLAYER); 
@@ -393,7 +228,7 @@ static struct Player *createPlayer(struct Game *game, struct PlayerCredentials *
     return newPlayer;
 }
 
-static void deletePlayer(struct Player *restrict player)
+void deletePlayer(struct Player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
     pthread_mutex_lock  (lock);
@@ -510,38 +345,6 @@ void setGamePassword(struct Game *restrict game, const char password[static MAX_
     pthread_mutex_unlock (game->threadlock);
 }
 
-/*
- * Returns 0 on success and -1 on failure
- */
-int tryGameLogin(struct Game *restrict game, const char *password)
-{
-    int match = 0;
-    pthread_mutex_lock   (game->threadlock);
-    match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (game->threadlock);
-    match = -1 * (match != 0);
-    return match;
-}
-
-/*
- * Parses an int64 token out of a HTTP
- * message and returns it, or 0 on failure.
- */
-SessionToken getTokenFromHTTP(char *http,
-                              int httpLength)
-{
-    const char    cookieName[HEADER_LENGTH] = "sessionToken=";
-    int           startIndex                = stringSearch(http, cookieName, httpLength);
-    SessionToken  token                     = 0;
-
-    if (startIndex >= 0) {
-        startIndex += strnlen(cookieName, HEADER_LENGTH);
-        // TODO: This might overflow with specifically 
-        // malformed packets
-        token       = strtoll(&http[startIndex], NULL, 10);
-    }
-    return token;
-}
 
 /*
  * Returns NULL when none is found
@@ -557,131 +360,6 @@ struct Player *tryGetPlayerFromToken(SessionToken token,
         }
     }
     return NULL;
-}
-
-/*
- * We pass in the game because the
- * session token needs to be unique
- * on a per game basis
- */
-static void generateSessionToken(struct Player *restrict player, 
-                                 struct Game *restrict game)
-{
-    long long int nonce = getRandomInt();
-    int           i     = 0;
-    // Make sure the token is unique, and not 0.
-    while ((tryGetPlayerFromToken(nonce, game) != NULL) || (nonce == 0)) {
-        nonce = getRandomInt();
-        i++;
-        if (i > 2) {
-            fprintf(stderr, "How the fuck? Kill it with fire.\n");
-            exit(1);
-        }
-    }
-    player->sessionToken = nonce;
-}
-
-/* 
- * Builds the custom Cookie header that
- * sends the session token to the client.
- */
-static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH], 
-                                    SessionToken token)
-{
-    char headerBase [HEADER_LENGTH] = "Set-Cookie: sessionToken=";
-    char tokenString[HEADER_LENGTH] = {0};
-
-    sprintf(tokenString, "%lld\n", token);
-    strncat(headerBase, tokenString, HEADER_LENGTH - strlen(headerBase));
-    memcpy (outHeader, headerBase, HEADER_LENGTH);
-}
-
-/*
- * returns the index of the player in the game
- */
-static struct Player *tryGetPlayerFromPlayername(struct Game *game, 
-                                                 const char *playername)
-{
-    int playerIndex   = 0;
-    int playerFound   = -1;
-
-    for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
-        playerFound = strncmp(playername, 
-                              game->players[playerIndex].credentials.name, 
-                              MAX_CREDENTIAL_LEN); 
-        if (playerFound == 0) {
-            return &game->players[playerIndex];
-        }
-    }
-    return NULL;
-}
-
-static int isPlayerPasswordValid(const struct Player *restrict player,
-                                 const char *password)
-{
-    int passwordCheck = 0;
-    passwordCheck = strncmp(password, 
-                            player->credentials.password, 
-                            MAX_CREDENTIAL_LEN); 
-    return passwordCheck == 0;
-}
-/*
- * This function assumes the player had a valid
- * game password, so it'll make them a new
- * character if their credentials don't fit.
- *
- * returns 0 if the client successfully logged in
- * and took control of some player, new or pre-existing
- *
- * returns -1 when the player exists but the
- * password was wrong
- */
-int   tryPlayerLogin    (struct Game *restrict game,
-                         struct PlayerCredentials *restrict credentials,
-                         Host remotehost)
-{
-    struct Player *player        = NULL;
-    char          sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
-    if (isEmptyString(credentials->name)) {
-        return -1;
-    }
-    pthread_mutex_lock(game->threadlock);
-    player = tryGetPlayerFromPlayername(game, credentials->name);
-    if (player != NULL) {
-        if (isPlayerPasswordValid(player, credentials->password)) {
-            generateSessionToken   (player, 
-                                    game);
-            buildSessionTokenHeader(sessionTokenHeader, 
-                                    player->sessionToken);
-            sendContent            ("./game.html", 
-                                    HTTP_FLAG_TEXT_HTML, 
-                                    remotehost,
-                                    sessionTokenHeader);
-            pthread_mutex_unlock   (game->threadlock);
-            return 0;
-        }
-        else {
-            // Player exists, but the password was wrong
-            pthread_mutex_unlock   (game->threadlock);
-            return -1;
-        }
-    }
-    // Player was not found in game redirect them to character creation
-    // And create a player
-    player = 
-    createPlayer            (game, 
-                             credentials);
-    generateSessionToken    (player, 
-                             game);
-    buildSessionTokenHeader (sessionTokenHeader, 
-                             player->sessionToken);
-    sendContent             ("./charsheet.html", 
-                             HTTP_FLAG_TEXT_HTML, 
-                             remotehost, 
-                             sessionTokenHeader);
-
-    pthread_mutex_unlock(game->threadlock);
-    return 0;
 }
 
 /*
@@ -706,15 +384,19 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 
 static void moveObjOnMapHandler(char *data, ssize_t dataSize, Host remotehost)
 {
+    // Maybe I need helper functions to build these sort
+    // of response packets?
     const struct MoveObjOnMapData *moveData = (struct MoveObjOnMapData*)data; 
     const Opcode responseOpcode = 0x01;
     char multicastBuffer [(sizeof(*moveData) 
                           + sizeof(responseOpcode))
                           + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+
     const int headerSize =
     writeWebsocketHeader (multicastBuffer, 
                           sizeof(*moveData) 
                           + sizeof(responseOpcode));
+
     char  *gameResponseData = &multicastBuffer[headerSize];
     memcpy (gameResponseData, 
             &responseOpcode, 
@@ -723,6 +405,8 @@ static void moveObjOnMapHandler(char *data, ssize_t dataSize, Host remotehost)
             moveData, 
             sizeof(*moveData));
 
+    // Instead of just sending the coordinate out, I should validate 
+    // the coordinates.
 
     int packetSize = sizeof(*moveData) 
                      + sizeof(responseOpcode) 

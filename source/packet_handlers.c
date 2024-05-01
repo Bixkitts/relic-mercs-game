@@ -14,6 +14,7 @@
 #include "file_handling.h"
 #include "html_server.h"
 #include "game_logic.h"
+#include "auth.h"
 
 enum CredentialFormFields {
     FORM_CREDENTIAL_PLAYERNAME,
