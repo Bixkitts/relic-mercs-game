@@ -1,4 +1,4 @@
-import { getGLContext } from '../canvas-getter.js'
+import { getGLContext } from '../canvas-getter.js';
 import { loadTexture } from './resource-loading.js';
 import { subscribeToRender } from './rendering/renderer.js';
 import { unsubscribeFromRender } from './rendering/renderer.js';

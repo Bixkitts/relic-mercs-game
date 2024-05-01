@@ -1,6 +1,5 @@
-#include <stdatomic.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -10,9 +9,11 @@
 #include "bbnetlib.h"
 #include "error_handling.h"
 #include "helpers.h"
+#include "host_custom_attributes.h"
 #include "websockets.h"
 #include "game_logic.h"
 #include "net_ids.h"
+#include "validators.h"
 
 #define MESSAGE_HANDLER_COUNT 6
 
@@ -100,12 +101,7 @@ validateNewCharsheet        (struct CharacterSheet *sheet);
  * Handlers for incoming messages from the websocket connection
  */
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
-struct MoveObjOnMapData {
-    NetID     netID; 
-    double    xCoord;
-    double    yCoord;
-};
-static void moveObjOnMapHandler         (char *data, ssize_t dataSize, Host remotehost);
+static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
 static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
 // Player chose a response to an encounter
 static void respondToEventHandler       (char *data, ssize_t dataSize, Host remotehost);
@@ -123,14 +119,14 @@ static void getGameStateHandler         (char *data, ssize_t dataSize, Host remo
  */
 static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     pingHandler,
-    moveObjOnMapHandler, 
+    movePlayerHandler, 
     endTurnHandler,           
     respondToEventHandler, 
     getGameStateHandler         
 };
 static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
     0,
-    sizeof(struct MoveObjOnMapData),
+    sizeof(struct MovePlayerData),
     0,
     0,
     0,
@@ -159,8 +155,10 @@ static int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
  */
 void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
 {
-    Opcode *opcode = (Opcode*)data;
-    if (*opcode >= MESSAGE_HANDLER_COUNT) {
+    Opcode opcode = 0;
+    // memcpy because of pointer aliasing
+    memcpy (&opcode, data, sizeof(opcode));
+    if (opcode >= MESSAGE_HANDLER_COUNT) {
 #ifdef DEBUG
         fprintf(stderr, "\nBad websocket Opcode.\n");
 #endif
@@ -170,10 +168,8 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     printBufferInHex(data, dataSize);
 #endif 
 
-    if(isGameMessageValidLength(*opcode, dataSize - sizeof(Opcode))) {
-        // Execute the opcode, this function
-        // assumes it won't segfault.
-        gameMessageHandlers[*opcode](&data[sizeof(Opcode)], dataSize, remotehost);
+    if(isGameMessageValidLength(opcode, dataSize - sizeof(Opcode))) {
+        gameMessageHandlers[opcode](&data[sizeof(Opcode)], dataSize, remotehost);
     };
 }
 
@@ -243,32 +239,6 @@ void  setPlayerCharSheet (struct Player *player,
     pthread_mutex_lock(player->threadlock);
     memcpy (&player->charSheet, charsheet, sizeof(*charsheet));
     pthread_mutex_unlock(player->threadlock);
-}
-
-/*
- * We've just gotten a character sheet
- * parsed out of a html form,
- * but we need to make sure it's
- * not fudged somehow by the client.
- */
-static int validateNewCharsheet (struct CharacterSheet *sheet)
-{
-    // All this math is unsigned for a reason
-    PlayerAttr playerPower = sheet->vigour
-                             + sheet->cunning
-                             + sheet->violence;
-    if (playerPower != 13) {
-        return -1;
-    }
-    if (sheet->background >= PLAYER_BACKGROUND_COUNT
-        || sheet->background < 0) {
-        return -1;
-    }
-    if (sheet->gender >= GENDER_COUNT
-        || sheet->gender < 0) {
-        return -1;
-    }
-    return 0;
 }
 
 /* 
@@ -346,7 +316,6 @@ void setGamePassword(struct Game *restrict game, const char password[static MAX_
     pthread_mutex_unlock (game->threadlock);
 }
 
-
 /*
  * Returns NULL when none is found
  * It's all readonly, so it _should_ be
@@ -383,33 +352,45 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
                             remotehost);
 }
 
-static void moveObjOnMapHandler(char *data, ssize_t dataSize, Host remotehost)
+struct movePlayerResponse {
+    NetID                 playerNetID;
+    struct MovePlayerData coords;
+};
+static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 {
-    // Maybe I need helper functions to build these sort
-    // of response packets?
-    const struct MoveObjOnMapData *moveData = (struct MoveObjOnMapData*)data; 
-    const Opcode responseOpcode = 0x01;
-    char multicastBuffer [(sizeof(*moveData) 
+    struct movePlayerResponse    responseData   = { 0 };
+    const struct MovePlayerData *moveData       = (struct MovePlayerData*)data; 
+    // Magic number for moving a player
+    const Opcode                 responseOpcode = 0x01;
+    int                          headerSize     = 0;
+    struct Player               *hostPlayer     = getPlayerFromHost(remotehost);
+
+    // Buffer we respond with INCLUDING websocket header
+    char multicastBuffer [(sizeof(responseData) 
                           + sizeof(responseOpcode))
                           + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
 
-    const int headerSize =
+    headerSize =
     writeWebsocketHeader (multicastBuffer, 
-                          sizeof(*moveData) 
+                          sizeof(responseData) 
                           + sizeof(responseOpcode));
 
+    // Buffer we respond NOT INCLUDING websocket header
     char  *gameResponseData = &multicastBuffer[headerSize];
+
+    // It's at this point that we actually get data into the
+    // response
+    validatePlayerMoveCoords(moveData, &responseData.coords);
+    responseData.playerNetID = hostPlayer->netID;
+
     memcpy (gameResponseData, 
             &responseOpcode, 
             sizeof(responseOpcode));
     memcpy (&(gameResponseData[sizeof(responseOpcode)]), 
-            moveData, 
-            sizeof(*moveData));
+            &responseData, 
+            sizeof(responseData));
 
-    // Instead of just sending the coordinate out, I should validate 
-    // the coordinates.
-
-    int packetSize = sizeof(*moveData) 
+    int packetSize = sizeof(responseData) 
                      + sizeof(responseOpcode) 
                      + headerSize;
     multicastTCP (multicastBuffer, 

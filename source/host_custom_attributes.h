@@ -9,7 +9,13 @@
 struct HostCustomAttributes {
     enum Handler  handler;  // Which handler should be called when receiving a 
                            // packet from this host
-    const struct Player *player;  // Which player this host controls
+    struct Player *player;  // Which player this host controls
 };
+
+static inline struct Player *getPlayerFromHost(Host remotehost)
+{
+    struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
+    return attr->player;
+}
 
 #endif

@@ -1,3 +1,5 @@
+import { getPlayers } from  './game-logic.js';
+
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
 let   socket;
@@ -23,9 +25,44 @@ export function getSocket() {
  * @param {ArrayBuffer} msg 
  */
 function handleIncoming(msg) {
-    console.log('Received: ', msg.byteLength);
+    const dataView = new DataView(msg);
+
+    const opcode = dataView.getInt16(0, true);
+
+    switch (opcode) {
+        case 0:
+            console.log('Received Ping response!');
+            break;
+        case 1:
+            handleMovePlayerResponse(dataView);
+            break;
+        default:
+            console.log('Unknown opcode: ', opcode);
+            break;
+    }
 }
 
+function handleMovePlayerResponse(dataView) {
+
+    const playerNetID = dataView.getBigInt64(2, true);
+
+    const xCoord = dataView.getFloat64(10, true);
+    const yCoord = dataView.getFloat64(18, true);
+
+    const movePlayerResponse = {
+        playerNetID: playerNetID,
+        coords: {
+            xCoord: xCoord,
+            yCoord: yCoord
+        }
+    };
+    // TODO: placeholder, we need to resolve the correct
+    // player from the netID
+    const players = getPlayers();
+    players[0].move(xCoord, yCoord);
+
+    console.log('Received movePlayerResponse: ', movePlayerResponse);
+}
 
 function sendHeartbeat() {
     console.log('Sending heartbeat...');
@@ -36,14 +73,12 @@ function sendHeartbeat() {
 }
 
 export function sendMovePacket(coordX, coordY) {
-    const ab       = new ArrayBuffer(26);
+    const ab       = new ArrayBuffer(18);
     const dataView = new DataView(ab);
-    const netID    = 69n;
 
     dataView.setInt16   (0, 1, true);
-    dataView.setBigInt64(2, netID, true);
-    dataView.setFloat64 (10, coordX, true);
-    dataView.setFloat64 (18, coordY, true);
+    dataView.setFloat64 (2, coordX, true);
+    dataView.setFloat64 (10, coordY, true);
 
     socket.send(ab);
 }

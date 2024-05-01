@@ -3,16 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h> 
-#include <limits.h>
 #include <openssl/rand.h>
 
 #include "helpers.h"
 #include "error_handling.h"
-
-
-
-static inline int getMutexIndex(const void *object, 
-                                const int mutexCount);
 
 static void stringSearch_computeLps(const char* pattern, int m, int* lps) 
 {
@@ -129,9 +123,15 @@ long long int getRandomInt()
     return randomInteger;
 }
 
-void capInt(int *intToCap, int maxValue)
+void cap(int *intToCap, int maxValue)
 {
     *intToCap = *intToCap > maxValue ? maxValue : *intToCap;
+}
+
+double clamp(double x, double min, double max)
+{
+    const double t = x < min ? min : x;
+    return t > max ? max : t;
 }
 
 /*
@@ -190,7 +190,7 @@ void parseHTMLForm(const char * inBuffer, struct HTMLForm *outBuffer, ssize_t in
             fieldLen = inBufferLen - i;
         }
 
-        capInt(&fieldLen, HTMLFORM_FIELD_MAX_LEN);
+        cap(&fieldLen, HTMLFORM_FIELD_MAX_LEN);
         memcpy(outBuffer->fields[outBuffer->fieldCount], &inBuffer[i], fieldLen);
         outBuffer->fieldCount++;
     }

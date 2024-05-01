@@ -141,7 +141,10 @@ function clickToWorldCoord(mouseX, mouseY) {
     vec3.set(camPos, viewToWorld[12], viewToWorld[13], viewToWorld[14]);
 
     let rayRelative = vec3.subtract(vec3.create(), rayWorld, camPos);
-    const iPoint = rayPlaneIntersection(camPos, rayRelative, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
+    const iPoint = rayPlaneIntersection(camPos, 
+                                        rayRelative, 
+                                        vec3.fromValues(0,0,0), 
+                                        vec3.fromValues(0,0,1));
 
     return iPoint
 }

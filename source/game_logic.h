@@ -22,6 +22,7 @@ extern const char testGameName[];
 #define MAX_GAMES            16
 #define MAX_PLAYERS          MAX_PLAYERS_IN_GAME * MAX_GAMES
 
+
 typedef uint16_t Opcode;
 
 // All injuries are followed immediately by their 
@@ -199,6 +200,14 @@ struct Game {
     int                playerCount;
 };
 
+/*
+ * Data structures coupled with websocket
+ * handlers
+ */
+struct MovePlayerData {
+    double    xCoord;
+    double    yCoord;
+};
 
 /*
  * Primary entry point for interpreting

@@ -27,16 +27,18 @@ struct HTMLForm {
 int  stringSearch     (const char* text, const char* pattern, int maxLength);
 
 // returns the index at which c is found or -1
-int  charSearch       (const char *restrict text, char c, int bufLen);
+int     charSearch       (const char *restrict text, char c, int bufLen);
 
-void capInt           (int *intToCap, int maxValue);
+void    cap              (int *intToCap, int maxValue);
 
-void printBufferInHex (char *data, int size);
-void parseHTMLForm    (const char * inBuffer, 
-                       struct HTMLForm *outBuffer, 
-                       ssize_t inBufferLen);
-void checkDataSizes   ();
-bool isEmptyString    (const char *string);
+void    printBufferInHex (char *data, int size);
+void    parseHTMLForm    (const char * inBuffer, 
+                          struct HTMLForm *outBuffer, 
+                          ssize_t inBufferLen);
+void    checkDataSizes   ();
+bool    isEmptyString    (const char *string);
+
+double  clamp            (double x, double min, double max);
 
 long long int getRandomInt();
 
