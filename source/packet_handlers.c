@@ -258,11 +258,7 @@ static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost
 
 static void websockHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    if (packetSize > 120) {
-        fprintf(stderr, "\nToo long websocket packet received.\n");
-        return;
-    }
-    else if (packetSize < 8) {
+    if (packetSize < 8) {
         fprintf(stderr, "\nToo short websocket packet received.\n");
         return;
     }

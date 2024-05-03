@@ -45,10 +45,18 @@ static void extractKeyCode(char *outString, char *httpString, ssize_t packetSize
  */
 int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 {
-    const int opcodeLength = 1;
-    const int maskLength   = 4;
-    int       lengthBytes  = 0; // the amount of bytes that tell us
-                                 // the length of the packet
+    const int           opcodeLength          = 1;
+    const int           maskLength            = 4;
+    // The 9th bit is the MASK bit, that's why it's 0.
+    const unsigned char lengthCode            = (unsigned char)inData[1] & 0b01111111;
+    // By default, payload length is the same as the length code
+    // up to 125 bytes
+    ssize_t             payloadLength = (ssize_t)lengthCode;
+    ssize_t             maxPayloadLength     = 0;
+    // The amount of bytes that make up the number that indicates
+    // the amount of bytes that make up the payload :))
+    int                 lengthBytes   = 1;
+
     int       maskIndex    = 0; // index at which to find the MASK
     int       payloadIndex = 0;
     char     *mask         = NULL;
@@ -56,15 +64,19 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
 
     // 1. First byte = FIN and opcodes
     // Ignore completely!
-    
 
-    // 2. Bytes 2-10 payload length
-    //      - Read bits 9-15 (inclusive), interpret as uint
-    //      This is just byte [1], we chillin
-
-    if (((unsigned char)inData[1] & 0b01111111) <= 125) {
-        lengthBytes = 1;
-        // we're done, this is the payload length
+    /* 2. Bytes 2-10 payload length
+     * The lengthCode indicates how many bytes we need to tell
+     * provide the length of the packet.
+     * Magic numbers are from websocket spec.
+     */
+    if (lengthCode == 125) {
+        lengthBytes = 3;
+        payloadLength = (uint16_t)inData[2];
+    }
+    else if (lengthCode == 126) {
+        lengthBytes = 9;
+        payloadLength = (uint64_t)inData[2];
     }
 
     // 3. IF masking is used (for incoming messages, it is), the next 4 BYTES contain
@@ -75,11 +87,18 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
     mask         = &inData[maskIndex];
     inPayload    = &inData[payloadIndex];
 
-    for (int i = 0; i < dataSize - payloadIndex; i++) {
+    maxPayloadLength = dataSize - payloadIndex;
+
+    if (payloadLength > maxPayloadLength) {
+        fprintf(stderr, "Malformed websocket packet received, ignoring...");
+        return 0;
+    }
+
+    // Here the actual payload from the client is decoded.
+    for (int i = 0; i < payloadLength; i++) {
         outData[i] = mask[i % maskLength] ^ inPayload[i];
     }
-    return dataSize - payloadIndex;
-    // 4. All subsequent bytes are payload
+    return payloadLength;
 }
 
 /*
@@ -90,16 +109,33 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
  * written to the buffer in bytes.
  */
 int 
-writeWebsocketHeader
-(char inOutData[static WEBSOCKET_HEADER_SIZE_MAX], 
- ssize_t dataSize)
+writeWebsocketHeader (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX], 
+                      ssize_t dataSize)
 {
-    // In the future this will vary, but is
-    // 2 bytes while we're sending under 
-    // 128 bytes of data
-    const int headerSize = 2;
-    inOutData[0] = 0x82; // FIN websocket header
-    inOutData[1] = (unsigned char)dataSize & 0b01111111; // Payload size
+    /* Refer to the websocket spec for how
+     * this encoding works
+     */
+    int headerSize = 0;
+    // 1. Let's assume every websock
+    //    message we send will be under
+    //    1024 bytes (my TCP max) and
+    //    just write a FIN websocket header.
+    inOutData[0] = 0x82;
+    // 2. Weirdest part of the
+    //    websocket spec (writing payload length).
+    //    Remember, our max packet size or netlib is 1024.
+    //    Beyond those sizes, we'll need to implement
+    //    special code in websocket encoding/decoding.
+    if (dataSize < 126) {
+        inOutData[1] = (unsigned char)dataSize & 0b01111111;
+        headerSize = 2;
+    }
+    else {
+        inOutData[1] = (unsigned char)126 & 0b01111111; // 126 is a magic number for a
+                                                        // 16 bit payload length.
+        memcpy(&inOutData[2], &dataSize, 2);
+        headerSize = 4;
+    }
 
     return headerSize;
 }
