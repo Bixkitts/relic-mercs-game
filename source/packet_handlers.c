@@ -81,11 +81,11 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     memcpy(requestedResource, startingPoint, stringLen);
 
-    struct Game  *game    = getGameFromName  (testGameName);
-    SessionToken  token   = getTokenFromHTTP (data, packetSize);
-    const struct Player *player = tryGetPlayerFromToken(token, game);
-    /*
-     * Direct the remotehost to the login, character creation
+    struct Game   *game   = getGameFromName  (testGameName);
+    SessionToken   token  = getTokenFromHTTP (data, packetSize);
+    struct Player *player = tryGetPlayerFromToken(token, game);
+
+    /* Direct the remotehost to the login, character creation
      * or game depending on their session token.
      */
     if (stringSearch(data, "GET / ", 10) >= 0) {
