@@ -70,11 +70,11 @@ int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize)
      * provide the length of the packet.
      * Magic numbers are from websocket spec.
      */
-    if (lengthCode == 125) {
+    if (lengthCode == 126) {
         lengthBytes = 3;
         payloadLength = (uint16_t)inData[2];
     }
-    else if (lengthCode == 126) {
+    else if (lengthCode == 127) {
         lengthBytes = 9;
         payloadLength = (uint64_t)inData[2];
     }

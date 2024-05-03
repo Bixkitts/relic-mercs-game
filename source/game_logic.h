@@ -208,6 +208,10 @@ struct MovePlayerData {
     double    xCoord;
     double    yCoord;
 };
+struct FetchPlayerDataData {
+    int16_t playerCount;
+    NetID   players[MAX_PLAYERS_IN_GAME];
+};
 
 /*
  * Primary entry point for interpreting

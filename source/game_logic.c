@@ -15,7 +15,6 @@
 #include "net_ids.h"
 #include "validators.h"
 
-#define MESSAGE_HANDLER_COUNT 6
 
 /*
  * Networked data structures
@@ -91,46 +90,30 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
  *  to lock the game state they are modifying.
  */
 // TODO: move these to validator.h
-static int            
+static inline int            
 isGameMessageValidLength    (Opcode opcode, 
                              ssize_t messageSize);
-static int            
-validateNewCharsheet        (struct CharacterSheet *sheet);
-
 /*
  * Handlers for incoming messages from the websocket connection
  */
 static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
 static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
-static void endTurnHandler              (char *data, ssize_t dataSize, Host remotehost);
-// Player chose a response to an encounter
-static void respondToEventHandler       (char *data, ssize_t dataSize, Host remotehost);
-// Client calls this on connect,
-// this should either:
-// 1. Set an atomic lock on the entire game state while the client connects (easy)
-// 2. Allow the game to continue during the connection and apply
-//    any state changes that happened since (harder)
-static void getGameStateHandler         (char *data, ssize_t dataSize, Host remotehost);
-
+static void fetchPlayerDataHandler      (char *data, ssize_t dataSize, Host remotehost);
 
 /*
  * Primary interpreter for incoming websocket messages
  * carrying valid gameplay opcodes.
  */
+#define MESSAGE_HANDLER_COUNT 3
 static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     pingHandler,
-    movePlayerHandler, 
-    endTurnHandler,           
-    respondToEventHandler, 
-    getGameStateHandler         
+    movePlayerHandler,
+    fetchPlayerDataHandler,
 };
 static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
     0,
     sizeof(struct MovePlayerData),
-    0,
-    0,
-    0,
-    0
+    sizeof(struct FetchPlayerDataData),
 };
 
 /*
@@ -140,7 +123,7 @@ static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
  * corresponding data structure perfectly,
  * or be rejected.
  */
-static int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
+static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
 {
     return messageSize == gameDataSizes[opcode];
 }
@@ -397,29 +380,14 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
                   packetSize, 
                   0);
 }
-static void endTurnHandler(char *data, ssize_t dataSize, Host remotehost)
+
+struct FetchPlayerDataResponse {
+    
+};
+static void 
+fetchPlayerDataHandler (char *data, ssize_t dataSize, Host remotehost)
 {
-
-}
-// Player chose a response to an encounter
-static void respondToEventHandler(char *data, ssize_t dataSize, Host remotehost)
-{
-
-}
-// Player manually used one of their resources
-static void useResourceHandler(char *data, ssize_t dataSize, Host remotehost)
-{
-
-}
-
-// Client calls this on connect,
-// this should either:
-// 1. Set an atomic lock on the entire game state while the client connects (easy)
-// 2. Allow the game to continue during the connection and apply
-//    any state changes that happened since (harder)
-static void getGameStateHandler(char *data, ssize_t dataSize, Host remotehost)
-{
-
+    
 }
 
 /* ===================================================================

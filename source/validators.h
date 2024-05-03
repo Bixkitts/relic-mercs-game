@@ -29,6 +29,7 @@ static inline bool validatePlayerMoveCoords(const struct MovePlayerData *inData,
     outData->xCoord = clamp(inData->xCoord, mapBound_x * -1, mapBound_x);
     outData->yCoord = clamp(inData->yCoord, mapBound_y * -1, mapBound_y);
     
+    // Currently the client can't pass "invalid" move coords, they're just clamped.
     return true;
 }
 
@@ -57,4 +58,5 @@ static inline int validateNewCharsheet (struct CharacterSheet *sheet)
     }
     return 0;
 }
+
 #endif
