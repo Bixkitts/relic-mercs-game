@@ -182,6 +182,7 @@ struct Player {
     NetID                    netID;
     pthread_mutex_t         *threadlock;
     Host                     associatedHost;
+    struct Game             *game;
     struct PlayerCredentials credentials;
     SessionToken             sessionToken;
     struct CharacterSheet    charSheet;
@@ -204,11 +205,21 @@ struct Game {
  * Data structures coupled with websocket
  * handlers
  */
-struct MovePlayerData {
+// REQUESTS //
+struct MovePlayerReq {
     double    xCoord;
     double    yCoord;
 };
-struct FetchPlayerDataData {
+struct PlayerConnectReq {
+    char gameName[MAX_CREDENTIAL_LEN];
+};
+
+// RESPONSES //
+struct MovePlayerRes {
+    NetID                    playerNetID;
+    struct MovePlayerReq coords;
+};
+struct PlayerConnectRes {
     int16_t playerCount;
     NetID   players[MAX_PLAYERS_IN_GAME];
 };

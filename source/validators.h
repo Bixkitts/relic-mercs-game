@@ -20,8 +20,8 @@ ever have one entry point each, so they're inlined.
  * Attempts to correct the coordinates either way
  * and write corrected coords to outData.
  */
-static inline bool validatePlayerMoveCoords(const struct MovePlayerData *inData,
-                                            struct MovePlayerData *outData)
+static inline bool validatePlayerMoveCoords(const struct MovePlayerReq *inData,
+                                            struct MovePlayerReq *outData)
 {
     const double mapBound_x = 1.6;
     const double mapBound_y = 1.0;

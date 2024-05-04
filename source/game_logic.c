@@ -15,6 +15,7 @@
 #include "net_ids.h"
 #include "validators.h"
 
+#define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX+sizeof(Opcode)
 
 /*
  * Networked data structures
@@ -96,9 +97,9 @@ isGameMessageValidLength    (Opcode opcode,
 /*
  * Handlers for incoming messages from the websocket connection
  */
-static void pingHandler                 (char *data, ssize_t dataSize, Host remotehost);
-static void movePlayerHandler           (char *data, ssize_t dataSize, Host remotehost);
-static void fetchPlayerDataHandler      (char *data, ssize_t dataSize, Host remotehost);
+static void pingHandler              (char *data, ssize_t dataSize, Host remotehost);
+static void movePlayerHandler        (char *data, ssize_t dataSize, Host remotehost);
+static void playerConnectHandler     (char *data, ssize_t dataSize, Host remotehost);
 
 /*
  * Primary interpreter for incoming websocket messages
@@ -108,12 +109,18 @@ static void fetchPlayerDataHandler      (char *data, ssize_t dataSize, Host remo
 static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
     pingHandler,
     movePlayerHandler,
-    fetchPlayerDataHandler,
+    playerConnectHandler,
 };
-static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
-    0,
-    sizeof(struct MovePlayerData),
-    sizeof(struct FetchPlayerDataData),
+#define EMPTY_OPCODE 0 // Some opcodes just give the server no data
+static int requestSizes[MESSAGE_HANDLER_COUNT] = {
+    EMPTY_OPCODE,
+    sizeof(struct MovePlayerReq),
+    sizeof(struct PlayerConnectReq),
+};
+static int responseSizes[MESSAGE_HANDLER_COUNT] = {
+    EMPTY_OPCODE,
+    sizeof(struct MovePlayerRes),
+    sizeof(struct PlayerConnectRes),
 };
 
 /*
@@ -125,7 +132,7 @@ static int gameDataSizes[MESSAGE_HANDLER_COUNT] = {
  */
 static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
 {
-    return messageSize == gameDataSizes[opcode];
+    return messageSize == requestSizes[opcode];
 }
 
 /*
@@ -320,74 +327,108 @@ struct Player *tryGetPlayerFromToken(SessionToken token,
  * ======= Message handling functions ===========================
  * ==============================================================
  */
+enum ResponseOpcodes {
+    OPCODE_PING,
+    OPCODE_PLAYER_MOVE,
+    OPCODE_PLAYER_CONNECT
+};
+/*
+ * This will run at the start of most
+ * websocket handlers to prepare a buffer for writing
+ * data to, and takes care of writing the websocket
+ * header and opcode data.
+ *
+ * Response payload should ALWAYS be
+ * a single type corresponding to the opcode and what's
+ * tracked in gameDataSizes[].
+ *
+ * Returns the amount of bytes it wrote to the buffer.
+ */
+static int initHandlerResponseBuffer(void *responseBuffer, Opcode code)
+{
+    int     headerSize       = 0;
+    ssize_t responseDataSize = responseSizes[code];
+
+    headerSize =
+    writeWebsocketHeader (responseBuffer, 
+                          sizeof(code)
+                          + responseDataSize);
+    memcpy               (&responseBuffer[headerSize], 
+                          &code, 
+                          sizeof(code));
+    return headerSize + sizeof(code);
+}
+
 static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 {
     printf("Ping incoming!");
-    const Opcode responseOpcode = 0x00;
-    char         responseBuffer[sizeof(responseOpcode)
-                                + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
-    int headerSize =
-    writeWebsocketHeader   (responseBuffer,
-                            sizeof(responseOpcode));
-    int packetSize = sizeof(responseOpcode) + headerSize;
-    sendDataTCP            (responseBuffer,
-                            packetSize,
-                            remotehost);
+    const Opcode responseOpcode = OPCODE_PING;
+    char         responseBuffer[MAX_RESPONSE_HEADER_SIZE] = { 0 };
+    int packetSize =
+    initHandlerResponseBuffer (responseBuffer, 
+                               responseOpcode);
+    sendDataTCP               (responseBuffer,
+                               (ssize_t)packetSize,
+                               remotehost);
 }
 
-struct movePlayerResponse {
-    NetID                 playerNetID;
-    struct MovePlayerData coords;
-};
 static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 {
-    struct movePlayerResponse    responseData   = { 0 };
-    const struct MovePlayerData *moveData       = (struct MovePlayerData*)data; 
-    // Magic number for moving a player
-    const Opcode                 responseOpcode = 0x01;
-    int                          headerSize     = 0;
-    struct Player               *hostPlayer     = getPlayerFromHost(remotehost);
+    struct MovePlayerRes        responseData   = { 0 };
+    const struct MovePlayerReq *moveData       = (struct MovePlayerReq*)data; 
+    const Opcode                responseOpcode = OPCODE_PLAYER_MOVE;
+    int                         headerSize     = 0;
+    struct Player              *hostPlayer     = getPlayerFromHost(remotehost);
 
-    // Buffer we respond with INCLUDING websocket header
-    char multicastBuffer [(sizeof(responseData) 
-                          + sizeof(responseOpcode))
-                          + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
-
+    char responseBuffer [MAX_RESPONSE_HEADER_SIZE 
+                         + sizeof(responseData)] = { 0 };
     headerSize =
-    writeWebsocketHeader (multicastBuffer, 
-                          sizeof(responseData) 
-                          + sizeof(responseOpcode));
+    initHandlerResponseBuffer(responseBuffer, responseOpcode);
 
-    // Buffer we respond NOT INCLUDING websocket header
-    char  *gameResponseData = &multicastBuffer[headerSize];
-
-    // It's at this point that we actually get data into the
-    // response
     validatePlayerMoveCoords(moveData, &responseData.coords);
     responseData.playerNetID = hostPlayer->netID;
 
-    memcpy (gameResponseData, 
-            &responseOpcode, 
-            sizeof(responseOpcode));
-    memcpy (&(gameResponseData[sizeof(responseOpcode)]), 
+    memcpy (&(responseBuffer[headerSize]), 
             &responseData, 
             sizeof(responseData));
 
-    int packetSize = sizeof(responseData) 
-                     + sizeof(responseOpcode) 
-                     + headerSize;
-    multicastTCP (multicastBuffer, 
+    int packetSize = headerSize + sizeof(responseData);
+    multicastTCP (responseBuffer, 
                   packetSize, 
                   0);
 }
 
-struct FetchPlayerDataResponse {
-    
-};
+/*
+ * The client is attempting to fetch the player netIDs
+ * so it can interpret messages about player state
+ * changes
+ */
 static void 
-fetchPlayerDataHandler (char *data, ssize_t dataSize, Host remotehost)
+playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
 {
+    struct 
+    PlayerConnectRes   responseData   = {0};
+    const struct 
+    PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data; 
+    const Opcode       responseOpcode = OPCODE_PLAYER_CONNECT;
+    struct Player     *hostPlayer     = getPlayerFromHost(remotehost);
+    const struct Game *game           = hostPlayer->game;
+
+    char responseBuffer  [(sizeof(responseData) 
+                          + sizeof(responseOpcode))
+                          + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+
+    int headerSize =
+    initHandlerResponseBuffer(responseBuffer, responseOpcode);
+
+    memcpy (&(responseBuffer[headerSize]), 
+            &responseData, 
+            sizeof(responseData));
     
+    int packetSize = headerSize + sizeof(responseData);
+    multicastTCP (responseBuffer, 
+                  packetSize, 
+                  0);
 }
 
 /* ===================================================================

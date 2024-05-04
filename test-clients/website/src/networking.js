@@ -2,6 +2,7 @@ import { getPlayers } from  './game-logic.js';
 
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
+const opcodeSize    = 2;
 let   socket;
 
 window.onload = function() {
@@ -44,7 +45,7 @@ function handleIncoming(msg) {
 
 function handleMovePlayerResponse(dataView) {
 
-    const playerNetID = dataView.getBigInt64(2, true);
+    const playerNetID = dataView.getBigInt64(opcodeSize, true);
 
     const xCoord = dataView.getFloat64(10, true);
     const yCoord = dataView.getFloat64(18, true);
@@ -62,6 +63,10 @@ function handleMovePlayerResponse(dataView) {
     players[0].move(xCoord, yCoord);
 
     console.log('Received movePlayerResponse: ', movePlayerResponse);
+}
+
+function fetchPlayerNetIDs() {
+    
 }
 
 function sendHeartbeat() {
