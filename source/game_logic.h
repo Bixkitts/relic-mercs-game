@@ -212,7 +212,10 @@ struct MovePlayerReq {
     double    yCoord;
 }__attribute__((packed));
 struct PlayerConnectReq {
-    char gameName[MAX_CREDENTIAL_LEN];
+    // We don't actually need anything from
+    // the client on connection.
+    // But one day we might!
+    char placeholder;
 }__attribute__((packed));
 
 // RESPONSES //

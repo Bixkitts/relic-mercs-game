@@ -13,7 +13,9 @@ window.onload = function() {
     socket.onopen = () => {
         console.log('WebSocket connection established');
         setInterval(sendHeartbeat, 3000);
+        sendPlayerConnect();
     }
+
 
     socket.onerror = e => console.log('WebSocket error:', e);
 }
@@ -40,6 +42,7 @@ function handleIncoming(msg) {
             break;
         case 2:
             handlePlayerConnectResponse(dataView);
+            break;
         default:
             console.log('Unknown opcode: ', opcode);
             break;
@@ -68,6 +71,17 @@ function handleMovePlayerResponse(dataView) {
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
 
+function sendPlayerConnect() {
+    const ab       = new ArrayBuffer(3);
+    const dataView = new DataView(ab);
+
+    dataView.setInt16   (0, 2, true);
+    // Placeholder data, does nothing
+    dataView.setInt8    (2, 0, true);
+
+    socket.send(ab);
+}
+
 function handlePlayerConnectResponse(dataView) {
     const maxPlayers = 8;
     const playerList = [];
@@ -84,7 +98,9 @@ function handlePlayerConnectResponse(dataView) {
                                               + (int64Size*maxPlayers)
                                               + int64Size
                                               + 1, true);
-    
+    const myPlayer = playerList[playerIndex];  
+    console.log('My NetID:', myPlayer);
+    console.log('Player NetIDs:', playerList);
 }
 
 function sendHeartbeat() {
