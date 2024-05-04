@@ -1,6 +1,7 @@
 #ifndef BB_GAME_LOGIC
 #define BB_GAME_LOGIC
 
+#include <stdbool.h>
 #include <unistd.h>
 
 #include "bbnetlib.h"
@@ -18,7 +19,7 @@
 extern const char testGameName[];
 
 #define MAX_CREDENTIAL_LEN   32
-#define MAX_PLAYERS_IN_GAME  16
+#define MAX_PLAYERS_IN_GAME  8
 #define MAX_GAMES            16
 #define MAX_PLAYERS          MAX_PLAYERS_IN_GAME * MAX_GAMES
 
@@ -209,20 +210,22 @@ struct Game {
 struct MovePlayerReq {
     double    xCoord;
     double    yCoord;
-};
+}__attribute__((packed));
 struct PlayerConnectReq {
     char gameName[MAX_CREDENTIAL_LEN];
-};
+}__attribute__((packed));
 
 // RESPONSES //
 struct MovePlayerRes {
-    NetID                    playerNetID;
+    NetID                playerNetID;
     struct MovePlayerReq coords;
-};
+} __attribute__((packed));
 struct PlayerConnectRes {
-    int16_t playerCount;
     NetID   players[MAX_PLAYERS_IN_GAME];
-};
+    NetID   currentTurn; // NetID of the player who's turn it is
+    bool    gameOngoing; // Has the game we've joined started yet?
+    char    playerIndex; // Index in the "players" array of the connecting player
+}__attribute__((packed));
 
 /*
  * Primary entry point for interpreting
@@ -250,7 +253,7 @@ isCharsheetValid        (const struct Player *restrict player);
 // Note: use initCharsheetFromForm.
 void 
 setPlayerCharSheet      (struct Player *player,
-                         struct CharacterSheet *charsheet);
+                         const struct CharacterSheet *charsheet);
 /* --------------------------------------------- */
 
 struct Game   *createGame    (struct GameConfig *config);

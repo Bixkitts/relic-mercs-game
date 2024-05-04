@@ -27,17 +27,24 @@ struct NetIDRange {
 
 static const NetID netIDRanges[NET_TYPE_COUNT] = 
 {   
-    0,
+    NULL_NET_ID,
+    1,
     MAX_PLAYERS,
     MAX_GAMES
 };
-static const struct NetIDRange getObjNetIDRange(enum NetObjType type)
+/*
+ * Returns the range of NetIDs
+ * a particular NetObjType could
+ * possibly have
+ */
+static inline const 
+struct NetIDRange getObjNetIDRange(enum NetObjType type)
 {
     struct NetIDRange range = {0};
     for (int i = 0; i < type; i++) {
         range.min += netIDRanges[i]; 
     }
-    range.max = netIDRanges[type];
+    range.max = netIDRanges[type]+netIDRanges[NETID_RANGE_BEGIN];
     return range;
 }
 
@@ -93,7 +100,7 @@ NetID createNetID(enum NetObjType type)
  * Do this to prevent the object from being
  * resolved from a NetID e.g. if it's being deleted.
  */
-void  clearNetID        (const NetID netID)
+void  clearNetID (const NetID netID)
 {
     pthread_mutex_lock   (&netIDmutex);
     netIDs[netID] = NULL;

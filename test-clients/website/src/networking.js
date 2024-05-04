@@ -3,6 +3,7 @@ import { getPlayers } from  './game-logic.js';
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
 const opcodeSize    = 2;
+const int64Size     = 8;
 let   socket;
 
 window.onload = function() {
@@ -37,6 +38,8 @@ function handleIncoming(msg) {
         case 1:
             handleMovePlayerResponse(dataView);
             break;
+        case 2:
+            handlePlayerConnectResponse(dataView);
         default:
             console.log('Unknown opcode: ', opcode);
             break;
@@ -65,7 +68,22 @@ function handleMovePlayerResponse(dataView) {
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
 
-function fetchPlayerNetIDs() {
+function handlePlayerConnectResponse(dataView) {
+    const maxPlayers = 8;
+    const playerList = [];
+    for (let i = 0; i < maxPlayers; i++) {
+        playerList.push(dataView.getBigInt64(opcodeSize + (int64Size*i), true));
+    }
+    // NetID of the player who's turn it currently is
+    const currentTurn = dataView.getBigInt64( opcodeSize 
+                                              + (int64Size*maxPlayers), true);
+    const gameOngoing = dataView.getInt8    ( opcodeSize
+                                              + (int64Size*maxPlayers)
+                                              + int64Size, true);
+    const playerIndex = dataView.getInt8    ( opcodeSize
+                                              + (int64Size*maxPlayers)
+                                              + int64Size
+                                              + 1, true);
     
 }
 

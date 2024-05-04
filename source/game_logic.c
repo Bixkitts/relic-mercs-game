@@ -192,6 +192,7 @@ void deleteGame(struct Game *game)
 {
     pthread_mutex_t *lock = game->threadlock;
     pthread_mutex_lock(lock);
+    clearNetID(game->netID);
     memset(game, 0, sizeof(*game));
     pthread_mutex_unlock(lock);
     atomic_fetch_sub(&gameCount, 1);
@@ -207,6 +208,9 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
     struct Player *newPlayer = &game->players[game->playerCount];
     newPlayer->netID      = createNetID(NET_TYPE_PLAYER); 
     newPlayer->threadlock = &netObjMutexes[newPlayer->netID];
+    // TODO: Do we need to store a pointer to the game
+    // in the Player struct?
+    newPlayer->game       = game;
     memcpy (&newPlayer->credentials, 
             credentials, 
             sizeof(*credentials));
@@ -219,12 +223,13 @@ void deletePlayer(struct Player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
     pthread_mutex_lock  (lock);
+    clearNetID (player->netID);
     memset(player, 0, sizeof(*player));
     pthread_mutex_unlock(lock);
 }
 
 void  setPlayerCharSheet (struct Player *player,
-                          struct CharacterSheet *charsheet)
+                          const struct CharacterSheet *charsheet)
 {
     pthread_mutex_lock(player->threadlock);
     memcpy (&player->charSheet, charsheet, sizeof(*charsheet));
@@ -414,12 +419,20 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
     struct Player     *hostPlayer     = getPlayerFromHost(remotehost);
     const struct Game *game           = hostPlayer->game;
 
-    char responseBuffer  [(sizeof(responseData) 
-                          + sizeof(responseOpcode))
-                          + WEBSOCKET_HEADER_SIZE_MAX] = { 0 };
+    char responseBuffer  [MAX_RESPONSE_HEADER_SIZE 
+                          + sizeof(responseData)] = { 0 };
 
     int headerSize =
     initHandlerResponseBuffer(responseBuffer, responseOpcode);
+
+    if (game == NULL) {
+        return;
+    }
+    pthread_mutex_lock(game->threadlock);
+    for (int i = 0; i < game->playerCount; i++) {
+        responseData.players[i] = game->players[i].netID;
+    }
+    pthread_mutex_unlock(game->threadlock);
 
     memcpy (&(responseBuffer[headerSize]), 
             &responseData, 

@@ -1,6 +1,11 @@
 #ifndef BB_NET_IDS
 #define BB_NET_IDS
 
+// Nothing has a netID of 0,
+// so if encountered it's an
+// uninitialised/nonexistent object.
+#define NULL_NET_ID 0
+
 /*
  * Types of objects or states
  * that will need to be synced,
@@ -9,6 +14,7 @@
  */
 enum NetObjType {
     NET_TYPE_NULL,
+    NETID_RANGE_BEGIN,
     NET_TYPE_PLAYER,
     NET_TYPE_GAME,
     NET_TYPE_COUNT
