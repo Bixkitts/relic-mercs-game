@@ -224,7 +224,8 @@ struct MovePlayerRes {
     struct MovePlayerReq coords;
 } __attribute__((packed));
 struct PlayerConnectRes {
-    NetID   players[MAX_PLAYERS_IN_GAME];
+    NetID   players     [MAX_PLAYERS_IN_GAME];
+    char    playerNames [MAX_CREDENTIAL_LEN * MAX_PLAYERS_IN_GAME];
     NetID   currentTurn; // NetID of the player who's turn it is
     bool    gameOngoing; // Has the game we've joined started yet?
     char    playerIndex; // Index in the "players" array of the connecting player

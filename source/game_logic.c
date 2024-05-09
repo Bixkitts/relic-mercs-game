@@ -379,25 +379,22 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 
 static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 {
-    struct MovePlayerRes        responseData   = { 0 };
+    struct MovePlayerRes       *responseData   = NULL;
     const struct MovePlayerReq *moveData       = (struct MovePlayerReq*)data; 
     const Opcode                responseOpcode = OPCODE_PLAYER_MOVE;
     int                         headerSize     = 0;
     struct Player              *hostPlayer     = getPlayerFromHost(remotehost);
 
     char responseBuffer [MAX_RESPONSE_HEADER_SIZE 
-                         + sizeof(responseData)] = { 0 };
+                         + sizeof(*responseData)] = { 0 };
     headerSize =
     initHandlerResponseBuffer(responseBuffer, responseOpcode);
+    responseData = (struct MovePlayerRes*)&responseBuffer[headerSize];
 
-    validatePlayerMoveCoords(moveData, &responseData.coords);
-    responseData.playerNetID = hostPlayer->netID;
+    validatePlayerMoveCoords(moveData, &responseData->coords);
+    responseData->playerNetID = hostPlayer->netID;
 
-    memcpy (&(responseBuffer[headerSize]), 
-            &responseData, 
-            sizeof(responseData));
-
-    int packetSize = headerSize + sizeof(responseData);
+    int packetSize = headerSize + sizeof(*responseData);
     multicastTCP (responseBuffer, 
                   packetSize, 
                   0);
@@ -412,33 +409,34 @@ static void
 playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
 {
     struct 
-    PlayerConnectRes   responseData   = {0};
+    PlayerConnectRes  *responseData   = NULL;
     const struct 
     PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data; 
     const Opcode       responseOpcode = OPCODE_PLAYER_CONNECT;
     struct Player     *hostPlayer     = getPlayerFromHost(remotehost);
     const struct Game *game           = hostPlayer->game;
-
-    char responseBuffer  [MAX_RESPONSE_HEADER_SIZE 
-                          + sizeof(responseData)] = { 0 };
-
-    int headerSize =
-    initHandlerResponseBuffer(responseBuffer, responseOpcode);
-
     if (game == NULL) {
         return;
     }
+    const ssize_t      namelen        = sizeof(game->players[0].credentials.name);
+
+    char responseBuffer[MAX_RESPONSE_HEADER_SIZE 
+                        + sizeof(struct PlayerConnectRes)] = { 0 };
+
+    int headerSize =
+    initHandlerResponseBuffer(responseBuffer, responseOpcode);
+    responseData = (struct PlayerConnectRes*)&responseBuffer[headerSize];
+
     pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < game->playerCount; i++) {
-        responseData.players[i] = game->players[i].netID;
+        responseData->players[i] = game->players[i].netID;
+        memcpy(&responseData->playerNames[i * namelen], 
+               game->players[i].credentials.name, 
+               namelen);
     }
     pthread_mutex_unlock(game->threadlock);
-
-    memcpy (&(responseBuffer[headerSize]), 
-            &responseData, 
-            sizeof(responseData));
     
-    int packetSize = headerSize + sizeof(responseData);
+    int packetSize = headerSize + sizeof(*responseData);
     multicastTCP (responseBuffer, 
                   packetSize, 
                   0);

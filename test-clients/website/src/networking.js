@@ -83,24 +83,32 @@ function sendPlayerConnect() {
 }
 
 function handlePlayerConnectResponse(dataView) {
-    const maxPlayers = 8;
-    const playerList = [];
+    const maxPlayers  = 8;
+    const playerList  = [];
+    const playerNames = [];
+    const MAX_CREDENTIAL_LEN = 32;
+
     for (let i = 0; i < maxPlayers; i++) {
         playerList.push(dataView.getBigInt64(opcodeSize + (int64Size*i), true));
+        const nameStartIndex  = opcodeSize + (int64Size * maxPlayers) + (MAX_CREDENTIAL_LEN * i);
+        const playerNameBytes = new Uint8Array(dataView.buffer, nameStartIndex, MAX_CREDENTIAL_LEN);
+        const playerName      = new TextDecoder().decode(playerNameBytes).trim();
+        playerNames.push(playerName);
     }
+    const currentTurnIndex = opcodeSize 
+                             + (MAX_CREDENTIAL_LEN*maxPlayers)
+                             + (int64Size*maxPlayers);
     // NetID of the player who's turn it currently is
-    const currentTurn = dataView.getBigInt64( opcodeSize 
-                                              + (int64Size*maxPlayers), true);
-    const gameOngoing = dataView.getInt8    ( opcodeSize
-                                              + (int64Size*maxPlayers)
-                                              + int64Size, true);
-    const playerIndex = dataView.getInt8    ( opcodeSize
-                                              + (int64Size*maxPlayers)
-                                              + int64Size
-                                              + 1, true);
+    const currentTurn = dataView.getBigInt64( currentTurnIndex, true);
+    const gameOngoingIndex = currentTurnIndex + int64Size;
+    const gameOngoing = dataView.getInt8    ( gameOngoingIndex, true);
+    const playerIndexIndex = gameOngoingIndex + 1;
+    const playerIndex = dataView.getInt8    ( playerIndexIndex, true);
     const myPlayer = playerList[playerIndex];  
+
     console.log('My NetID:', myPlayer);
     console.log('Player NetIDs:', playerList);
+    console.log('Player Names:', playerNames);
 }
 
 function sendHeartbeat() {

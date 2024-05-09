@@ -133,7 +133,9 @@ writeWebsocketHeader (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX],
     else {
         inOutData[1] = (unsigned char)126 & 0b01111111; // 126 is a magic number for a
                                                         // 16 bit payload length.
-        memcpy(&inOutData[2], &dataSize, 2);
+        // Network byte order *rolls eyes*
+        inOutData[2] = (unsigned char)((dataSize >> 8) & 0xFF);
+        inOutData[3] = (unsigned char)(dataSize & 0xFF);
         headerSize = 4;
     }
 
