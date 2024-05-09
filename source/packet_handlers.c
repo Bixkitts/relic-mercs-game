@@ -53,11 +53,16 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         customAttr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
     }
 #ifdef DEBUG
-    printf("\nReceived data:");
-    for (int i = 0; i < packetSize; i++) {
-        printf("%c", data[i]);
+    if (packetSize > 0) {
+        printf("\nReceived data:");
+        for (int i = 0; i < packetSize; i++) {
+            printf("%c", data[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
+    else if (packetSize == 0) {
+        printf("\nClient disconnected\n");
+    }
 #endif
 
     handlers[customAttr->handler](data, packetSize, remotehost);
