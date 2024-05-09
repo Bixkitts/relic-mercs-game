@@ -171,6 +171,10 @@ void sendContent(char* dir,
         exit(1);
     }
 
+    // TODO: Do I malloc and memcpy into one buffer so
+    // I only call send() once, or do I avoid a malloc
+    // and memcpy of the content but use two send() calls?
+    // (header, and then content)
     memcpy(packet, header, headerLen);
     memcpy(&packet[headerLen], content, contentLen);
 

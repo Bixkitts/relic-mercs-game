@@ -245,7 +245,6 @@ static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost
 
 static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
-    // TODO: I _think_ packetSize is capped at 1024....
     if (packetSize < 10) {
         return;
     }
