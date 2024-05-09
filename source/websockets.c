@@ -116,16 +116,10 @@ writeWebsocketHeader (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX],
      * this encoding works
      */
     int headerSize = 0;
-    // 1. Let's assume every websock
-    //    message we send will be under
-    //    1024 bytes (my TCP max) and
-    //    just write a FIN websocket header.
+    // 1. Websocket FIN Header
     inOutData[0] = 0x82;
     // 2. Weirdest part of the
     //    websocket spec (writing payload length).
-    //    Remember, our max packet size or netlib is 1024.
-    //    Beyond those sizes, we'll need to implement
-    //    special code in websocket encoding/decoding.
     if (dataSize < 126) {
         inOutData[1] = (unsigned char)dataSize & 0b01111111;
         headerSize = 2;
@@ -133,7 +127,7 @@ writeWebsocketHeader (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX],
     else {
         inOutData[1] = (unsigned char)126 & 0b01111111; // 126 is a magic number for a
                                                         // 16 bit payload length.
-        // Network byte order *rolls eyes*
+        // Network byte order (big endian)
         inOutData[2] = (unsigned char)((dataSize >> 8) & 0xFF);
         inOutData[3] = (unsigned char)(dataSize & 0xFF);
         headerSize = 4;
@@ -152,7 +146,9 @@ static int generateAcceptCode(unsigned char *outCode, char *inCode, ssize_t code
         return -1;
     } 
     base64_encode ((char*)temp2, 20, (char*)outCode);
+#ifdef DEBUG
     printf ("\n%s\n", outCode);
+#endif
     return 0;
 }
 
