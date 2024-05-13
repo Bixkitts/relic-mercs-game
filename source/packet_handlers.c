@@ -24,16 +24,21 @@ enum CredentialFormFields {
 };
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
-static void httpHandler      (char *data, ssize_t packetSize, Host remotehost);
-static void websockHandler   (char *data, ssize_t packetSize, Host remotehost);
+static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost);
+static void httpHandler       (char *data, ssize_t packetSize, Host remotehost);
+static void websockHandler    (char *data, ssize_t packetSize, Host remotehost);
 
 static void loginHandler     (char *restrict data, ssize_t packetSize, Host remotehost);
 static void charsheetHandler (char *restrict data, ssize_t packetSize, Host remotehost);
 static void POSTHandler      (char *restrict data, ssize_t packetSize, Host remotehost);
 static void GETHandler       (char *restrict data, ssize_t packetSize, Host remotehost);
 
-
+/* disconnectHandler needs to be at index 0
+ * because we use pointer math to handle
+ * empty packets (TCP disconnections)
+ */
 static PacketHandler handlers[HANDLER_COUNT] = {
+    disconnectHandler,
     httpHandler,
     websockHandler
 };
@@ -65,7 +70,9 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     }
 #endif
 
-    handlers[customAttr->handler](data, packetSize, remotehost);
+    // Pointer math handles client disconnects
+    // and calls disconnectHandler()
+    handlers[customAttr->handler * (packetSize > 0)](data, packetSize, remotehost);
 
     return;
 }
@@ -112,7 +119,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
             struct HostCustomAttributes *hostAttr  = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
             hostAttr->player    = player;
             customAttr->handler = HANDLER_WEBSOCK;
-            cacheHost             (remotehost, 0);
+            cacheHost             (remotehost, HOST_CACHE_INDEX);
             return;
         }
         else {
@@ -260,6 +267,52 @@ static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost
     
 }
 
+pthread_mutex_t cachingMutex     = PTHREAD_MUTEX_INITIALIZER;
+int8_t          currentHostCache = 0;
+int8_t          lastHostCache    = 0;
+
+static void writePlayersToNewCache(Host exclude)
+{
+    pthread_mutex_lock(&cachingMutex);    
+    lastHostCache    = currentHostCache;
+    currentHostCache = !currentHostCache;
+    struct HostCustomAttributes *attr = getHostCustomAttr(exclude);
+    struct Game                 *game = attr->player->game;
+    pthread_mutex_lock(game->threadlock);
+    for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
+        struct Player *p = &game->players[i];
+        if (p->netID != NULL_NET_ID) {
+            cacheHost(p->associatedHost, currentHostCache);
+        }
+    }
+    pthread_mutex_unlock(game->threadlock);
+    clearHostCache(lastHostCache);
+    pthread_mutex_unlock(&cachingMutex);    
+}
+static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost)
+{
+    struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
+    if (attr->handler == HANDLER_WEBSOCK) {
+        writePlayersToNewCache(remotehost);
+    }
+}
+/*
+ * When a user disconnects,
+ * all OTHER users who are still
+ * connected get written to another
+ * multicast cache and the former
+ * one is cleared.
+ * This function returns the up-to-date
+ * multicast cache.
+ */
+int  getCurrentHostCache (void)
+{
+    pthread_mutex_lock(&cachingMutex);    
+    int ret = (int)currentHostCache;
+    pthread_mutex_unlock(&cachingMutex);    
+    return ret;
+}
+
 static void websockHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     if (packetSize < 8) {
@@ -275,3 +328,4 @@ static void websockHandler(char *restrict data, ssize_t packetSize, Host remoteh
     decodeWebsocketMessage (decodedData, data, packetSize);
     handleGameMessage      (decodedData, decodedDataLength, remotehost);
 }
+
