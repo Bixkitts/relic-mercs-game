@@ -34,14 +34,17 @@ static struct Player *tryGetPlayerFromPlayername(struct Game *game,
     int playerIndex   = 0;
     int playerFound   = -1;
 
+    pthread_mutex_lock(game->threadlock);
     for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
         playerFound = strncmp(playername, 
                               game->players[playerIndex].credentials.name, 
                               MAX_CREDENTIAL_LEN); 
         if (playerFound == 0) {
+            pthread_mutex_unlock(game->threadlock);
             return &game->players[playerIndex];
         }
     }
+    pthread_mutex_unlock(game->threadlock);
     return NULL;
 }
 /*
