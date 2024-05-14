@@ -114,11 +114,12 @@ static void generateSessionToken(struct Player *restrict player,
     long long int nonce = getRandomInt();
     int           i     = 0;
     // Make sure the token is unique, and not 0.
-    while ((tryGetPlayerFromToken(nonce, game) != NULL) || (nonce == 0)) {
+    while ((tryGetPlayerFromToken(nonce, game) != NULL) 
+           || (nonce == INVALID_SESSION_TOKEN)) {
         nonce = getRandomInt();
         i++;
-        if (i > 2) {
-            fprintf(stderr, "How the fuck? Kill it with fire.\n");
+        if (i > TOKEN_GEN_LIMIT) {
+            fprintf(stderr, "Too many token collisions, exiting...\n");
             exit(1);
         }
     }

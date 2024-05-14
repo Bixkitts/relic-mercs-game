@@ -119,7 +119,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
             struct HostCustomAttributes *hostAttr  = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
             hostAttr->player    = player;
             customAttr->handler = HANDLER_WEBSOCK;
-            cacheHost             (remotehost, HOST_CACHE_INDEX);
+            cacheHost             (remotehost, getCurrentHostCache());
             return;
         }
         else {
@@ -140,7 +140,8 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         return;
     }
     /*
-     * For any other url than a blank one,
+     * For any other url than a blank one
+     * (or the styles.css and login.js),
      * the remotehost needs to be authenticated
      * otherwise we're not sending anything at all.
      */
@@ -156,9 +157,6 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
-    // TODO: Have an ignore list of files the client should not be able
-    // to download.
-    // Or just put the whole site in a subdirectory and count on file extensions.
     sendForbiddenPacket(remotehost);
 }
 
@@ -180,8 +178,6 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
                    &form, 
                    packetSize - credentialIndex);
     if (form.fieldCount < FORM_CREDENTIAL_FIELD_COUNT) {
-        // TODO: something went wrong while parsing, abort and 
-        // tell the user something about their malformed data
         sendForbiddenPacket(remotehost); //placeholder
         return;
     }
@@ -267,21 +263,37 @@ static void httpHandler(char *restrict data, ssize_t packetSize, Host remotehost
     
 }
 
+/*
+ * Global caching state.
+ * Affected by disconnections.
+ */
 pthread_mutex_t cachingMutex     = PTHREAD_MUTEX_INITIALIZER;
+// Netlib gives us numbered caches for
+// storing hosts that connect
 int8_t          currentHostCache = 0;
 int8_t          lastHostCache    = 0;
 
+/* 
+ * The locking branching and looping
+ * here probably makes this sloooow,
+ * but it only runs when somebody disconnects
+ * and a cache is invalidated.
+ * I tried to optimise the loop
+ * out of the cache lock but couldn't.
+ */
 static void writePlayersToNewCache(Host exclude)
 {
     pthread_mutex_lock(&cachingMutex);    
-    lastHostCache    = currentHostCache;
-    currentHostCache = !currentHostCache;
+    lastHostCache       = currentHostCache;
+    currentHostCache    = !currentHostCache;
     struct HostCustomAttributes *attr = getHostCustomAttr(exclude);
+    struct Player               *plyr = attr->player;
     struct Game                 *game = attr->player->game;
     pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
         struct Player *p = &game->players[i];
-        if (p->netID != NULL_NET_ID) {
+        if (p->netID != NULL_NET_ID
+            && p->netID != plyr->netID) {
             cacheHost(p->associatedHost, currentHostCache);
         }
     }
@@ -294,6 +306,10 @@ static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost)
     struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
         writePlayersToNewCache(remotehost);
+        // TODO: When someone disconnects,
+        // the game will need to pause and alert everyone
+        // of the disconnect and ask whether to
+        // continue or wait.
     }
 }
 /*

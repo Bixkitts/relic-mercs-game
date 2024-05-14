@@ -64,6 +64,7 @@ enum Gender {
 // callbacks to handle these encounters
 // serverside
 enum EncounterID{
+    ENCOUNTER_NONE,
     ENCOUNTER_BANDITS,
     ENCOUNTER_TROLLS,
     ENCOUNTER_WOLVES,
@@ -81,6 +82,8 @@ enum EncounterID{
 };
 
 enum EncounterTypeID{
+    ENCOUNTER_TYPE_NONE,
+    ENCOUNTER_TYPE_ANY,
     ENCOUNTER_TYPE_BANDIT,
     ENCOUNTER_TYPE_BEASTS,
     ENCOUNTER_TYPE_MONSTROSITIES,
@@ -108,15 +111,21 @@ enum ResourceID{
 // NOTE: Every encounter category needs at least one specific
 // encounter in it.
 static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
-    {ENCOUNTER_BANDITS},                 // ENCOUNTER_TYPE_BANDIT
-    {ENCOUNTER_WOLVES,                   // ENCOUNTER_TYPE_BEASTS
+    // ENCOUNTER_TYPE_BANDIT
+    {ENCOUNTER_BANDITS},
+    // ENCOUNTER_TYPE_BEASTS
+    {ENCOUNTER_WOLVES,
      ENCOUNTER_RATS},
-    {ENCOUNTER_TROLLS},                  // ENCOUNTER_TYPE_MONSTROSITIES
-    {ENCOUNTER_DRAGONS},                 // ENCOUNTER_TYPE_DRAGON
-    {ENCOUNTER_RUINS_OLD,                // ENCOUNTER_TYPE_MYSTICAL
+    // ENCOUNTER_TYPE_MONSTROSITIES
+    {ENCOUNTER_TROLLS},
+    // ENCOUNTER_TYPE_DRAGON
+    {ENCOUNTER_DRAGONS},
+    // ENCOUNTER_TYPE_MYSTICAL
+    {ENCOUNTER_RUINS_OLD,
      ENCOUNTER_TREASURE_MAGICAL,
      ENCOUNTER_SPELL_TOME},
-    {ENCOUNTER_CULTISTS_CANNIBAL,        // ENCOUNTER_TYPE_CULTISTS
+    // ENOUNTER_TYPE_CULTISTS
+    {ENCOUNTER_CULTISTS_CANNIBAL,
      ENCOUNTER_CULTISTS_PEACEFUL}
 };
 // This is coupled with playerBackgroundStrings
@@ -179,6 +188,12 @@ enum CharsheetFormFields {
  * respect to concurrent access from
  * multiple clients.
  */
+// TODO:
+// we need to store exactly
+// what the player is in the middle of doing
+// in case they disconnect and reconnect so we can
+// restore whatever encounter they were having (or other
+// UI dialogue).
 struct Player {
     NetID                    netID;
     pthread_mutex_t         *threadlock;
@@ -190,13 +205,18 @@ struct Player {
     struct Coordinates       coords;
     // How many of each ResourceID the player has
     int                      resources[RESOURCE_COUNT];
+    // Which encounter is the player currently
+    // encountering, if any.
+    enum EncounterID         currentEnc;
 };
 struct Game {
     NetID              netID;
     pthread_mutex_t   *threadlock;
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];
-    int                playerTurn;
+    // Which player (identified by NetID) is currently
+    // taking their turn:
+    NetID              currentTurn;
     int                maxPlayerCount;
     struct Player      players [MAX_PLAYERS_IN_GAME];
     int                playerCount;

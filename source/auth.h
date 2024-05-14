@@ -4,6 +4,14 @@
 #include "game_logic.h"
 #include "session_token.h"
 
+#define INVALID_SESSION_TOKEN 0
+/* A randomly generated token
+ * will collide with another one
+ * this many times before
+ * crashing the program
+ */
+#define TOKEN_GEN_LIMIT       3
+
 // This just returns 0 on success
 // and -1 on failure
 int          

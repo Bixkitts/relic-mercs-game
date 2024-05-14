@@ -4,12 +4,6 @@
 #include "bbnetlib.h"
 
 #define MAX_PACKET_SIZE  1024
-/* Netlib gives us numbered caches
- * to store hosts for multicasting.
- * This constant defines the one we
- * use for all caching.
- */
-#define HOST_CACHE_INDEX 0
 
 enum Handler{
     HANDLER_DISCONNECT,
@@ -24,4 +18,5 @@ void buildFileTable      (void);
 
 int  getCurrentHostCache (void);
 
+int  getCurrentHostCache (void);
 #endif

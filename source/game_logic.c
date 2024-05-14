@@ -14,6 +14,7 @@
 #include "game_logic.h"
 #include "net_ids.h"
 #include "validators.h"
+#include "auth.h"
 
 #define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX+sizeof(Opcode)
 
@@ -26,6 +27,7 @@
  */
 
 // This is coupled with enum PlayerBackground
+// and also coupled on the clientside
 static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
     "Trader",
     "Farmer",
@@ -104,6 +106,8 @@ static void playerConnectHandler     (char *data, ssize_t dataSize, Host remoteh
 /*
  * Primary interpreter for incoming websocket messages
  * carrying valid gameplay opcodes.
+ * Player disconnects are handled in packet_handlers.c,
+ * and are not seen by the websocket layer.
  */
 #define MESSAGE_HANDLER_COUNT 3
 static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
@@ -319,6 +323,9 @@ void setGamePassword(struct Game *restrict game, const char password[static MAX_
 struct Player *tryGetPlayerFromToken(SessionToken token,
                                      struct Game *restrict game)
 {
+    if (token == INVALID_SESSION_TOKEN) {
+        return NULL;
+    }
     for (int i = 0; i < game->playerCount; i ++) {
         if (token == game->players[i].sessionToken) {
             return &game->players[i];
@@ -408,6 +415,11 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 static void 
 playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
 {
+    // TODO:
+    // When somebody connects, they could be connecting to
+    // an ongoing game when someone, or themselves, are
+    // in the middle of an encounter or other dialog.
+    // This will need to be communicated.
     struct 
     PlayerConnectRes  *responseData   = NULL;
     const struct 
