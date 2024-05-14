@@ -31,7 +31,8 @@ int main(void)
     struct GameConfig gameConfig = {
         .name           = "test game",
         .password       = "hello",
-        .maxPlayerCount = 4
+        .maxPlayerCount = 4,
+        .minPlayerCount = 2
     };
 
     createGame(&gameConfig);

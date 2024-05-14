@@ -169,6 +169,7 @@ struct GameConfig {
     char name    [MAX_CREDENTIAL_LEN];
     char password[MAX_CREDENTIAL_LEN];
     int  maxPlayerCount;
+    int  minPlayerCount;
 };
 
 /*
@@ -215,9 +216,12 @@ struct Game {
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];
     // Which player (identified by NetID) is currently
-    // taking their turn:
+    // taking their turn.
+    // When this is 0, the game hasn't started yet
+    // and the first turn needs to be assigned.
     NetID              currentTurn;
     int                maxPlayerCount;
+    int                minPlayerCount;
     struct Player      players [MAX_PLAYERS_IN_GAME];
     int                playerCount;
 };

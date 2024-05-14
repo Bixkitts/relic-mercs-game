@@ -187,6 +187,7 @@ struct Game *createGame(struct GameConfig *config)
              config->name,
              MAX_CREDENTIAL_LEN);
     game->maxPlayerCount = config->maxPlayerCount;
+    game->minPlayerCount = config->minPlayerCount;
 
     pthread_mutex_unlock(game->threadlock);
     return game;
@@ -205,7 +206,8 @@ void deleteGame(struct Game *game)
 /*
  * This function assumes that the player was redirected to
  * character creation and creates a character at the next free 
- * index in the game
+ * index in the game.
+ * Caller handles concurrency.
  */
 struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
 {
@@ -223,12 +225,18 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
     return newPlayer;
 }
 
+/*
+ * Caller handles threadlocking the game
+ * the player is in.
+ */
 void deletePlayer(struct Player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
     pthread_mutex_lock  (lock);
+    struct Game *game = player->game;
     clearNetID (player->netID);
     memset(player, 0, sizeof(*player));
+    game->playerCount--;
     pthread_mutex_unlock(lock);
 }
 
@@ -373,7 +381,9 @@ static int initHandlerResponseBuffer(void *responseBuffer, Opcode code)
 
 static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
 {
+#ifdef DEBUG
     printf("Ping incoming!");
+#endif
     const Opcode responseOpcode = OPCODE_PING;
     char         responseBuffer[MAX_RESPONSE_HEADER_SIZE] = { 0 };
     int packetSize =
@@ -408,6 +418,25 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 }
 
 /*
+ * Somebody has sent the connection opcode,
+ * but the current player taking a turn is *nobody*.
+ * Returns 0 on success, -1 if we still
+ * can't start the game because there aren't enough
+ * players.
+ * Caller handles game threadlock.
+ */
+static int
+tryStartGame(struct Game *game)
+{
+    if (game->playerCount >= game->minPlayerCount) {
+        // TODO: handle turn order more
+        // gracefully than first come first serve.
+        game->currentTurn = game->players[0].netID;
+        return 0;
+    }
+    return -1;
+}
+/*
  * The client is attempting to fetch the player netIDs
  * so it can interpret messages about player state
  * changes
@@ -422,11 +451,13 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
     // This will need to be communicated.
     struct 
     PlayerConnectRes  *responseData   = NULL;
-    const struct 
-    PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data; 
+    // Currently unused
+    // ---------------------
+    // const struct 
+    // PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data; 
     const Opcode       responseOpcode = OPCODE_PLAYER_CONNECT;
     struct Player     *hostPlayer     = getPlayerFromHost(remotehost);
-    const struct Game *game           = hostPlayer->game;
+    struct Game       *game           = hostPlayer->game;
     if (game == NULL) {
         return;
     }
@@ -441,11 +472,21 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
 
     pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < game->playerCount; i++) {
-        responseData->players[i] = game->players[i].netID;
+        NetID id = game->players[i].netID;
+        responseData->players[i] = id;
         memcpy(&responseData->playerNames[i * namelen], 
                game->players[i].credentials.name, 
                namelen);
+        if (hostPlayer->netID == id) {
+            responseData->playerIndex = (char)i;
+        }
     }
+    // It's *nobody's* turn?
+    // This means the game hasn't started yet.
+    if (game->currentTurn == NULL_NET_ID) {
+        tryStartGame(game);
+    }
+    responseData->currentTurn = game->currentTurn;
     pthread_mutex_unlock(game->threadlock);
     
     int packetSize = headerSize + sizeof(*responseData);
