@@ -24,6 +24,9 @@ enum CredentialFormFields {
 };
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
+static enum Handler
+initialHandlerCheck(Host remotehost);
+
 static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost);
 static void httpHandler       (char *data, ssize_t packetSize, Host remotehost);
 static void websockHandler    (char *data, ssize_t packetSize, Host remotehost);
@@ -43,7 +46,13 @@ static PacketHandler handlers[HANDLER_COUNT] = {
     websockHandler
 };
 
-void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+/*
+ * Called from masterHandler,
+ * checks all incoming connections
+ * and figures out which handler to use
+ */
+static enum Handler
+initialHandlerCheck(Host remotehost)
 {
     struct HostCustomAttributes *customAttr = NULL;
     if (getHostCustomAttr(remotehost) == NULL) {
@@ -52,11 +61,19 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
             printError(BB_ERR_CALLOC);
             exit(1);
         }
+        customAttr->handler = HANDLER_DEFAULT;
         setHostCustomAttr(remotehost, (void*)customAttr);
     }
     else {
         customAttr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
     }
+    return customAttr->handler;
+}
+
+void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+{
+    const enum Handler
+    handler = initialHandlerCheck(remotehost);
 #ifdef DEBUG
     if (packetSize > 0) {
         printf("\nReceived data:");
@@ -72,7 +89,7 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
     // Pointer math handles client disconnects
     // and calls disconnectHandler()
-    handlers[customAttr->handler * (packetSize > 0)](data, packetSize, remotehost);
+    handlers[handler * (packetSize > 0)](data, packetSize, remotehost);
 
     return;
 }
@@ -197,7 +214,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
                         &credentials, 
                         remotehost) < 0) {
         sendBadRequestPacket(remotehost);
+        return;
     }
+    return;
 }
 
 static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)

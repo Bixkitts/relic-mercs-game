@@ -67,8 +67,8 @@ int   tryPlayerLogin    (struct Game *restrict game,
     if (isEmptyString(credentials->name)) {
         return -1;
     }
-    pthread_mutex_lock(game->threadlock);
     player = tryGetPlayerFromPlayername(game, credentials->name);
+    pthread_mutex_lock(game->threadlock);
     if (player != NULL) {
         if (isPlayerPasswordValid(player, credentials->password)) {
             generateSessionToken   (player, 

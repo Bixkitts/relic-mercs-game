@@ -12,6 +12,8 @@ enum Handler{
     HANDLER_COUNT
 };
 
+#define HANDLER_DEFAULT HANDLER_HTTP
+
 void masterHandler       (char *restrict data, ssize_t packetSize, Host remotehost);
 
 void buildFileTable      (void);
