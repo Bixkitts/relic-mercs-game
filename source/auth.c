@@ -109,7 +109,8 @@ int   tryPlayerLogin    (struct Game *restrict game,
 /*
  * We pass in the game because the
  * session token needs to be unique
- * on a per game basis
+ * on a per game basis.
+ * Caller handles concurrency.
  */
 static void generateSessionToken(struct Player *restrict player, 
                                  struct Game *restrict game)

@@ -326,14 +326,11 @@ struct Player *tryGetPlayerFromToken(SessionToken token,
     if (token == INVALID_SESSION_TOKEN) {
         return NULL;
     }
-    pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < game->playerCount; i ++) {
         if (token == game->players[i].sessionToken) {
             return &game->players[i];
-            pthread_mutex_unlock(game->threadlock);
         }
     }
-    pthread_mutex_unlock(game->threadlock);
     return NULL;
 }
 
