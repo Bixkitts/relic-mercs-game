@@ -24,6 +24,28 @@ static int              memoryMapBufferSize             = 0;
 static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
+ * TODO:
+ * We can swap this out with a
+ * hash map implementation
+ * at some point
+ */
+static inline int 
+searchMmapBuffer(const char *dir, char **buffer)
+{
+    int foundInCache = -1;
+    *buffer = NULL;
+    for (int i = 0; i < memoryMapBufferSize; i++) {
+        foundInCache = stringSearch(memoryMapBuffer[i].name, 
+                                    dir, 
+                                    MAX_FILENAME_LEN);
+        if (foundInCache == 0) {
+            *buffer = memoryMapBuffer[i].data;
+            return memoryMapBuffer[i].size;
+        }
+    }
+    return -1;
+}
+/*
  * Get file data from a directory into
  * a buffer. The files are memory-mapped
  * and cached.
@@ -32,17 +54,14 @@ static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
  */
 int getFileData(const char *dir, char **buffer)
 {
+    int ret = 0;
     pthread_mutex_lock(&fileMutex);
-    int foundInCache = -1;
-    for (int i = 0; i < memoryMapBufferSize; i++) {
-        foundInCache = stringSearch(memoryMapBuffer[i].name, dir, MAX_FILENAME_LEN);
-        if (foundInCache == 0) {
-            *buffer = memoryMapBuffer[i].data;
-            pthread_mutex_unlock(&fileMutex);
-            return memoryMapBuffer[i].size;
-        }
+    ret = searchMmapBuffer(dir, buffer);
+    if (*buffer != NULL) {
+        pthread_mutex_unlock(&fileMutex);
+        return ret;
     }
-    if (memoryMapBufferSize >= MAX_FILENAME_LEN) {
+    if (memoryMapBufferSize >= MAX_FILE_COUNT) {
         fprintf(stderr, "\nError, too many files open.\n");
     }
     // The file was not found in the cache,
@@ -73,7 +92,6 @@ int getFileData(const char *dir, char **buffer)
         return -1;
     }
     memoryMapBufferSize++;
-
 
     // Close the file
     close(fd);
