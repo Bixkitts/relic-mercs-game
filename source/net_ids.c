@@ -61,7 +61,7 @@ void *resolveNetIDToObj (const NetID netID,
         return NULL;
     }
     pthread_mutex_lock(&netIDmutex);
-    const void *retObj     = netIDs[netID];
+    const void *retObj = netIDs[netID];
     if (retObj == NULL) {
         pthread_mutex_unlock(&netIDmutex);
         return NULL;
@@ -77,7 +77,7 @@ void *resolveNetIDToObj (const NetID netID,
  * Returns the usable NetID it
  * finds or -1 on failure
  */
-NetID createNetID(enum NetObjType type)
+NetID createNetID(enum NetObjType type, void *obj)
 {
     pthread_mutex_lock   (&netIDmutex);
     struct NetIDRange range = getObjNetIDRange(type);
@@ -85,9 +85,11 @@ NetID createNetID(enum NetObjType type)
     while(netIDs[i] != NULL) {
         i++;
         if (i >= range.max) {
+            pthread_mutex_unlock (&netIDmutex);
             return -1;
         }
     }
+    netIDs[i] = obj;
     pthread_mutex_unlock (&netIDmutex);
     return i;
 }

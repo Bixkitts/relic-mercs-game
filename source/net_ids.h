@@ -29,7 +29,10 @@ typedef long long NetID;
 
 void *resolveNetIDToObj (const NetID netID,
                          enum NetObjType type);
-NetID createNetID       (enum NetObjType);
+// Assigns the pointer that is passed
+// to the netID it finds and returns.
+NetID createNetID       (enum NetObjType,
+                         void *obj);
 void  clearNetID        (const NetID netID);
 
 

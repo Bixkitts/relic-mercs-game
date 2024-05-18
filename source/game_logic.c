@@ -175,7 +175,8 @@ struct Game *createGame(struct GameConfig *config)
         return NULL;
     }
 
-    game->netID      = createNetID(NET_TYPE_GAME);
+    game->netID      = createNetID(NET_TYPE_GAME,
+                                   (void*)game);
     game->threadlock = &netObjMutexes[game->netID];
 
     pthread_mutex_lock(game->threadlock);
@@ -212,7 +213,8 @@ void deleteGame(struct Game *game)
 struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
 {
     struct Player *newPlayer = &game->players[game->playerCount];
-    newPlayer->netID      = createNetID(NET_TYPE_PLAYER); 
+    newPlayer->netID      = createNetID(NET_TYPE_PLAYER,
+                                        (void*)newPlayer); 
     newPlayer->threadlock = &netObjMutexes[newPlayer->netID];
     // TODO: Do we need to store a pointer to the game
     // in the Player struct?
