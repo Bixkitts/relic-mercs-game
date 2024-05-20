@@ -3,7 +3,9 @@
 
 #include "sync_queue.h"
 
-void enqueue(struct SyncQueue *queue, int item) {
+void enqueue(struct SyncQueue *queue,
+             void *inParams)
+{
     while (1) {
         int tail = atomic_load(&queue->tail);
         int next_tail = (tail + 1) % MAX_SYNC_QUEUE_SIZE;
@@ -11,7 +13,7 @@ void enqueue(struct SyncQueue *queue, int item) {
             // The queue is not full, we can enqueue
             if (atomic_compare_exchange_weak(&queue->tail, &tail, next_tail)) {
                 // Successfully reserved the tail, enqueue the item
-                queue->buffer[tail] = item;
+                queue->buffer[tail] = inParams;
                 return;
             }
         } else {
@@ -22,7 +24,9 @@ void enqueue(struct SyncQueue *queue, int item) {
     }
 }
 
-int dequeue(struct SyncQueue *queue) {
+void dequeue(struct SyncQueue *queue,
+             void **outParams)
+{
     while (1) {
         int head = atomic_load(&queue->head);
         int tail = atomic_load(&queue->tail);
@@ -32,8 +36,8 @@ int dequeue(struct SyncQueue *queue) {
                                              &head,
                                              (head + 1) % MAX_SYNC_QUEUE_SIZE)) {
                 // Successfully reserved the head, dequeue the item
-                int item = queue->buffer[head];
-                return item;
+                *outParams = queue->buffer[head];
+                return;
             }
         } else {
             // The queue is empty, wait

@@ -211,6 +211,7 @@ struct Player {
     enum EncounterID         currentEnc;
 };
 struct Game {
+    pthread_t          dequeueThread;
     struct SyncQueue  *queue;
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];

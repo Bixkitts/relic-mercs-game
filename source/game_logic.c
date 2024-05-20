@@ -183,6 +183,12 @@ static int getFreeGame()
     }
     return -1;
 }
+static void *dequeueRoutine(struct Game *arg)
+{
+    while (1) {
+        dequeue(
+    }
+}
 
 struct Game *createGame(struct GameConfig *config)
 {
@@ -193,6 +199,11 @@ struct Game *createGame(struct GameConfig *config)
     struct Game *game      = &gameList[gameIndex].game;
 
     game->queue = &gameQueues[gameIndex];
+    if (pthread_create(&game->dequeueThread,
+                       dequeueRoutine,
+                       game) !=) {
+        return NULL;
+    }
 
     strncpy (game->password,
              config->password,
