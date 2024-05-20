@@ -68,7 +68,6 @@ int   tryPlayerLogin    (struct Game *restrict game,
         return -1;
     }
     player = tryGetPlayerFromPlayername(game, credentials->name);
-    pthread_mutex_lock(game->threadlock);
     if (player != NULL) {
         if (isPlayerPasswordValid(player, credentials->password)) {
             generateSessionToken   (player, 
@@ -79,12 +78,10 @@ int   tryPlayerLogin    (struct Game *restrict game,
                                     HTTP_FLAG_TEXT_HTML, 
                                     remotehost,
                                     sessionTokenHeader);
-            pthread_mutex_unlock   (game->threadlock);
             return 0;
         }
         else {
             // Player exists, but the password was wrong
-            pthread_mutex_unlock   (game->threadlock);
             return -1;
         }
     }
@@ -102,7 +99,6 @@ int   tryPlayerLogin    (struct Game *restrict game,
                              remotehost, 
                              sessionTokenHeader);
 
-    pthread_mutex_unlock(game->threadlock);
     return 0;
 }
 

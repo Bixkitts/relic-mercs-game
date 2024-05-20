@@ -8,13 +8,13 @@
 #include "helpers.h"
 #include "session_token.h"
 #include "net_ids.h"
+#include "sync_queue.h"
 
 /*
  * Maximum amount of networked
- * objects/states
+ * objects/states in a game
  */
-#define MAX_NETOBJS          MAX_GAMES       \
-                             + MAX_PLAYERS
+#define MAX_NETOBJS NETIDS_MAX
 
 extern const char testGameName[];
 
@@ -211,10 +211,12 @@ struct Player {
     enum EncounterID         currentEnc;
 };
 struct Game {
-    NetID              netID;
-    pthread_mutex_t   *threadlock;
+    struct SyncQueue  *queue;
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];
+    struct Player      players [MAX_PLAYERS_IN_GAME];
+    struct netIDList   netIDs;
+    // lock this before touching netIDs
     // Which player (identified by NetID) is currently
     // taking their turn.
     // When this is 0, the game hasn't started yet
@@ -222,7 +224,6 @@ struct Game {
     NetID              currentTurn;
     int                maxPlayerCount;
     int                minPlayerCount;
-    struct Player      players [MAX_PLAYERS_IN_GAME];
     int                playerCount;
 };
 

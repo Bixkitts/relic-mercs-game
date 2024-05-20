@@ -16,6 +16,18 @@
                       // TODO: Find a way to automate this.
 #endif
 
+// Compiler specific branch optimisation
+#ifdef __GNUC__
+#define LIKELY(x) __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#elif defined(_MSC_VER)
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
+#else
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
+#endif
+
 struct HTMLForm {
    char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
    int  fieldCount;
@@ -39,6 +51,8 @@ void    checkDataSizes   ();
 bool    isEmptyString    (const char *string);
 
 double  clamp            (double x, double min, double max);
+
+int     lockObject       (pthread_mutex_t *lock);
 
 long long int getRandomInt();
 

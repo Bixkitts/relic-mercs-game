@@ -1,10 +1,12 @@
 #ifndef BB_NET_IDS
 #define BB_NET_IDS
 
+#include <pthread.h>
 // Nothing has a netID of 0,
 // so if encountered it's an
 // uninitialised/nonexistent object.
 #define NULL_NET_ID 0
+#define NETIDS_MAX 512
 
 /*
  * Types of objects or states
@@ -26,6 +28,11 @@ enum NetObjType {
  * to the specific object.
  */
 typedef long long NetID;
+
+struct netIDList {
+    pthread_mutex_t    netIDlock;
+    NetID              netIDs  [NETIDS_MAX];
+};
 
 void *resolveNetIDToObj (const NetID netID,
                          enum NetObjType type);

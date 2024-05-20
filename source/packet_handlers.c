@@ -111,8 +111,10 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     memcpy(requestedResource, startingPoint, stringLen);
 
     struct Game   *game   = getGameFromName  (testGameName);
+    enqueue(game->queue, 0);
     SessionToken   token  = getTokenFromHTTP (data, packetSize);
     struct Player *player = tryGetPlayerFromToken(token, game);
+    dequeue(game->queue);
 
     /* Direct the remotehost to the login, character creation
      * or game depending on their session token.
@@ -186,6 +188,9 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     const char               firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
     struct HTMLForm          form                               = { 0 };
 
+    struct Game *game = getGameFromName(testGameName);
+    enqueue(game->queue, 0);
+
     credentialIndex = 
 
     stringSearch  (data, 
@@ -196,12 +201,14 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
                    packetSize - credentialIndex);
     if (form.fieldCount < FORM_CREDENTIAL_FIELD_COUNT) {
         sendForbiddenPacket(remotehost); //placeholder
+        dequeue(game->queue);
         return;
     }
-    if (tryGameLogin(getGameFromName(testGameName), 
+    if (tryGameLogin(game, 
                      form.fields[FORM_CREDENTIAL_GAMEPASSWORD])
             != 0) {
         sendBadRequestPacket(remotehost);
+        dequeue(game->queue);
         return;
     };
     strncpy        (credentials.name, 
@@ -210,19 +217,25 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     strncpy        (credentials.password, 
                     form.fields[FORM_CREDENTIAL_PLAYERPASSWORD], 
                     MAX_CREDENTIAL_LEN);
-    if (tryPlayerLogin (getGameFromName(testGameName), 
+    if (tryPlayerLogin (game, 
                         &credentials, 
                         remotehost) < 0) {
         sendBadRequestPacket(remotehost);
+        dequeue(game->queue);
         return;
     }
+    dequeue(game->queue);
     return;
 }
 
-static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+static void charsheetHandler(char *restrict data,
+                             ssize_t packetSize,
+                             Host remotehost)
 {
     SessionToken     token  = getTokenFromHTTP(data, packetSize); 
-    struct Player   *player = tryGetPlayerFromToken(token, getGameFromName(testGameName));
+    struct Game     *game   = getGameFromName(testGameName);
+    enqueue(game->queue, 0);
+    struct Player   *player = tryGetPlayerFromToken(token, game);
     struct HTMLForm  form   = {0};
 
     const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
@@ -230,7 +243,7 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     if (player == NULL) {
         // token was invalid, handle that
         sendForbiddenPacket(remotehost);
-        return;
+        goto cleanup;
     }
     int htmlFormIndex =
     stringSearch                (data, 
@@ -239,7 +252,7 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     if (htmlFormIndex < 0) {
         // TODO: Malformed form data, let the client know
         sendForbiddenPacket(remotehost); //placeholder
-        return;
+        goto cleanup;
     }
     parseHTMLForm               (&data[htmlFormIndex], 
                                  &form, 
@@ -247,12 +260,15 @@ static void charsheetHandler(char *restrict data, ssize_t packetSize, Host remot
     if (initCharsheetFromForm (player, &form) != 0) {
         // The client needs to know about malformed data
         sendForbiddenPacket(remotehost); //placeholder
-        return;
+        goto cleanup;
     }
     sendContent                 ("./game.html", 
                                  HTTP_FLAG_TEXT_HTML, 
                                  remotehost,
                                  NULL);
+cleanup:
+    dequeue(game->queue);
+    return;
 }
 
 static void POSTHandler(char *restrict data, ssize_t packetSize, Host remotehost)

@@ -195,3 +195,12 @@ void parseHTMLForm(const char * inBuffer, struct HTMLForm *outBuffer, ssize_t in
         outBuffer->fieldCount++;
     }
 }
+
+int lockObject(pthread_mutex_t *lock)
+{
+    if (lock == NULL) {
+        return -1;
+    }
+    pthread_mutex_lock(lock);
+    return 0;
+}

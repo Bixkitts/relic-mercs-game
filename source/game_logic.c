@@ -15,6 +15,7 @@
 #include "net_ids.h"
 #include "validators.h"
 #include "auth.h"
+#include "sync_queue.h"
 
 #define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX+sizeof(Opcode)
 
@@ -49,7 +50,6 @@ static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
 
 pthread_mutex_t netObjMutexes[MAX_NETOBJS] = {0};
 
-
 const char testGameName[MAX_CREDENTIAL_LEN] = "test game";
 
 /*
@@ -63,8 +63,13 @@ typedef void (*TakeResourceHandler) (enum ResourceID resource, struct Player *ta
 /*
  * Central global list of games
  */
-static struct Game gameList[MAX_GAMES] = { 0 };
-atomic_int gameCount = ATOMIC_VAR_INIT(0);
+struct GameSlot {
+    atomic_int inUse;
+    struct Game game;
+};
+static struct GameSlot  gameList   [MAX_GAMES] = { 0 };
+static struct SyncQueue gameQueues [MAX_GAMES] = { 0 };
+atomic_int              gameCount              = 0;
 
 /* 
  * Returns a pointer to the corresponding
@@ -73,13 +78,12 @@ atomic_int gameCount = ATOMIC_VAR_INIT(0);
  */
 struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
 {
-    int cmp = -1;
     for(int i = 0; i < MAX_GAMES; i++) {
-        cmp = strncmp(gameList[i].name, 
-                      name, 
-                      MAX_CREDENTIAL_LEN);
-        if (cmp == 0) {
-            return &gameList[i];
+        if (atomic_load(&gameList[i].inUse)
+            && strncmp(gameList[i].game.name, 
+                       name, 
+                       MAX_CREDENTIAL_LEN)) {
+            return &gameList[i].game;
         }
     }
     return NULL;
@@ -167,19 +171,28 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     };
 }
 
+static int getFreeGame()
+{
+    int expected = 0;
+    for (int i = 0; i < MAX_GAMES; i++) {
+        if (atomic_compare_exchange_strong(&gameList[i].inUse,
+                                           &expected,
+                                           1)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 struct Game *createGame(struct GameConfig *config)
 {
-    const char name[MAX_CREDENTIAL_LEN] = {0};
-    struct Game *game = getGameFromName(name);
-    if (game == NULL) {
+    int          gameIndex = getFreeGame();
+    if (gameIndex == -1) {
         return NULL;
     }
+    struct Game *game      = &gameList[gameIndex].game;
 
-    game->netID      = createNetID(NET_TYPE_GAME,
-                                   (void*)game);
-    game->threadlock = &netObjMutexes[game->netID];
-
-    pthread_mutex_lock(game->threadlock);
+    game->queue = &gameQueues[gameIndex];
 
     strncpy (game->password,
              config->password,
@@ -190,17 +203,13 @@ struct Game *createGame(struct GameConfig *config)
     game->maxPlayerCount = config->maxPlayerCount;
     game->minPlayerCount = config->minPlayerCount;
 
-    pthread_mutex_unlock(game->threadlock);
+    atomic_fetch_add(&gameCount, 1);
     return game;
 }
 
 void deleteGame(struct Game *game)
 {
-    pthread_mutex_t *lock = game->threadlock;
-    pthread_mutex_lock(lock);
-    clearNetID(game->netID);
     memset(game, 0, sizeof(*game));
-    pthread_mutex_unlock(lock);
     atomic_fetch_sub(&gameCount, 1);
 }
 
@@ -210,17 +219,18 @@ void deleteGame(struct Game *game)
  * index in the game.
  * Caller handles concurrency.
  */
-struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
+struct Player *createPlayer(struct Game *game,
+                            struct PlayerCredentials *credentials)
 {
     struct Player *newPlayer = &game->players[game->playerCount];
     newPlayer->netID      = createNetID(NET_TYPE_PLAYER,
-                                        (void*)newPlayer); 
+                                        (void*)newPlayer);
     newPlayer->threadlock = &netObjMutexes[newPlayer->netID];
     // TODO: Do we need to store a pointer to the game
     // in the Player struct?
     newPlayer->game       = game;
-    memcpy (&newPlayer->credentials, 
-            credentials, 
+    memcpy (&newPlayer->credentials,
+            credentials,
             sizeof(*credentials));
 
     game->playerCount++;
@@ -313,16 +323,17 @@ bool isCharsheetValid (const struct Player *restrict player)
     return result;
 }
 
-void setGamePassword(struct Game *restrict game, const char password[static MAX_CREDENTIAL_LEN])
+void setGamePassword(struct Game *restrict game,
+                     const char password[static MAX_CREDENTIAL_LEN])
 {
-    pthread_mutex_lock   (game->threadlock);
+    pthread_mutex_lock   (&game->threadlock);
     memset               (game->password, 
                           0, 
                           MAX_CREDENTIAL_LEN);
     strncpy              (game->password, 
                           password, 
                           MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (game->threadlock);
+    pthread_mutex_unlock (&game->threadlock);
 }
 
 /*
