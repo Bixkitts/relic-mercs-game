@@ -472,13 +472,14 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
     initHandlerResponseBuffer(responseBuffer, responseOpcode);
     responseData = (struct PlayerConnectRes*)&responseBuffer[headerSize];
 
-    pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < game->playerCount; i++) {
+        pthread_mutex_lock(game->players[i].threadlock);
         NetID id = game->players[i].netID;
         responseData->players[i] = id;
         memcpy(&responseData->playerNames[i * namelen], 
                game->players[i].credentials.name, 
                namelen);
+        pthread_mutex_unlock(game->players[i].threadlock);
         if (hostPlayer->netID == id) {
             responseData->playerIndex = (char)i;
         }
@@ -489,7 +490,6 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
         tryStartGame(game);
     }
     responseData->currentTurn = game->currentTurn;
-    pthread_mutex_unlock(game->threadlock);
     
     int packetSize = headerSize + sizeof(*responseData);
     multicastTCP (responseBuffer, 
