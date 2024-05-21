@@ -24,7 +24,7 @@ void enqueue(struct SyncQueue *queue,
                 par->dataSize   = packetSize;
                 par->remotehost = remotehost;
                 attr = getHostCustomAttr(remotehost);
-                par->
+                par->handler = attr->handler;
                 return;
             }
         } else {

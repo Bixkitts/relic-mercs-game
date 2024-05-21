@@ -73,18 +73,10 @@ initialHandlerCheck(Host remotehost,
 
 void handleSpecificPacket(struct QueueParams *params)
 {
-    if (params->dataSize > 0) {
-        struct HostCustomAttributes
-        *attr = getHostCustomAttr(params->remotehost);
-        handlers[attr->handler](params->data,
-                                params->dataSize,
-                                params->remotehost);
-    }
-    else {
-        handlers[HANDLER_DISCONNECT](params->data,
-                                     params->dataSize,
-                                     params->remotehost);
-    }
+    handlers[params->handler
+             * (params->dataSize > 0)](params->data,
+                                       params->dataSize,
+                                       params->remotehost);
 }
 
 static struct SyncQueue mainQueue = { 0 };
