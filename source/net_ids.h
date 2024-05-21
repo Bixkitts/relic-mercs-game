@@ -29,18 +29,21 @@ enum NetObjType {
  */
 typedef long long NetID;
 
-struct netIDList {
-    pthread_mutex_t    netIDlock;
-    NetID              netIDs  [NETIDS_MAX];
-};
+struct Game;
 
-void *resolveNetIDToObj (const NetID netID,
-                         enum NetObjType type);
+enum NetObjType resolveNetIDToObj(const NetID netID,
+                                  struct Game *game,
+                                  void **ret);
+NetID createNetID(enum NetObjType type,
+                  struct Game *game,
+                  void *obj);
 // Assigns the pointer that is passed
 // to the netID it finds and returns.
-NetID createNetID       (enum NetObjType,
-                         void *obj);
-void  clearNetID        (const NetID netID);
+NetID createNetID(enum NetObjType type,
+                  struct Game *game,
+                  void *obj);
 
+void  clearNetID (struct Game *game,
+                  const NetID netID);
 
 #endif

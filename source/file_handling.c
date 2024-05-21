@@ -55,10 +55,8 @@ searchMmapBuffer(const char *dir, char **buffer)
 int getFileData(const char *dir, char **buffer)
 {
     int ret = 0;
-    pthread_mutex_lock(&fileMutex);
     ret = searchMmapBuffer(dir, buffer);
     if (*buffer != NULL) {
-        pthread_mutex_unlock(&fileMutex);
         return ret;
     }
     if (memoryMapBufferSize >= MAX_FILE_COUNT) {
@@ -69,14 +67,12 @@ int getFileData(const char *dir, char **buffer)
     int fd = open(dir, O_RDONLY);
     if (fd == -1) {
         perror("Error opening file");
-        pthread_mutex_unlock(&fileMutex);
         return -1;
     }
     struct stat file_stat;
     if (fstat(fd, &file_stat) == -1) {
         perror("Error getting file size");
         close(fd);
-        pthread_mutex_unlock(&fileMutex);
         return -1;
     }
     memoryMapBuffer[memoryMapBufferSize].data = 
@@ -88,14 +84,12 @@ int getFileData(const char *dir, char **buffer)
     if (*buffer == MAP_FAILED) {
         perror("Error mapping file into memory");
         close(fd);
-        pthread_mutex_unlock(&fileMutex);
         return -1;
     }
     memoryMapBufferSize++;
 
     // Close the file
     close(fd);
-    pthread_mutex_unlock(&fileMutex);
     return file_stat.st_size;
 }
 

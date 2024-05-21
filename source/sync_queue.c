@@ -1,10 +1,14 @@
 #include <stdatomic.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "sync_queue.h"
+#include "host_custom_attributes.h"
 
 void enqueue(struct SyncQueue *queue,
-             void *inParams)
+             char *data,
+             ssize_t packetSize,
+             Host remotehost)
 {
     while (1) {
         int tail = atomic_load(&queue->tail);
@@ -12,20 +16,26 @@ void enqueue(struct SyncQueue *queue,
         if (next_tail != atomic_load(&queue->head)) {
             // The queue is not full, we can enqueue
             if (atomic_compare_exchange_weak(&queue->tail, &tail, next_tail)) {
-                // Successfully reserved the tail, enqueue the item
-                queue->buffer[tail] = inParams;
+                struct HostCustomAttributes *attr = NULL;
+                struct QueueParams *par = &queue->params[tail];
+                memcpy(par->data,
+                       data,
+                       sizeof(par->data));
+                par->dataSize   = packetSize;
+                par->remotehost = remotehost;
+                attr = getHostCustomAttr(remotehost);
+                par->
                 return;
             }
         } else {
             // The queue is full, wait
             // You may use pthread_cond_wait here for more efficient waiting
-            sched_yield(); // Simple yield
+            sched_yield();
         }
     }
 }
 
-void dequeue(struct SyncQueue *queue,
-             void **outParams)
+struct QueueParams *dequeue(struct SyncQueue *queue)
 {
     while (1) {
         int head = atomic_load(&queue->head);
@@ -36,8 +46,7 @@ void dequeue(struct SyncQueue *queue,
                                              &head,
                                              (head + 1) % MAX_SYNC_QUEUE_SIZE)) {
                 // Successfully reserved the head, dequeue the item
-                *outParams = queue->buffer[head];
-                return;
+                return &queue->params[head];
             }
         } else {
             // The queue is empty, wait

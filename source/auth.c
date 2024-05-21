@@ -34,17 +34,14 @@ static struct Player *tryGetPlayerFromPlayername(struct Game *game,
     int playerIndex   = 0;
     int playerFound   = -1;
 
-    pthread_mutex_lock(game->threadlock);
     for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
         playerFound = strncmp(playername, 
                               game->players[playerIndex].credentials.name, 
                               MAX_CREDENTIAL_LEN); 
         if (playerFound == 0) {
-            pthread_mutex_unlock(game->threadlock);
             return &game->players[playerIndex];
         }
     }
-    pthread_mutex_unlock(game->threadlock);
     return NULL;
 }
 /*
@@ -167,9 +164,7 @@ SessionToken getTokenFromHTTP(char *http,
 int tryGameLogin(struct Game *restrict game, const char *password)
 {
     int match = 0;
-    pthread_mutex_lock   (game->threadlock);
     match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock (game->threadlock);
     match = -1 * (match != 0);
     return match;
 }

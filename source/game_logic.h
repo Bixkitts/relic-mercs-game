@@ -216,7 +216,7 @@ struct Game {
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];
     struct Player      players [MAX_PLAYERS_IN_GAME];
-    struct netIDList   netIDs;
+    void              *netIDs  [NETIDS_MAX];
     // lock this before touching netIDs
     // Which player (identified by NetID) is currently
     // taking their turn.

@@ -25,7 +25,7 @@ enum CredentialFormFields {
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
 static enum Handler
-initialHandlerCheck(Host remotehost);
+initialHandlerCheck(Host remotehost, struct HostCustomAttributes **attr);
 
 static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost);
 static void httpHandler       (char *data, ssize_t packetSize, Host remotehost);
@@ -52,28 +52,48 @@ static PacketHandler handlers[HANDLER_COUNT] = {
  * and figures out which handler to use
  */
 static enum Handler
-initialHandlerCheck(Host remotehost)
+initialHandlerCheck(Host remotehost,
+                    struct HostCustomAttributes **attr)
 {
-    struct HostCustomAttributes *customAttr = NULL;
     if (getHostCustomAttr(remotehost) == NULL) {
-        customAttr = calloc(1, sizeof(*customAttr));
-        if (customAttr == NULL) {
+        *attr = calloc(1, sizeof(**attr));
+        if (*attr == NULL) {
             printError(BB_ERR_CALLOC);
             exit(1);
         }
-        customAttr->handler = HANDLER_DEFAULT;
-        setHostCustomAttr(remotehost, (void*)customAttr);
+        (*attr)->handler = HANDLER_DEFAULT;
+        setHostCustomAttr(remotehost, (void*)*attr);
     }
     else {
-        customAttr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
+        *attr = (struct HostCustomAttributes*)getHostCustomAttr(remotehost);
     }
-    return customAttr->handler;
+
+    return (*attr)->handler;
 }
 
+void handleSpecificPacket(struct QueueParams *params)
+{
+    if (params->dataSize > 0) {
+        struct HostCustomAttributes
+        *attr = getHostCustomAttr(params->remotehost);
+        handlers[attr->handler](params->data,
+                                params->dataSize,
+                                params->remotehost);
+    }
+    else {
+        handlers[HANDLER_DISCONNECT](params->data,
+                                     params->dataSize,
+                                     params->remotehost);
+    }
+}
+
+static struct SyncQueue mainQueue = { 0 };
 void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
+    struct HostCustomAttributes
+    *attr   = NULL;
     const enum Handler
-    handler = initialHandlerCheck(remotehost);
+    handler = initialHandlerCheck(remotehost, &attr);
 #ifdef DEBUG
     if (packetSize > 0) {
         printf("\nReceived data:");
@@ -86,11 +106,8 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         printf("\nClient disconnected\n");
     }
 #endif
-
-    // Pointer math handles client disconnects
-    // and calls disconnectHandler()
-    handlers[handler * (packetSize > 0)](data, packetSize, remotehost);
-
+    struct Game *game = getGameFromName(testGameName);
+    enqueue(game->queue, data, packetSize, remotehost);
     return;
 }
 
@@ -187,7 +204,6 @@ static void loginHandler(char *restrict data, ssize_t packetSize, Host remotehos
     struct HTMLForm          form                               = { 0 };
 
     struct Game *game = getGameFromName(testGameName);
-    enqueue(game->queue, 0);
 
     credentialIndex = 
 
@@ -232,7 +248,6 @@ static void charsheetHandler(char *restrict data,
 {
     SessionToken     token  = getTokenFromHTTP(data, packetSize); 
     struct Game     *game   = getGameFromName(testGameName);
-    enqueue(game->queue, 0);
     struct Player   *player = tryGetPlayerFromToken(token, game);
     struct HTMLForm  form   = {0};
 
@@ -316,13 +331,11 @@ int8_t          lastHostCache    = 0;
  */
 static void writePlayersToNewCache(Host exclude)
 {
-    pthread_mutex_lock(&cachingMutex);    
     lastHostCache       = currentHostCache;
     currentHostCache    = !currentHostCache;
     struct HostCustomAttributes *attr = getHostCustomAttr(exclude);
     struct Player               *plyr = attr->player;
     struct Game                 *game = attr->player->game;
-    pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
         struct Player *p = &game->players[i];
         if (p->netID != NULL_NET_ID
@@ -330,12 +343,13 @@ static void writePlayersToNewCache(Host exclude)
             cacheHost(p->associatedHost, currentHostCache);
         }
     }
-    pthread_mutex_unlock(game->threadlock);
     clearHostCache(lastHostCache);
-    pthread_mutex_unlock(&cachingMutex);    
 }
 static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost)
 {
+    if (remotehost == NULL) {
+        return;
+    }
     struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
         writePlayersToNewCache(remotehost);
@@ -356,9 +370,7 @@ static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost)
  */
 int  getCurrentHostCache (void)
 {
-    pthread_mutex_lock(&cachingMutex);    
     int ret = (int)currentHostCache;
-    pthread_mutex_unlock(&cachingMutex);    
     return ret;
 }
 

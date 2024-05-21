@@ -14,6 +14,9 @@ enum Handler{
 
 #define HANDLER_DEFAULT HANDLER_HTTP
 
+struct QueueParams;
+
+void handleSpecificPacket(struct QueueParams *params);
 void masterHandler       (char *restrict data, ssize_t packetSize, Host remotehost);
 
 void buildFileTable      (void);
