@@ -165,8 +165,8 @@ before spawning the player on the board and last in the turn order.
     <li>The player should be able to open their own and other character's statistics by
         clicking on the portraits.
         This should open a popup in the middle of the screen listing known statistics</li>
-    <li>The player should have one button to see their Resources (covered later)</li>
-    <li>The player should have one button to see their Reputations (covered later)</li>
+    <li>The player should have one button to see their Resources (covered later)</lig
+g   <li>The player should have one button to see their Reputations (covered later)</li>
 </ul>
 <h2>Core Gameplay Concepts</h2>
     <h3>Turn Order</h3>
@@ -174,12 +174,18 @@ before spawning the player on the board and last in the turn order.
     <p class="optional"> The game is configured with a minimum player count, it waits
         until there are that many people in the game, then it randomises the turn order </p>
     <h3>Player Statistics</h3>
-    <p>The core loop of the game is that the players travel across the map, face random encounters and solve it with their skills.
-    Any event they encounter will allow the player to solve it with at least one skill.
-    Different skills are better for solving different situations, but applying different skills MIGHT yield different results-
-    such as having cooler results on success despite having a lower success chance (though not as a rule).
-    An event should present the player with a list of buttons presenting ways to solve the problem, also showing the success chance.
-    The players will also need to keep track of their health and other core things like that.</p>
+    <p>Players have three main statistics:
+    <ul>
+        <li>Vigour is the player's health</li>
+        <li>Violence is the player's prowess in combat</li>
+        <li>Cunning is the player's cognitive ability</li>
+    </ul>
+    Besides these three main statistics, the players will find resources during the game
+    that will aid or hinder them in specific circumstances, for example they may
+    get a dragon hunter as a follower who will boost their abilities in combat when it involves dragon
+    type enemies.
+    Or it might be more abstract, such as "climbing training" which will give them bonuses in relevant situations.
+    </p>
     <h3>Success Chance</h3>
     <ul>
         <li>Any encounter a player character faces has a certain difficulty for each different skill that
