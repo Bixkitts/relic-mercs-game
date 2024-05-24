@@ -308,15 +308,16 @@ static void writePlayersToNewCache(Host exclude)
     struct HostCustomAttributes *attr = getHostCustomAttr(exclude);
     struct Player               *plyr = attr->player;
     struct Game                 *game = attr->player->game;
-    pthread_mutex_lock(game->threadlock);
     for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
         struct Player *p = &game->players[i];
+        pthread_mutex_lock(p->threadlock);
         if (p->netID != NULL_NET_ID
-            && p->netID != plyr->netID) {
+            && p->netID != plyr->netID
+            && p->associatedHost != NULL) {
             cacheHost(p->associatedHost, currentHostCache);
         }
+        pthread_mutex_unlock(p->threadlock);
     }
-    pthread_mutex_unlock(game->threadlock);
     clearHostCache(lastHostCache);
     pthread_mutex_unlock(&cachingMutex);    
 }
