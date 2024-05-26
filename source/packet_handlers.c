@@ -292,40 +292,11 @@ pthread_mutex_t cachingMutex     = PTHREAD_MUTEX_INITIALIZER;
 int8_t          currentHostCache = 0;
 int8_t          lastHostCache    = 0;
 
-/* 
- * The locking branching and looping
- * here probably makes this sloooow,
- * but it only runs when somebody disconnects
- * and a cache is invalidated.
- * I tried to optimise the loop
- * out of the cache lock but couldn't.
- */
-static void writePlayersToNewCache(Host exclude)
-{
-    pthread_mutex_lock(&cachingMutex);    
-    lastHostCache       = currentHostCache;
-    currentHostCache    = !currentHostCache;
-    struct HostCustomAttributes *attr = getHostCustomAttr(exclude);
-    struct Player               *plyr = attr->player;
-    struct Game                 *game = attr->player->game;
-    for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
-        struct Player *p = &game->players[i];
-        pthread_mutex_lock(p->threadlock);
-        if (p->netID != NULL_NET_ID
-            && p->netID != plyr->netID
-            && p->associatedHost != NULL) {
-            cacheHost(p->associatedHost, currentHostCache);
-        }
-        pthread_mutex_unlock(p->threadlock);
-    }
-    clearHostCache(lastHostCache);
-    pthread_mutex_unlock(&cachingMutex);    
-}
 static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost)
 {
     struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
-        writePlayersToNewCache(remotehost);
+        uncacheHost(remotehost, 0);
         // TODO: When someone disconnects,
         // the game will need to pause and alert everyone
         // of the disconnect and ask whether to

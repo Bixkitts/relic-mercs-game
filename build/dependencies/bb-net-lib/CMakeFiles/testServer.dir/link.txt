@@ -1,1 +1,0 @@
-/usr/bin/cc -g CMakeFiles/testServer.dir/tests/server.c.o -o testServer  libbbnetlibd.a /usr/lib/libssl.so /usr/lib/libcrypto.so
