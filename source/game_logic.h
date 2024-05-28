@@ -189,6 +189,10 @@ enum CharsheetFormFields {
  * Make sure to lock these properly with
  * respect to concurrent access from
  * multiple clients.
+ * They each have their own threadlock mutex
+ * set on creation.
+ * Use this before modifying data in the structure,
+ * unless it is an atomic variable.
  */
 // TODO:
 // we need to store exactly
@@ -211,6 +215,13 @@ struct Player {
     // encountering, if any.
     enum EncounterID         currentEnc;
 };
+/*
+ * Lock the threadlock before modifying
+ * game data.
+ * The struct Player has it's own threadlock
+ * you should lock before you modify any of their
+ * data.
+ */
 struct Game {
     NetID              netID;
     pthread_mutex_t   *threadlock;

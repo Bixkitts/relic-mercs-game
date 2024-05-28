@@ -18,14 +18,6 @@
 
 #define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX+sizeof(Opcode)
 
-/*
- * Networked data structures
- * like Player or Game
- * are private to this translation
- * unit so we can make sure we
- * manage concurrent access correctly
- */
-
 // This is coupled with enum PlayerBackground
 // and also coupled on the clientside
 static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
@@ -46,9 +38,7 @@ static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] = {
     "Female"
 };
 
-
 pthread_mutex_t netObjMutexes[MAX_NETOBJS] = {0};
-
 
 const char testGameName[MAX_CREDENTIAL_LEN] = "test game";
 
