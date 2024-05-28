@@ -155,9 +155,9 @@ struct CharacterSheet {
 };
 
 struct Coordinates {
-    int x;
-    int y;
-    int z;
+    double x;
+    double y;
+    double z;
 };
 
 struct PlayerCredentials {

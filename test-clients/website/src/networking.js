@@ -81,34 +81,68 @@ function sendPlayerConnect() {
 
     socket.send(ab);
 }
-
+// The C struct
+// -----------------------------------
+// struct PlayerConnectRes {
+//    NetID              players      [MAX_PLAYERS_IN_GAME];
+//    char               playerNames  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
+//    struct Coordinates playerCoords [MAX_PLAYERS_IN_GAME];
+//    NetID              currentTurn; // NetID of the player who's turn it is
+//    bool               gameOngoing; // Has the game we've joined started yet?
+//    char               playerIndex; // Index in the "players" array of the connecting player
+//}__attribute__((packed));
 function handlePlayerConnectResponse(dataView) {
-    const maxPlayers  = 8;
-    const playerList  = [];
-    const playerNames = [];
+    const maxPlayers         = 8;
+    const int64Size          = 8; // Size of int64 (BigInt)
+    const doubleSize         = 8; // Size of double
+    const opcodeSize         = 2; // Two bytes for the opcode
     const MAX_CREDENTIAL_LEN = 32;
 
+    let playerList   = [];
+    let playerNames  = [];
+    let playerCoords = [];
+
+    let offset = opcodeSize;
+    
     for (let i = 0; i < maxPlayers; i++) {
-        playerList.push(dataView.getBigInt64(opcodeSize + (int64Size*i), true));
-        const nameStartIndex  = opcodeSize + (int64Size * maxPlayers) + (MAX_CREDENTIAL_LEN * i);
-        const playerNameBytes = new Uint8Array(dataView.buffer, nameStartIndex, MAX_CREDENTIAL_LEN);
+        // Extract player NetID
+        playerList.push(dataView.getBigInt64(offset, true));
+        offset += int64Size;
+
+        // Extract player name
+        const playerNameBytes = new Uint8Array(dataView.buffer, offset + (MAX_CREDENTIAL_LEN * i), MAX_CREDENTIAL_LEN);
         const playerName      = new TextDecoder().decode(playerNameBytes).trim();
         playerNames.push(playerName);
+
+        // Extract player coordinates
+        const coordStartIndex = offset + (MAX_CREDENTIAL_LEN * maxPlayers) + (i * 2 * doubleSize);
+        const x = dataView.getFloat64(coordStartIndex, true);
+        const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
+        playerCoords.push({ x, y });
     }
-    const currentTurnIndex = opcodeSize 
-                             + (MAX_CREDENTIAL_LEN*maxPlayers)
-                             + (int64Size*maxPlayers);
-    // NetID of the player who's turn it currently is
-    const currentTurn = dataView.getBigInt64( currentTurnIndex, true);
-    const gameOngoingIndex = currentTurnIndex + int64Size;
-    const gameOngoing = dataView.getInt8    ( gameOngoingIndex, true);
-    const playerIndexIndex = gameOngoingIndex + 1;
-    const playerIndex = dataView.getInt8    ( playerIndexIndex, true);
-    const myPlayer = playerList[playerIndex];  
+
+    // Adjust offset after player coordinates
+    offset += MAX_CREDENTIAL_LEN * maxPlayers + 2 * doubleSize * maxPlayers;
+
+    // Extract current turn NetID
+    const currentTurn = dataView.getBigInt64(offset, true);
+    offset += int64Size;
+
+    // Extract game ongoing status
+    const gameOngoing = Boolean(dataView.getInt8(offset));
+    offset += 1;
+
+    // Extract player index
+    const playerIndex = dataView.getInt8(offset);
+    const myPlayer    = playerList[playerIndex];
 
     console.log('My NetID:', myPlayer);
     console.log('Player NetIDs:', playerList);
     console.log('Player Names:', playerNames);
+    console.log('Player Coordinates:', playerCoords);
+    console.log('Current Turn NetID:', currentTurn);
+    console.log('Is Game Ongoing:', gameOngoing);
+    console.log('My Player Index:', playerIndex);
 }
 
 function sendHeartbeat() {

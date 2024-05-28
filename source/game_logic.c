@@ -186,11 +186,11 @@ static inline int getFreeGame()
 
 struct Game *createGame(struct GameConfig *config)
 {
-    int          gameIndex = getFreeGame();
+    int gameIndex = getFreeGame();
     if (gameIndex == -1) {
         return NULL;
     }
-    struct Game *game      = &gameList[gameIndex].game;
+    struct Game *game = &gameList[gameIndex].game;
 
     strncpy (game->password,
              config->password,
@@ -210,6 +210,11 @@ void deleteGame(struct Game *game)
 {
     pthread_mutex_t *lock = game->threadlock;
     pthread_mutex_lock(lock);
+    // TODO:
+    // Before we nuke the game,
+    // we need to lock and tell all the clients
+    // that the game is deleted and make
+    // sure they shutdown
     memset(game, 0, sizeof(*game));
     pthread_mutex_unlock(lock);
     atomic_fetch_sub(&gameCount, 1);
@@ -229,8 +234,6 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
                                                (void*)newPlayer); 
     newPlayer->threadlock = getMutexFromNetID (game,
                                                newPlayer->netID);
-    // TODO: Do we need to store a pointer to the game
-    // in the Player struct?
     newPlayer->game       = game;
     memcpy (&newPlayer->credentials, 
             credentials, 
@@ -240,10 +243,6 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
     return newPlayer;
 }
 
-/*
- * Caller handles threadlocking the game
- * the player is in.
- */
 void deletePlayer(struct Player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
@@ -255,8 +254,8 @@ void deletePlayer(struct Player *restrict player)
     pthread_mutex_unlock(lock);
 }
 
-void  setPlayerCharSheet (struct Player *player,
-                          const struct CharacterSheet *charsheet)
+void setPlayerCharSheet (struct Player *player,
+                         const struct CharacterSheet *charsheet)
 {
     pthread_mutex_lock(player->threadlock);
     memcpy (&player->charSheet, charsheet, sizeof(*charsheet));
@@ -273,8 +272,7 @@ int initCharsheetFromForm(struct Player *player,
     pthread_mutex_lock(player->threadlock);                           
     struct CharacterSheet *sheet = &player->charSheet;
     if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
-        pthread_mutex_unlock(player->threadlock);
-        return -1;
+        goto exit_error;
     }
     while(sheet->background < PLAYER_BACKGROUND_COUNT) {
         if (strncmp(playerBackgroundStrings[sheet->background], 
@@ -303,12 +301,14 @@ int initCharsheetFromForm(struct Player *player,
 
     if (validateNewCharsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(*sheet));
-        pthread_mutex_unlock(player->threadlock);
-        return -1;
+        goto exit_error;
     }
     sheet->isValid = true;
     pthread_mutex_unlock(player->threadlock);
     return 0;
+exit_error:
+    pthread_mutex_unlock(player->threadlock);
+    return -1;
 }
 
 /*
@@ -425,6 +425,9 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 
     validatePlayerMoveCoords(moveData, &responseData->coords);
     responseData->playerNetID = hostPlayer->netID;
+
+    hostPlayer->coords.x = responseData->coords.xCoord;
+    hostPlayer->coords.y = responseData->coords.yCoord;
 
     int packetSize = headerSize + sizeof(*responseData);
     multicastTCP (responseBuffer, 
