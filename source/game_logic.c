@@ -63,8 +63,12 @@ typedef void (*TakeResourceHandler) (enum ResourceID resource, struct Player *ta
 /*
  * Central global list of games
  */
-static struct Game gameList[MAX_GAMES] = { 0 };
-atomic_int gameCount = ATOMIC_VAR_INIT(0);
+struct GameSlot {
+    atomic_int inUse;
+    struct Game game;
+};
+static struct GameSlot  gameList   [MAX_GAMES] = { 0 };
+atomic_int              gameCount              = 0;
 
 /* 
  * Returns a pointer to the corresponding
@@ -75,11 +79,11 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
 {
     int cmp = -1;
     for(int i = 0; i < MAX_GAMES; i++) {
-        cmp = strncmp(gameList[i].name, 
+        cmp = strncmp(gameList[i].game.name, 
                       name, 
                       MAX_CREDENTIAL_LEN);
         if (cmp == 0) {
-            return &gameList[i];
+            return &gameList[i].game;
         }
     }
     return NULL;
@@ -167,19 +171,26 @@ void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
     };
 }
 
+static inline int getFreeGame()
+{
+    int expected = 0;
+    for (int i = 0; i < MAX_GAMES; i++) {
+        if (atomic_compare_exchange_strong(&gameList[i].inUse,
+                                           &expected,
+                                           1)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 struct Game *createGame(struct GameConfig *config)
 {
-    const char name[MAX_CREDENTIAL_LEN] = {0};
-    struct Game *game = getGameFromName(name);
-    if (game == NULL) {
+    int          gameIndex = getFreeGame();
+    if (gameIndex == -1) {
         return NULL;
     }
-
-    game->netID      = createNetID(NET_TYPE_GAME,
-                                   (void*)game);
-    game->threadlock = &netObjMutexes[game->netID];
-
-    pthread_mutex_lock(game->threadlock);
+    struct Game *game      = &gameList[gameIndex].game;
 
     strncpy (game->password,
              config->password,
@@ -190,7 +201,8 @@ struct Game *createGame(struct GameConfig *config)
     game->maxPlayerCount = config->maxPlayerCount;
     game->minPlayerCount = config->minPlayerCount;
 
-    pthread_mutex_unlock(game->threadlock);
+    atomic_store     (&game->playerCount, 0);
+    atomic_fetch_add (&gameCount, 1);
     return game;
 }
 
@@ -198,7 +210,6 @@ void deleteGame(struct Game *game)
 {
     pthread_mutex_t *lock = game->threadlock;
     pthread_mutex_lock(lock);
-    clearNetID(game->netID);
     memset(game, 0, sizeof(*game));
     pthread_mutex_unlock(lock);
     atomic_fetch_sub(&gameCount, 1);
@@ -213,9 +224,11 @@ void deleteGame(struct Game *game)
 struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credentials)
 {
     struct Player *newPlayer = &game->players[game->playerCount];
-    newPlayer->netID      = createNetID(NET_TYPE_PLAYER,
-                                        (void*)newPlayer); 
-    newPlayer->threadlock = &netObjMutexes[newPlayer->netID];
+    newPlayer->netID      = createNetID       (NET_TYPE_PLAYER,
+                                               game,
+                                               (void*)newPlayer); 
+    newPlayer->threadlock = getMutexFromNetID (game,
+                                               newPlayer->netID);
     // TODO: Do we need to store a pointer to the game
     // in the Player struct?
     newPlayer->game       = game;
@@ -223,7 +236,7 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
             credentials, 
             sizeof(*credentials));
 
-    game->playerCount++;
+    atomic_fetch_add(&game->playerCount, 1);
     return newPlayer;
 }
 
@@ -235,10 +248,10 @@ void deletePlayer(struct Player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
     pthread_mutex_lock  (lock);
-    struct Game *game = player->game;
-    clearNetID (player->netID);
+    clearNetID (player->game, player->netID);
+    atomic_fetch_sub(&player->game->playerCount, 1);
+    player->game->playerCount--;
     memset(player, 0, sizeof(*player));
-    game->playerCount--;
     pthread_mutex_unlock(lock);
 }
 
@@ -476,7 +489,7 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
         pthread_mutex_lock(game->players[i].threadlock);
         NetID id = game->players[i].netID;
         responseData->players[i] = id;
-        memcpy(&responseData->playerNames[i * namelen], 
+        memcpy(&responseData->playerNames[i], 
                game->players[i].credentials.name, 
                namelen);
         pthread_mutex_unlock(game->players[i].threadlock);

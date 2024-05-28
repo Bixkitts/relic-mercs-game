@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <unistd.h>
+#include <stdatomic.h>
 
 #include "bbnetlib.h"
 #include "helpers.h"
@@ -215,6 +216,7 @@ struct Game {
     pthread_mutex_t   *threadlock;
     char               name    [MAX_CREDENTIAL_LEN];
     char               password[MAX_CREDENTIAL_LEN];
+    struct NetIDSlot   netIDs  [MAX_NETOBJS];
     // Which player (identified by NetID) is currently
     // taking their turn.
     // When this is 0, the game hasn't started yet
@@ -223,7 +225,7 @@ struct Game {
     int                maxPlayerCount;
     int                minPlayerCount;
     struct Player      players [MAX_PLAYERS_IN_GAME];
-    int                playerCount;
+    atomic_int         playerCount;
 };
 
 /*
@@ -248,11 +250,12 @@ struct MovePlayerRes {
     struct MovePlayerReq coords;
 } __attribute__((packed));
 struct PlayerConnectRes {
-    NetID   players     [MAX_PLAYERS_IN_GAME];
-    char    playerNames [MAX_CREDENTIAL_LEN * MAX_PLAYERS_IN_GAME];
-    NetID   currentTurn; // NetID of the player who's turn it is
-    bool    gameOngoing; // Has the game we've joined started yet?
-    char    playerIndex; // Index in the "players" array of the connecting player
+    NetID              players      [MAX_PLAYERS_IN_GAME];
+    char               playerNames  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
+    struct Coordinates playerCoords [MAX_PLAYERS_IN_GAME];
+    NetID              currentTurn; // NetID of the player who's turn it is
+    bool               gameOngoing; // Has the game we've joined started yet?
+    char               playerIndex; // Index in the "players" array of the connecting player
 }__attribute__((packed));
 
 /*

@@ -12,11 +12,6 @@
  * dynamic objects. That won't happen to me though :D
  */
 
-#define NETIDS_MAX MAX_NETOBJS
-// Lock this before touching netIDs
-static pthread_mutex_t   netIDmutex         = PTHREAD_MUTEX_INITIALIZER;
-static void             *netIDs[NETIDS_MAX] = { 0 };
-
 /*
  * NetID ranges corresponding to object types
  */
@@ -29,8 +24,7 @@ static const NetID netIDRanges[NET_TYPE_COUNT] =
 {   
     NULL_NET_ID,
     1,
-    MAX_PLAYERS,
-    MAX_GAMES
+    MAX_PLAYERS_IN_GAME
 };
 /*
  * Returns the range of NetIDs
@@ -38,7 +32,7 @@ static const NetID netIDRanges[NET_TYPE_COUNT] =
  * possibly have
  */
 static inline const 
-struct NetIDRange getObjNetIDRange(enum NetObjType type)
+struct NetIDRange getIDRangeFromType(enum NetObjType type)
 {
     struct NetIDRange range = {0};
     for (int i = 0; i < type; i++) {
@@ -49,48 +43,53 @@ struct NetIDRange getObjNetIDRange(enum NetObjType type)
 }
 
 /*
+ * returns NetObjType from
+ * a netID based on ranges
+ */
+static inline enum NetObjType
+getTypeFromNetID(NetID id)
+{
+    for(int i = 0; i < NET_TYPE_COUNT-1; i++) {
+        if (id > netIDRanges[i] && id < netIDRanges[i+1]) {
+            return netIDRanges[i+1];
+        }
+    }
+    return NULL_NET_ID;
+}
+
+/*
  * Returns an object of the corresponding NetObjType,
  * or NULL if: 
  * - The netID is invalid/out of range
  * - A valid netID resolves to an object of the wrong type
  */
-void *resolveNetIDToObj (const NetID netID,
-                         enum NetObjType type)
+enum NetObjType resolveNetIDToObj(const NetID netID,
+                                  struct Game *game,
+                                  void **ret)
 {
     if (netID >= NETIDS_MAX) {
-        return NULL;
+        return NET_TYPE_NULL;
     }
-    pthread_mutex_lock(&netIDmutex);
-    const void *retObj = netIDs[netID];
-    if (retObj == NULL) {
-        pthread_mutex_unlock(&netIDmutex);
-        return NULL;
-    }
-    struct NetIDRange range = getObjNetIDRange(type);
-    bool  isCorrectType = ((netID < range.max) 
-                          && (netID >= range.min));
-    void *ret           = (void*)(((unsigned long long)retObj) * isCorrectType);
-    pthread_mutex_unlock(&netIDmutex);
-    return ret;
+    *ret = game->netIDs[netID].object;
+    return getTypeFromNetID(netID);
 }
 /*
  * Returns the usable NetID it
  * finds or -1 on failure
  */
-NetID createNetID(enum NetObjType type, void *obj)
+NetID createNetID(enum NetObjType type,
+                  struct Game *game,
+                  void *obj)
 {
-    pthread_mutex_lock   (&netIDmutex);
-    struct NetIDRange range = getObjNetIDRange(type);
+    struct NetIDRange range = getIDRangeFromType(type);
     int i = range.min;
-    while(netIDs[i] != NULL) {
+    while(game->netIDs[i].object != NULL) {
         i++;
         if (i >= range.max) {
-            pthread_mutex_unlock (&netIDmutex);
             return -1;
         }
     }
-    netIDs[i] = obj;
-    pthread_mutex_unlock (&netIDmutex);
+    game->netIDs[i].object = obj;
     return i;
 }
 
@@ -102,9 +101,14 @@ NetID createNetID(enum NetObjType type, void *obj)
  * Do this to prevent the object from being
  * resolved from a NetID e.g. if it's being deleted.
  */
-void  clearNetID (const NetID netID)
+void  clearNetID (struct Game *game,
+                  const NetID netID)
 {
-    pthread_mutex_lock   (&netIDmutex);
-    netIDs[netID] = NULL;
-    pthread_mutex_unlock (&netIDmutex);
+    game->netIDs[netID].object = NULL;
+}
+
+pthread_mutex_t *getMutexFromNetID(struct Game *game,
+                                   const NetID netID)
+{
+    return &game->netIDs[netID].mutex;
 }
