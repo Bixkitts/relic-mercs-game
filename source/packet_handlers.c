@@ -24,7 +24,7 @@ enum CredentialFormFields {
 };
 typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
 
-static enum Handler
+static inline enum Handler
 initialHandlerCheck(Host remotehost);
 
 static void disconnectHandler (char *data, ssize_t packetSize, Host remotehost);
@@ -57,7 +57,7 @@ static PacketHandler handlers[HANDLER_COUNT] = {
  * in this file,
  * and enum Handler in packet_handlers.h.
  */
-static enum Handler
+static inline enum Handler
 initialHandlerCheck(Host remotehost)
 {
     struct HostCustomAttributes *customAttr = NULL;
