@@ -4,8 +4,12 @@
 #include "packet_handlers.h"
 #include "game_logic.h"
 
-// Store all custom data you need to attach to a host 
-// in this struct
+/*
+ * This struct stores all custom data we want
+ * to save as part of a remote host connection.
+ * Most notably, the application level protocol
+ * in use by the TCP connection in "handler".
+ */
 struct HostCustomAttributes {
     enum Handler  handler;  // Which handler should be called when receiving a 
                            // packet from this host

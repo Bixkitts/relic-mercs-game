@@ -38,7 +38,9 @@ static void GETHandler       (char *restrict data, ssize_t packetSize, Host remo
 
 /* disconnectHandler needs to be at index 0
  * because we use pointer math to handle
- * empty packets (TCP disconnections)
+ * empty packets (TCP disconnections).
+ * This is coupled with enum Handler
+ * in packet_handlers.h
  */
 static PacketHandler handlers[HANDLER_COUNT] = {
     disconnectHandler,
@@ -48,8 +50,12 @@ static PacketHandler handlers[HANDLER_COUNT] = {
 
 /*
  * Called from masterHandler,
- * checks all incoming connections
+ * checks all incoming packets
  * and figures out which handler to use
+ * i.e. what application-level protocol.
+ * This depends on the "handlers[]" array
+ * in this file,
+ * and enum Handler in packet_handlers.h.
  */
 static enum Handler
 initialHandlerCheck(Host remotehost)
@@ -70,6 +76,11 @@ initialHandlerCheck(Host remotehost)
     return customAttr->handler;
 }
 
+/*
+ * This function captures and handles
+ * every single incoming TCP packet
+ * in the entire server.
+ */
 void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 {
     const enum Handler

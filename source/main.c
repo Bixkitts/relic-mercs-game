@@ -37,6 +37,10 @@ int main(void)
 
     createGame(&gameConfig);
 
+    /* All incoming TCP packets
+     * are given to "masterHandler()"
+     * in "packet_handlers.c"
+     */
     listenForTCP (localhost, masterHandler);
     return 0;
 }
