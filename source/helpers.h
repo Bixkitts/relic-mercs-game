@@ -40,6 +40,9 @@ bool    isEmptyString    (const char *string);
 
 double  clamp            (double x, double min, double max);
 
+// random numbers
 long long int getRandomInt();
+float  getRandomFloat  (float min, float max);
+double getRandomDouble (double min, double max);
 
 #endif

@@ -64,8 +64,9 @@ typedef void (*TakeResourceHandler) (enum ResourceID resource, struct Player *ta
  * Central global list of games
  */
 struct GameSlot {
-    atomic_int inUse;
-    struct Game game;
+    atomic_int      inUse;
+    struct Game     game;
+    pthread_mutex_t gameMutex;
 };
 static struct GameSlot  gameList   [MAX_GAMES] = { 0 };
 atomic_int              gameCount              = 0;
@@ -100,6 +101,8 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
 static inline int            
 isGameMessageValidLength    (Opcode opcode, 
                              ssize_t messageSize);
+static void
+genPlayerStartPos           (struct Coordinates *outCoords);
 /*
  * Handlers for incoming messages from the websocket connection
  */
@@ -192,6 +195,8 @@ struct Game *createGame(struct GameConfig *config)
     }
     struct Game *game = &gameList[gameIndex].game;
 
+    game->threadlock = &gameList[gameIndex].gameMutex;
+
     strncpy (game->password,
              config->password,
              MAX_CREDENTIAL_LEN);
@@ -215,11 +220,18 @@ void deleteGame(struct Game *game)
     // we need to lock and tell all the clients
     // that the game is deleted and make
     // sure they shutdown
-    memset(game, 0, sizeof(*game));
+    atomic_store (&game->playerCount, 0);
+    memset       (game, 0, sizeof(*game));
     pthread_mutex_unlock(lock);
     atomic_fetch_sub(&gameCount, 1);
 }
 
+static void genPlayerStartPos(struct Coordinates *outCoords)
+{
+    outCoords->x = 0.0f;
+    outCoords->y = 0.0f;
+    outCoords->z = 0.0f;
+}
 /*
  * This function assumes that the player was redirected to
  * character creation and creates a character at the next free 
@@ -238,7 +250,7 @@ struct Player *createPlayer(struct Game *game, struct PlayerCredentials *credent
     memcpy (&newPlayer->credentials, 
             credentials, 
             sizeof(*credentials));
-
+    genPlayerStartPos(&newPlayer->coords);
     atomic_fetch_add(&game->playerCount, 1);
     return newPlayer;
 }
@@ -488,7 +500,10 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
     initHandlerResponseBuffer(responseBuffer, responseOpcode);
     responseData = (struct PlayerConnectRes*)&responseBuffer[headerSize];
 
-    for (int i = 0; i < game->playerCount; i++) {
+    for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
+        if (game->players[i].netID == NULL_NET_ID) {
+            continue;
+        }
         pthread_mutex_lock(game->players[i].threadlock);
         NetID id = game->players[i].netID;
         responseData->players[i] = id;

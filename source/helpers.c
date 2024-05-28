@@ -108,6 +108,38 @@ int charSearch(const char *restrict text, char c, int bufLen)
     return i;
 }
 
+float getRandomFloat(float min, float max) {
+    unsigned char buffer[sizeof(float)]; // 4 bytes to store a random integer
+    if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
+        fprintf(stderr, "Error generating random bytes\n");
+        exit(1);
+    }
+    unsigned int randInt = 0;
+    for (int i = 0; i < sizeof(buffer); i++) {
+        randInt = (randInt << 8) | buffer[i];
+    }
+    float normalized = randInt / (float)UINT_MAX;
+    float result = min + normalized * (max - min);
+
+    return result;
+}
+
+double getRandomDouble(double min, double max) {
+    unsigned char buffer[sizeof(double)]; // 4 bytes to store a random integer
+    if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
+        fprintf(stderr, "Error generating random bytes\n");
+        exit(1);
+    }
+    unsigned int randInt = 0;
+    for (int i = 0; i < sizeof(buffer); i++) {
+        randInt = (randInt << 8) | buffer[i];
+    }
+    double normalized = randInt / (double)UINT64_MAX;
+    double result = min + normalized * (max - min);
+
+    return result;
+}
+
 long long int getRandomInt()
 {
     long long     randomInteger                      = 0;
