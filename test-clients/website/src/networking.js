@@ -1,4 +1,6 @@
-import { getPlayers } from  './game-logic.js';
+import { getAllPlayers } from  './game-logic.js';
+import { getPlayer } from  './game-logic.js';
+import { addPlayer } from  './game-logic.js';
 
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
@@ -63,10 +65,7 @@ function handleMovePlayerResponse(dataView) {
             yCoord: yCoord
         }
     };
-    // TODO: placeholder, we need to resolve the correct
-    // player from the netID
-    const players = getPlayers();
-    players[0].move(xCoord, yCoord);
+    getPlayer(playerNetID).move(xCoord, yCoord);
 
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
@@ -106,11 +105,14 @@ function handlePlayerConnectResponse(dataView) {
     
     for (let i = 0; i < maxPlayers; i++) {
         // Extract player NetID
-        playerList.push(dataView.getBigInt64(offset, true));
+        const netID = dataView.getBigInt64(offset, true);
+        playerList.push(netID);
         offset += int64Size;
 
         // Extract player name
-        const playerNameBytes = new Uint8Array(dataView.buffer, offset + (MAX_CREDENTIAL_LEN * i), MAX_CREDENTIAL_LEN);
+        const playerNameBytes = new Uint8Array(dataView.buffer,
+                                               offset + (MAX_CREDENTIAL_LEN * i),
+                                               MAX_CREDENTIAL_LEN);
         const playerName      = new TextDecoder().decode(playerNameBytes).trim();
         playerNames.push(playerName);
 
@@ -119,6 +121,9 @@ function handlePlayerConnectResponse(dataView) {
         const x = dataView.getFloat64(coordStartIndex, true);
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
         playerCoords.push({ x, y });
+
+        // Add player to the map (assuming default vigour, violence, cunning, image)
+        addPlayer(netID, x, y, 1, 2, 3, "playerDefault.png");
     }
 
     // Adjust offset after player coordinates
@@ -134,6 +139,7 @@ function handlePlayerConnectResponse(dataView) {
 
     // Extract player index
     const playerIndex = dataView.getInt8(offset);
+    setMyNetID(playerList[playerIndex]);
     const myPlayer    = playerList[playerIndex];
 
     console.log('My NetID:', myPlayer);

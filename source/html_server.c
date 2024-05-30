@@ -21,6 +21,7 @@ static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] = {
     "text/html\n",
     "image/jpg\n",
     "image/png\n",
+    "image/bmp\n",
     "text/javascript\n",
     "text/css\n"
 };
@@ -28,6 +29,7 @@ static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
     "html",
     "jpg",
     "png",
+    "bmp",
     "js",
     "css"
 };
@@ -122,7 +124,7 @@ void sendContent(char* dir,
                  Host remotehost, 
                  const char *customHeaders)
 {
-    char          header   [HEADER_PACKET_LENGTH] = { 0 };
+    char          header   [HEADER_PACKET_LENGTH] = {0};
     unsigned long headerLen                       = 0;
     const char    status          [HEADER_LENGTH] = "HTTP/1.1 200 OK\n";
     const char    contentType     [HEADER_LENGTH] = "Content-Type: ";

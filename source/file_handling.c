@@ -12,14 +12,14 @@
 #include "file_handling.h"
 #include "helpers.h"
 
-typedef struct MemoryMappedFile {
+struct MemoryMappedFile {
     char  name[MAX_FILENAME_LEN];
     char *data;
     int   size;
-}MemoryMappedFile;
+};
 
-static MemoryMappedFile memoryMapBuffer[MAX_FILE_COUNT] = { 0 };
-static int              memoryMapBufferSize             = 0;          
+static struct MemoryMappedFile memoryMapBuffer[MAX_FILE_COUNT] = { 0 };
+static int                     memoryMapBufferSize             = 0;          
 
 static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
 

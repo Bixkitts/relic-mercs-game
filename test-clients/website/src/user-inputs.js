@@ -1,5 +1,5 @@
 import { getGLContext, getCanvas } from './canvas-getter.js'
-import { getPlayers } from './game-logic.js';
+import { getAllPlayers } from './game-logic.js';
 import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
 import { getProjectionMatrix } from './rendering/renderer.js';

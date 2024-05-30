@@ -1,5 +1,5 @@
 import { ProgramInfo } from "./type-hints.js";
-import { getPlayers } from "../game-logic.js";
+import { getAllPlayers } from "../game-logic.js";
 import { Player } from "../game-logic.js";
 import { loadTexture } from "./resource-loading.js";
 
@@ -35,7 +35,7 @@ export function drawMapPlane(gl, programInfo, texture, modelViewMatrix) {
  */
 export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix) 
 {
-    const players = getPlayers();
+    const players = getAllPlayers();
     players.forEach(player => {
         mat4.translate (modelViewMatrix,
                         modelViewMatrix,
