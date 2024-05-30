@@ -1,6 +1,8 @@
 import { getAllPlayers } from  './game-logic.js';
 import { getPlayer } from  './game-logic.js';
 import { addPlayer } from  './game-logic.js';
+import { getMyNetID } from  './game-logic.js';
+import { setMyNetID } from  './game-logic.js';
 
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
@@ -123,7 +125,7 @@ function handlePlayerConnectResponse(dataView) {
         playerCoords.push({ x, y });
 
         // Add player to the map (assuming default vigour, violence, cunning, image)
-        addPlayer(netID, x, y, 1, 2, 3, "playerDefault.png");
+        addPlayer(netID, x, y, 1, 2, 3, "playerTest.png");
     }
 
     // Adjust offset after player coordinates
@@ -162,8 +164,9 @@ function sendHeartbeat() {
 export function sendMovePacket(coordX, coordY) {
     const ab       = new ArrayBuffer(18);
     const dataView = new DataView(ab);
+    const opcode   = 1; // opcode for moving a player
 
-    dataView.setInt16   (0, 1, true);
+    dataView.setInt16   (0, opcode, true);
     dataView.setFloat64 (2, coordX, true);
     dataView.setFloat64 (10, coordY, true);
 

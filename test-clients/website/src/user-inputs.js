@@ -1,5 +1,7 @@
 import { getGLContext, getCanvas } from './canvas-getter.js'
 import { getAllPlayers } from './game-logic.js';
+import { getMyNetID } from './game-logic.js';
+import { getPlayer } from './game-logic.js';
 import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
 import { getProjectionMatrix } from './rendering/renderer.js';
@@ -94,8 +96,7 @@ export function initWASD() {
 
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
             // Get Own player here and MOVE() them
-            const players = getPlayers();
-            players[0].move(worldCoords[0], worldCoords[1]);
+            getPlayer(getMyNetID()).move(worldCoords[0], worldCoords[1]);
             sendMovePacket(worldCoords[0], worldCoords[1]);
         }
     }

@@ -18,12 +18,12 @@ static char allowedFileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = { 0 };
 static int  allowedFileTableLen = 0;
 
 static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] = {
-    "text/html\n",
-    "image/jpg\n",
-    "image/png\n",
-    "image/bmp\n",
-    "text/javascript\n",
-    "text/css\n"
+    "text/html\r\n",
+    "image/jpg\r\n",
+    "image/png\r\n",
+    "image/bmp\r\n",
+    "text/javascript\r\n",
+    "text/css\r\n"
 };
 static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
     "html",
@@ -37,19 +37,18 @@ static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] = {
 void sendForbiddenPacket(Host remotehost)
 {
     const char *data =
-        "HTTP/1.1 301 Moved Permanently\n"
-        "Location: https://http.cat/403\n"
-        "Content-Type: text/html\n"
-        "Content-Length: 0\n\n";
+        "HTTP/1.1 403 Forbidden\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: 0\r\n\r\n";
     sendDataTCP(data, strlen(data), remotehost);
     return;
 }
 void sendBadRequestPacket(Host remotehost)
 {
     const char *data =
-        "HTTP/1.1 400 Bad Request\n"
-        "Content-Type: text/html\n"
-        "Content-Length: 0\n\n";
+        "HTTP/1.1 400 Bad Request\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: 0\r\n\r\n";
     sendDataTCP(data, strlen(data), remotehost);
     return;
 }
@@ -126,9 +125,10 @@ void sendContent(char* dir,
 {
     char          header   [HEADER_PACKET_LENGTH] = {0};
     unsigned long headerLen                       = 0;
-    const char    status          [HEADER_LENGTH] = "HTTP/1.1 200 OK\n";
+    const char    status          [HEADER_LENGTH] = "HTTP/1.1 200 OK\r\n";
     const char    contentType     [HEADER_LENGTH] = "Content-Type: ";
     const char    contentLenString[HEADER_LENGTH] = "Content-Length: ";
+    const char    corsHeader[HEADER_LENGTH]       = "Access-Control-Allow-Origin: *\r\n";
 
     char *content               = NULL;
     int   contentLen            = 0;
@@ -144,8 +144,8 @@ void sendContent(char* dir,
         }
         return;
     }
+    sprintf(lenStr, "%d\r\n", contentLen);
 
-    sprintf(lenStr, "%d\n", contentLen);
     // Status:
     strncpy(header, status, HEADER_LENGTH);
     // Content-Type:
@@ -154,13 +154,15 @@ void sendContent(char* dir,
     // Content-Length:
     strncat(header, contentLenString, HEADER_LENGTH);
     strncat(header, lenStr, STATUS_LENGTH);
+    // Access-Control:
+    strncat(header, corsHeader, HEADER_LENGTH);
 
     headerLen = strnlen (header, HEADER_PACKET_LENGTH);
     // Custom Header:
     if (customHeaders != NULL) {
         strncat(header, customHeaders, HEADER_PACKET_LENGTH - headerLen);
     }
-    strncat(header, "\n", 2);
+    strncat(header, "\r\n", 3);
 
     headerLen = strnlen (header, HEADER_PACKET_LENGTH);
 

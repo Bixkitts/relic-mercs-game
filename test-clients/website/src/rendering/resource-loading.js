@@ -15,11 +15,14 @@ export function loadShader(gl, type, source) {
     return shader;
 }
 
+let images = new Map();
+document.texImages = images;
+
 /**
  * @param {WebGLRenderingContext} gl 
  */
 export function loadTexture(gl, url) {
-    const texture = gl.createTexture();
+    let texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
     const level          = 0;
@@ -38,10 +41,12 @@ export function loadTexture(gl, url) {
                    border,
                    srcFormat,
                    srcType,
-                   pixel,);
+                   pixel);
 
     // Texture will be solid blue until the image actually loads
-    const image = new Image();
+    images.set(url, new Image());
+    const image = images.get(url);
+    image.crossOrigin = "anonymous";
     image.onload = () => {
         gl.bindTexture (gl.TEXTURE_2D, texture);
         gl.texImage2D  (gl.TEXTURE_2D, level, internalFormat, 
@@ -60,7 +65,6 @@ export function loadTexture(gl, url) {
 
     return texture;
 }
-
 function isPowerOf2(value) {
     return (value & (value - 1)) === 0;
 }
