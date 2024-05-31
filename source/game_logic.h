@@ -266,7 +266,7 @@ struct PlayerConnectRes {
     struct Coordinates playerCoords [MAX_PLAYERS_IN_GAME];
     NetID              currentTurn; // NetID of the player who's turn it is
     bool               gameOngoing; // Has the game we've joined started yet?
-    char               playerIndex; // Index in the "players" array of the connecting player
+    int8_t             playerIndex; // Index in the "players" array of the connecting player
 }__attribute__((packed));
 
 /*

@@ -1,13 +1,15 @@
 import { getAllPlayers } from  './game-logic.js';
 import { getPlayer } from  './game-logic.js';
-import { addPlayer } from  './game-logic.js';
+import { tryAddPlayer } from  './game-logic.js';
 import { getMyNetID } from  './game-logic.js';
 import { setMyNetID } from  './game-logic.js';
+import { setCurrentTurn } from  './game-logic.js';
 
 const scriptUrl     = new URL(window.location.href);
 const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
 const opcodeSize    = 2;
 const int64Size     = 8;
+let   connected     = false; // Have we done an initial connection?
 let   socket;
 
 window.onload = function() {
@@ -95,44 +97,42 @@ function sendPlayerConnect() {
 function handlePlayerConnectResponse(dataView) {
     const maxPlayers         = 8;
     const int64Size          = 8; // Size of int64 (BigInt)
+    const netIdSize          = int64Size;
     const doubleSize         = 8; // Size of double
     const opcodeSize         = 2; // Two bytes for the opcode
     const MAX_CREDENTIAL_LEN = 32;
 
     let playerList   = [];
-    let playerNames  = [];
-    let playerCoords = [];
 
-    let offset = opcodeSize;
-    
+    const netIdOffset = opcodeSize;
+    const nameOffset  = netIdOffset + (netIdSize * maxPlayers);
+    const coordOffset = nameOffset + (MAX_CREDENTIAL_LEN * maxPlayers);
     for (let i = 0; i < maxPlayers; i++) {
         // Extract player NetID
-        const netID = dataView.getBigInt64(offset, true);
+        const netID = dataView.getBigInt64(netIdOffset + (i * netIdSize), true);
         playerList.push(netID);
-        offset += int64Size;
 
         // Extract player name
         const playerNameBytes = new Uint8Array(dataView.buffer,
-                                               offset + (MAX_CREDENTIAL_LEN * i),
+                                               nameOffset + (MAX_CREDENTIAL_LEN * i),
                                                MAX_CREDENTIAL_LEN);
         const playerName      = new TextDecoder().decode(playerNameBytes).trim();
-        playerNames.push(playerName);
 
         // Extract player coordinates
-        const coordStartIndex = offset + (MAX_CREDENTIAL_LEN * maxPlayers) + (i * 2 * doubleSize);
+        const coordStartIndex = coordOffset + (i * 3 * doubleSize);
         const x = dataView.getFloat64(coordStartIndex, true);
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
-        playerCoords.push({ x, y });
 
         // Add player to the map (assuming default vigour, violence, cunning, image)
-        addPlayer(netID, x, y, 1, 2, 3, "playerTest.png");
+        tryAddPlayer(netID, x, y, 1, 2, 3, "playerTest.png", playerName);
     }
 
     // Adjust offset after player coordinates
-    offset += MAX_CREDENTIAL_LEN * maxPlayers + 2 * doubleSize * maxPlayers;
+    let offset = coordOffset + (3 * doubleSize * maxPlayers);
 
     // Extract current turn NetID
     const currentTurn = dataView.getBigInt64(offset, true);
+    setCurrentTurn(currentTurn);
     offset += int64Size;
 
     // Extract game ongoing status
@@ -140,17 +140,17 @@ function handlePlayerConnectResponse(dataView) {
     offset += 1;
 
     // Extract player index
-    const playerIndex = dataView.getInt8(offset);
-    setMyNetID(playerList[playerIndex]);
-    const myPlayer    = playerList[playerIndex];
+    if (!connected) {
+        connected = true;
+        const playerIndex = dataView.getInt8(offset);
+        setMyNetID(playerList[playerIndex]);
+        console.log('Player Index:', playerIndex, '  Offset: ', offset);
+    }
 
-    console.log('My NetID:', myPlayer);
+    console.log('My NetID:', getMyNetID());
     console.log('Player NetIDs:', playerList);
-    console.log('Player Names:', playerNames);
-    console.log('Player Coordinates:', playerCoords);
     console.log('Current Turn NetID:', currentTurn);
     console.log('Is Game Ongoing:', gameOngoing);
-    console.log('My Player Index:', playerIndex);
 }
 
 function sendHeartbeat() {

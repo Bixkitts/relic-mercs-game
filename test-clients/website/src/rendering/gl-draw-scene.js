@@ -37,20 +37,21 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
 {
     const players = getAllPlayers();
     players.forEach(player => {
-        mat4.translate (modelViewMatrix,
-                        modelViewMatrix,
+        let mv = mat4.clone(modelViewMatrix);
+        mat4.translate (mv,
+                        mv,
                         player.position,);
-        mat4.rotate    (modelViewMatrix,
-                        modelViewMatrix,
+        mat4.rotate    (mv,
+                        mv,
                         (Math.PI * ((1 - camZoom) * 0.3) + 0.4),
                         [1, 0, 0]);
-        mat4.scale     (modelViewMatrix,
-                        modelViewMatrix,
+        mat4.scale     (mv,
+                        mv,
                         [0.05, 0.05, 0.05],);
 
         gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                             false,
-                            modelViewMatrix);
+                            mv);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture  (gl.TEXTURE_2D, player.image);

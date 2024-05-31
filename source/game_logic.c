@@ -448,7 +448,7 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
 static int
 tryStartGame(struct Game *game)
 {
-    if (game->playerCount >= game->minPlayerCount) {
+    if (atomic_load(&game->playerCount) >= game->minPlayerCount) {
         // TODO: handle turn order more
         // gracefully than first come first serve.
         game->currentTurn = game->players[0].netID;
@@ -500,9 +500,12 @@ playerConnectHandler (char *data, ssize_t dataSize, Host remotehost)
         memcpy(&responseData->playerNames[i], 
                game->players[i].credentials.name, 
                namelen);
+        memcpy(&responseData->playerCoords[i], 
+               &game->players[i].coords, 
+               sizeof(game->players[i].coords));
         pthread_mutex_unlock(game->players[i].threadlock);
         if (hostPlayer->netID == id) {
-            responseData->playerIndex = (char)i;
+            responseData->playerIndex = (int8_t)i;
         }
     }
     // It's *nobody's* turn?

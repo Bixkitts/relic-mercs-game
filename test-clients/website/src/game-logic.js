@@ -12,7 +12,7 @@ let currentTurn = 0;
 let myNetID     = 0;
 
 export class Player {
-    constructor(netID, x, y, vigour, violence, cunning, image) {
+    constructor(netID, x, y, vigour, violence, cunning, image, name) {
         this.netID = netID;
         this.position = vec3.fromValues(x, y, playerZHeight);
         this.vigour   = vigour;
@@ -29,25 +29,22 @@ export class Player {
 // Map to store players by netID
 const players = new Map();
 
-// Function to add a player
-export function addPlayer(netID, x, y, vigour, violence, cunning, image) {
-    if (!players.has(netID)) {
-        const player = new Player(netID, x, y, vigour, violence, cunning, image);
+export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name) {
+    const invalidNetID = 0;
+    if (!players.has(netID) && netID != invalidNetID) {
+        const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }
 }
 
-// Function to get a player by netID
 export function getPlayer(netID) {
     return players.get(netID);
 }
 
-// Function to remove a player by netID
 export function removePlayer(netID) {
     players.delete(netID);
 }
 
-// Function to get all players (as an array)
 export function getAllPlayers() {
     return Array.from(players.values());
 }
