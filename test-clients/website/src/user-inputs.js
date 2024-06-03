@@ -4,7 +4,7 @@ import { getMyNetID } from './game-logic.js';
 import { getPlayer } from './game-logic.js';
 import { printMat4 } from './helpers.js';
 import { getSocket } from './networking.js';
-import { getProjectionMatrix } from './rendering/renderer.js';
+import { getPerspMatrix } from './rendering/renderer.js';
 import { getModelViewMatrix } from './rendering/renderer.js';
 import { rayPlaneIntersection } from './helpers';
 import { sendMovePacket } from './networking.js';
@@ -118,7 +118,7 @@ export function initWASD() {
 }
 
 function clickToWorldCoord(mouseX, mouseY) {
-    const projectionMatrix = getProjectionMatrix();
+    const projectionMatrix = getPerspMatrix();
     const modelViewMatrix  = getModelViewMatrix();
     // -------------Edder's Shit here----------------------
     const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;

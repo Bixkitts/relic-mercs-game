@@ -26,9 +26,13 @@ function screenResUpdate() {
     canvasHeight = Math.floor(screenHeight / canvasScale);
 }
 
-let   projectionMatrix = createProjMatrix(45);
-export function getProjectionMatrix() {
-    return projectionMatrix;
+let   perspMatrix = createPerspMatrix(45);
+export function getPerspMatrix() {
+    return perspMatrix;
+}
+let   orthMatrix = createOrthMatrix();
+export function getOrthMatrix() {
+    return orthMatrix;
 }
 
 let modelViewMatrix = mat4.create();
@@ -98,10 +102,6 @@ function main() {
     gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
     gl.useProgram        (programInfo.program);
 
-    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
-                        false,
-                        projectionMatrix);
-
     startRenderLoop(programInfo);
 }
 
@@ -161,6 +161,9 @@ function startRenderLoop(programInfo) {
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, modelViewMatrix);
 
+        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+                            false,
+                            perspMatrix);
         drawMapPlane  (gl, 
                        programInfo, 
                        mapTexture, 
@@ -169,6 +172,9 @@ function startRenderLoop(programInfo) {
                        camZoom, 
                        programInfo, 
                        locModelViewMatrix); 
+        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+                            false,
+                            orthMatrix);
         drawHUD       (gl,
                        programInfo,
                        mat4.create(),
@@ -191,7 +197,7 @@ function doCameraTransforms(matrix, camZoom, camPan) {
     return matrix;
 }
 
-function createProjMatrix(fov) {
+function createPerspMatrix(fov) {
     const fieldOfView      = (fov * Math.PI) / 180; // in radians
     const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const zNear            = 0.1;
@@ -201,6 +207,12 @@ function createProjMatrix(fov) {
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
     return projectionMatrix;
+}
+function createOrthMatrix() {
+    const orthMatrix = mat4.create();
+    mat4.ortho(orthMatrix, 0, 1, 0, 1, -1, 1);
+
+    return orthMatrix;
 }
 
 /*
