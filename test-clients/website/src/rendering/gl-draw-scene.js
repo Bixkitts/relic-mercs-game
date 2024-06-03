@@ -71,7 +71,7 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
     gl.disable     (gl.DEPTH_TEST);
     mat4.translate (modelViewMatrix,
                     modelViewMatrix,
-                    [0.5, 0.5, 0.0]);
+                    [0.5, 0.0, 0.0]);
     mat4.scale     (modelViewMatrix,
                     modelViewMatrix,
                     [0.1, 0.1, 1]);

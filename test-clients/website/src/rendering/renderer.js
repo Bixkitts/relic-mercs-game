@@ -230,32 +230,6 @@ function canvasInit() {
     gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-/*
- *  Was copy pasted from chat gpt,
- *  make it work in our setup
- */
-function rayPlaneIntersection(rayDir, planeNormal) {
-    let dotProduct = Vec3.dot(rayDir, planeNormal);
-    // intersection
-    if (Math.abs(dotProduct) < 1e-6) {
-        // Return null to indicate no intersection
-        return null;
-    }
-
-    // Calculate the distance from the origin to the plane along the ray direction
-    // This distance is proportional to the dot product
-    let distance = -1 * dotProduct;
-
-    // Calculate the intersection point
-    let intersectionPoint = {
-        x: rayDir.x * distance,
-        y: rayDir.y * distance,
-        z: rayDir.z * distance
-    };
-
-    return intersectionPoint;
-}
-
 function setPositionAttribute(gl, buffers, programInfo) {
     const numComponents = 3;
     const type          = gl.FLOAT;
