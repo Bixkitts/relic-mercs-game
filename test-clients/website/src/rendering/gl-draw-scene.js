@@ -65,3 +65,25 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
         }
     });
 }
+
+export function drawHUD(gl, programInfo, modelViewMatrix, texture)
+{
+    mat4.translate (modelViewMatrix,
+                    modelViewMatrix,
+                    [0.0, 0.0, -1.0]);
+    mat4.scale     (modelViewMatrix,
+                    modelViewMatrix,
+                    [0.1, 0.1, 0.1]);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture  (gl.TEXTURE_2D, texture);
+    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+
+    const offset      = 24;
+    const type        = gl.UNSIGNED_SHORT;
+    const vertexCount = 6;
+    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+}

@@ -1,6 +1,7 @@
 import { initBuffers } from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
 import { drawPlayers } from './gl-draw-scene.js';
+import { drawHUD } from './gl-draw-scene.js';
 import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
@@ -168,6 +169,10 @@ function startRenderLoop(programInfo) {
                        camZoom, 
                        programInfo, 
                        locModelViewMatrix); 
+        drawHUD       (gl,
+                       programInfo,
+                       mat4.create(),
+                       mapTexture);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
