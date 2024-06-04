@@ -22,8 +22,8 @@ export function drawMapPlane(gl, programInfo, texture, modelViewMatrix) {
 
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
-    const vertexCount = 6;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    const vertexCount = 4;
+    gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
 }
 
 /**
@@ -58,17 +58,42 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
         gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
 
         {
-            const offset      = 24;
+            const offset      = 16;
             const type        = gl.UNSIGNED_SHORT;
-            const vertexCount = 6;
-            gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+            const vertexCount = 4;
+            gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
         }
     });
 }
 
 export function drawHUD(gl, programInfo, modelViewMatrix, texture)
 {
-    gl.disable     (gl.DEPTH_TEST);
+    mat4.translate (modelViewMatrix,
+                    modelViewMatrix,
+                    [0.5, 0.0, 0.0]);
+    mat4.scale     (modelViewMatrix,
+                    modelViewMatrix,
+                    [0.1, 0.1, 1]);
+    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+                        false,
+                        modelViewMatrix);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture  (gl.TEXTURE_2D, texture);
+    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+
+    const offset      = 8;
+    const type        = gl.UNSIGNED_SHORT;
+    const vertexCount = 4;
+    gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+}
+
+// TODO: This function is to be a consumer that grabs
+// text, it's coordinates, and size from a buffer
+// and draws that in a loop, similar to how the players
+// are drawn.
+export function drawText(gl, programInfo, modelViewMatrix)
+{
     mat4.translate (modelViewMatrix,
                     modelViewMatrix,
                     [0.5, 0.0, 0.0]);
@@ -87,5 +112,4 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
     const type        = gl.UNSIGNED_SHORT;
     const vertexCount = 6;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-    gl.enable     (gl.DEPTH_TEST);
 }

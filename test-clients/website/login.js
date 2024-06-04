@@ -38,3 +38,9 @@ document.getElementById("loginForm").addEventListener("submit", function(event) 
 document.getElementById("loginForm").addEventListener("input", function(event) {
   document.getElementById("credWarning").innerText = " "; // Clear warning message
 });
+
+document.getElementById('skip').addEventListener('click', function() {
+   document.getElementById("playerName").value     = "Test";
+   document.getElementById("playerPassword").value = "Test";
+   document.getElementById("gamePassword").value   = "hello";
+});

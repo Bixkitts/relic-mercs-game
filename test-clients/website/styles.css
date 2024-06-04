@@ -37,6 +37,20 @@ input[type="submit"] {
 input[type="submit"]:hover {
     background-color: #ffcc00; /* brighter gold on hover */
 }
+input[type="button"] {
+    padding:          10px 20px;
+    font-size:        20px; /* larger submit button text */
+    border-radius:    5px;
+    border:           none;
+    background-color: #d4ac0d; /* gold button */
+    color:            #462a16; /* dark brown text */
+    cursor:           pointer;
+    transition:       background-color 0.3s;
+}
+
+input[type="button"]:hover {
+    background-color: #ffcc00; /* brighter gold on hover */
+}
 @keyframes fadeIn {
     from {
         opacity: 0;

@@ -92,6 +92,7 @@ function main() {
     gl.clearDepth        (1.0);
     gl.enable            (gl.DEPTH_TEST);
     gl.enable            (gl.BLEND);
+    gl.enable            (gl.CULL_FACE);
     gl.blendFunc         (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthFunc         (gl.LEQUAL);
     gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -175,10 +176,16 @@ function startRenderLoop(programInfo) {
         gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
                             false,
                             orthMatrix);
+        gl.disable    (gl.DEPTH_TEST);
+        // TODO: Have HUD textures and not pass in placeholder
         drawHUD       (gl,
                        programInfo,
                        mat4.create(),
                        mapTexture);
+        //drawText      (gl,
+        //               programInfo,
+        //               mat4.create());
+        gl.enable     (gl.DEPTH_TEST);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }

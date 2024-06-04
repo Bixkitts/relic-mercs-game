@@ -166,3 +166,14 @@ document.getElementById('charsheetForm').addEventListener('submit', function(eve
         event.preventDefault();
     }
 });
+
+document.getElementById('skip').addEventListener('click', function() {
+    var stat = playerSkills["vigour"];
+    stat.index += 9;
+    pointPool  -= 9;
+    updateSelectedSkillOption("vigour");
+    var stat = playerSkills["violence"];
+    stat.index += 1;
+    pointPool  -= 1;
+    updateSelectedSkillOption("violence");
+});
