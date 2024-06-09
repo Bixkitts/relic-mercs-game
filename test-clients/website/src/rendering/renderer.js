@@ -81,6 +81,9 @@ function main() {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     const shaderProgram = initShaderProgram (gl, vertexShaderSource, fragmentShaderSource);
+    // These are a set of vertex and texture coordinates
+    // That cover basically everything in the game that isn't
+    // dynamically generated, like text.
     const buffers       = initBuffers       (gl);
     const programInfo   = createProgramInfo (gl, shaderProgram);
     const fpscap        = 50;
@@ -97,13 +100,11 @@ function main() {
     gl.depthFunc         (gl.LEQUAL);
     gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    setPositionAttribute (gl, buffers, programInfo);
-    setTextureAttribute  (gl, buffers, programInfo);
 
     gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
     gl.useProgram        (programInfo.program);
 
-    startRenderLoop(programInfo);
+    startRenderLoop(programInfo, buffers);
 }
 
 function createProgramInfo(gl, shaderProgram) {
@@ -138,12 +139,14 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programInfo) {
+function startRenderLoop(programInfo, baseBuffers) {
     let   then        = 0;
     const mapTexture  = loadTexture(gl, "map01.png");
     requestAnimationFrame(render);
     function render(now) {
 
+    setPositionAttribute (gl, baseBuffers.position, programInfo);
+    setTextureAttribute  (gl, baseBuffers.texCoord, programInfo);
         renderCallbacks.forEach(callback => {
             callback(deltaTime);
         });
@@ -237,13 +240,13 @@ function canvasInit() {
     gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-function setPositionAttribute(gl, buffers, programInfo) {
+function setPositionAttribute(gl, posBuffer, programInfo) {
     const numComponents = 3;
     const type          = gl.FLOAT;
     const normalize     = false;
     const stride        = 0; 
     const offset        = 0;
-    gl.bindBuffer             (gl.ARRAY_BUFFER, buffers.position);
+    gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
     gl.vertexAttribPointer    (programInfo.attribLocations.vertexPosition,
                                numComponents,
                                type,
@@ -270,13 +273,13 @@ function setColorAttribute(gl, buffers, programInfo) {
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
 
-function setTextureAttribute(gl, buffers, programInfo) {
+function setTextureAttribute(gl, texCoordBuffer, programInfo) {
     const num       = 2; // every coordinate composed of 2 values
     const type      = gl.FLOAT;
     const normalize = false;
     const stride    = 0;
     const offset    = 0;
-    gl.bindBuffer         (gl.ARRAY_BUFFER, buffers.texCoord);
+    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
     gl.vertexAttribPointer(programInfo.attribLocations.textureCoord,
                            num,
                            type,

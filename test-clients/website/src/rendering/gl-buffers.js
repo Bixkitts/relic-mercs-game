@@ -70,6 +70,12 @@ function initIndexBuffer(gl)
     return indexBuffer;
 }
 
+/*
+ * A buffer containing UV coordinates
+ * for a single quad.
+ * Will be heavily used throughout the
+ * entire game.
+ */
 function initTextureBuffer(gl) 
 {
   const textureCoordBuffer = gl.createBuffer();
@@ -90,22 +96,63 @@ function initTextureBuffer(gl)
   return textureCoordBuffer;
 }
 
-function buildTextBuffers(gl) 
-{
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+/*
+ * We create a vertex and index
+ * buffer with as many quads
+ * as we could possibly want for a
+ * line of text and send it to the
+ * GPU
+ */
+export function initTextBuffers(gl) {
+    const vertices    = [];
+    const indices     = [];
+    const uvs         = [];
+    const charWidth   = 0.1;
+    const charHeight  = 0.1;
+    const charCount   = 80;
+    let   indexOffset = 0;
+g   
+    for (let i = 0; i < charCount; i++) {
+        const xOffset = i * charWidth;
+        // Each character is a quad (2 triangles)
+        vertices.push(
+            xOffset, charHeight, 0.0,            // top left
+            xOffset + charWidth, charHeight, 0.0,// top right
+            xOffset, 0.0, 0.0,                   // bottom left
+            xOffset + charWidth, 0.0, 0.0,       // bottom right
+        );
 
-  const textureCoordinates = [
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0
-  ];
+        // TODO: use increment operation
+        indices.push(
+            indexOffset,
+            indexOffset + 1,
+            indexOffset + 2,
+            indexOffset + 3
+        );
+        // placeholders, this will get
+        // rewritten when the text is changed
+        uvs.push(
+            0.0, 0.0,
+            1.0, 0.0,
+            0.0, 1.0,
+            1.0, 1.0
+        );
+        
+        indexOffset += 4;
+    }
 
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(textureCoordinates),
-    gl.STATIC_DRAW,
-  );
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-  return textureCoordBuffer;
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+    return {
+        vertex: vertexBuffer,
+        index: indexBuffer,
+        count: indices.length
+    };
 }
+
