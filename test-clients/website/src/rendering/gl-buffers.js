@@ -140,7 +140,7 @@ export function initTextBuffers(gl) {
 
     const texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
 
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -154,3 +154,46 @@ export function initTextBuffers(gl) {
     };
 }
 
+let textElements = [];
+
+export function getTextElements()
+{
+    return textElements;
+}
+
+export function buildTextElement(gl, string, coords) {
+    const uvs          = [];
+    const charWidthUV  = 1.0 / 16.0;  // Assuming 16x16 grid
+    const charHeightUV = 1.0 / 16.0;  // Assuming 16x16 grid
+    const len          = string.length;
+
+    // Loop through each character in the string
+    for (let i = 0; i < string.length; i++) {
+        const char      = string[i];
+        const charIndex = char.charCodeAt(0); // ASCII index
+
+        // Calculate the row and column in the texture atlas
+        const col = charIndex % 16;
+        const row = Math.floor(charIndex / 16);
+
+        // Calculate the UV offsets
+        const uMin = col * charWidthUV;
+        const vMin = 1.0 - (row + 1) * charHeightUV; // Flip V coordinate
+        const uMax = uMin + charWidthUV;
+        const vMax = vMin + charHeightUV;
+
+        // Push the UV coordinates for the character's quad
+        uvs.push(uMin, vMin,
+                 uMin, vMax,
+                 uMax, vMax,
+                 uMax, vMin);
+    }
+
+    // Create and bind the texture coordinate buffer
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+
+    // Store the buffer and coordinates
+    textElements.push({ texCoordBuffer, coords, len});
+}

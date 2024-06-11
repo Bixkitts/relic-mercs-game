@@ -1,4 +1,6 @@
-import { initBuffers, initTextBuffers } from './gl-buffers.js';
+import { initBuffers,
+         initTextBuffers,
+         buildTextElement} from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
 import { drawPlayers } from './gl-draw-scene.js';
 import { drawHUD } from './gl-draw-scene.js';
@@ -58,12 +60,13 @@ function main() {
 
             uniform mat4 uModelViewMatrix;
             uniform mat4 uProjectionMatrix;
+            uniform vec2 uUVOffset;
 
             varying highp vec2 vTextureCoord;
 
             void main(void) {
                 gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-                vTextureCoord = aTextureCoord;
+                vTextureCoord = aTextureCoord + uUVOffset;
             }
           `;
     const fragmentShaderSource = `
@@ -119,6 +122,7 @@ function createProgramInfo(gl, shaderProgram) {
         uniformLocations: {
             projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
             modelViewMatrix:  gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
+            uvOffset:         gl.getUniformLocation(shaderProgram, "uUVOffset"),
             uSampler:         gl.getUniformLocation(shaderProgram, "uSampler"),
         },
     };
@@ -142,9 +146,16 @@ export function unsubscribeFromRender(callback) {
 }
 
 function startRenderLoop(programInfo, baseBuffers, textBuffers) {
+    const textCoords = [0.5, 0.5];
+    buildTextElement(gl, "test", textCoords);
     let   then        = 0;
     const mapTexture  = loadTexture(gl, "map01.png");
     const textTexture = loadTexture(gl, "BirdFont88.bmp");
+    // zero our texture UV offset
+    const uvOffset = vec2.create();
+    gl.uniform2fv(programInfo.uniformLocations.uvOffset,
+                  uvOffset);
+
     requestAnimationFrame(render);
     function render(now) {
 
@@ -166,9 +177,8 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, modelViewMatrix);
 
-        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
-                            false,
-                            perspMatrix);
+        setPersp             (programInfo);
+
         setPositionAttribute (gl, baseBuffers.vertices, programInfo);
         setTextureAttribute  (gl, baseBuffers.uvs, programInfo);
         gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
@@ -180,11 +190,9 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
                        camZoom, 
                        programInfo, 
                        locModelViewMatrix); 
+        setOrtho      (programInfo);
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
-        gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
-                            false,
-                            orthMatrix);
         gl.disable    (gl.DEPTH_TEST);
         // TODO: Have HUD textures and not pass in placeholder
         drawHUD       (gl,
@@ -192,15 +200,26 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
                        mat4.create(),
                        mapTexture);
         setPositionAttribute (gl, textBuffers.vertices, programInfo);
-        setTextureAttribute  (gl, textBuffers.uvs, programInfo);
         gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
         drawText      (gl,
                        programInfo,
                        mat4.create(),
-                       textTexture,
-                       "test");
+                       textTexture);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
+}
+
+function setPersp(programInfo)
+{
+    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+                        false,
+                        perspMatrix);
+}
+function setOrtho(programInfo)
+{
+    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+                        false,
+                        orthMatrix);
 }
 
 function doCameraTransforms(matrix, camZoom, camPan) {
@@ -283,7 +302,7 @@ function setColorAttribute(gl, buffers, programInfo) {
     gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 }
 
-function setTextureAttribute(gl, texCoordBuffer, programInfo) {
+export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
     const num       = 2; // every coordinate composed of 2 values
     const type      = gl.FLOAT;
     const normalize = false;

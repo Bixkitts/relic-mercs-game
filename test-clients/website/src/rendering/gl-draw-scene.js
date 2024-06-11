@@ -2,6 +2,8 @@ import { ProgramInfo } from "./type-hints.js";
 import { getAllPlayers } from "../game-logic.js";
 import { Player } from "../game-logic.js";
 import { loadTexture } from "./resource-loading.js";
+import { getTextElements } from "./gl-buffers.js";
+import { setTextureAttribute } from "./renderer.js";
 
 /**
  * @param {WebGLRenderingContext} gl 
@@ -88,18 +90,13 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
     gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
 }
 
-// TODO: This function is to be a consumer that grabs
+// This function is to be a consumer that grabs
 // text, it's coordinates, and size from a buffer
 // and draws that in a loop, similar to how the players
 // are drawn.
-export function drawText(gl, programInfo, modelViewMatrix, texture, string)
+export function drawText(gl, programInfo, modelViewMatrix, texture)
 {
-    mat4.translate (modelViewMatrix,
-                    modelViewMatrix,
-                    [0.5, 0.5, 0.0]);
-    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
-                        false,
-                        modelViewMatrix);
+    const textElements = getTextElements();
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture  (gl.TEXTURE_2D, texture);
@@ -107,6 +104,15 @@ export function drawText(gl, programInfo, modelViewMatrix, texture, string)
 
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
-    const vertexCount = 24;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+    for (const textElement of textElements) {
+        const { texCoordBuffer, coords, len } = textElement;
+        setTextureAttribute  (gl, texCoordBuffer, programInfo);
+        mat4.translate (modelViewMatrix,
+                        modelViewMatrix,
+                        [coords[0], coords[1], 0.0]);
+        gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+                            false,
+                            modelViewMatrix);
+        gl.drawElements(gl.TRIANGLES, len * 6, type, offset);
+    }
 }
