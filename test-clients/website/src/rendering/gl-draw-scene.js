@@ -70,7 +70,7 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
 {
     mat4.translate (modelViewMatrix,
                     modelViewMatrix,
-                    [0.5, 0.0, 0.0]);
+                    [0.5, 0.1, 0.0]);
     mat4.scale     (modelViewMatrix,
                     modelViewMatrix,
                     [0.1, 0.1, 1]);
@@ -92,14 +92,11 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
 // text, it's coordinates, and size from a buffer
 // and draws that in a loop, similar to how the players
 // are drawn.
-export function drawText(gl, programInfo, modelViewMatrix)
+export function drawText(gl, programInfo, modelViewMatrix, texture, string)
 {
     mat4.translate (modelViewMatrix,
                     modelViewMatrix,
-                    [0.5, 0.0, 0.0]);
-    mat4.scale     (modelViewMatrix,
-                    modelViewMatrix,
-                    [0.1, 0.1, 1]);
+                    [0.5, 0.5, 0.0]);
     gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
                         false,
                         modelViewMatrix);
@@ -108,8 +105,8 @@ export function drawText(gl, programInfo, modelViewMatrix)
     gl.bindTexture  (gl.TEXTURE_2D, texture);
     gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
 
-    const offset      = 24;
+    const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
-    const vertexCount = 6;
+    const vertexCount = 24;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 }

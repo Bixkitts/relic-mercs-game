@@ -6,8 +6,8 @@ export function initBuffers(gl)
     const texBuffer      = initTextureBuffer (gl);
       
     return {
-        position: positionBuffer,
-        texCoord: texBuffer,
+        vertices: positionBuffer,
+        uvs:      texBuffer,
         indices:  indexBuffer,
     };
 }
@@ -78,22 +78,20 @@ function initIndexBuffer(gl)
  */
 function initTextureBuffer(gl) 
 {
-  const textureCoordBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
-
-  const textureCoordinates = [
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0
-  ];
-
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(textureCoordinates),
-    gl.STATIC_DRAW,
-  );
-
-  return textureCoordBuffer;
+    const textureCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
+  
+    const textureCoordinates = [
+        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0
+    ];
+  
+    gl.bufferData(gl.ARRAY_BUFFER,
+                  new Float32Array(textureCoordinates),
+                  gl.STATIC_DRAW);
+  
+    return textureCoordBuffer;
 }
 
 /*
@@ -111,48 +109,48 @@ export function initTextBuffers(gl) {
     const charHeight  = 0.1;
     const charCount   = 80;
     let   indexOffset = 0;
-g   
     for (let i = 0; i < charCount; i++) {
         const xOffset = i * charWidth;
         // Each character is a quad (2 triangles)
-        vertices.push(
-            xOffset, charHeight, 0.0,            // top left
-            xOffset + charWidth, charHeight, 0.0,// top right
-            xOffset, 0.0, 0.0,                   // bottom left
-            xOffset + charWidth, 0.0, 0.0,       // bottom right
-        );
+        vertices.push(xOffset, 0.0, 0.0,                   // bottom left
+                      xOffset, charHeight, 0.0,            // top left
+                      xOffset + charWidth, charHeight, 0.0,// top right
+                      xOffset + charWidth, 0.0, 0.0,       // bottom right
+                      );
 
-        // TODO: use increment operation
-        indices.push(
-            indexOffset,
-            indexOffset + 1,
-            indexOffset + 2,
-            indexOffset + 3
-        );
+        indices.push(indexOffset,
+                     indexOffset + 2,
+                     indexOffset + 1,
+                     indexOffset,
+                     indexOffset + 3,
+                     indexOffset + 2);
+        indexOffset += 4;
         // placeholders, this will get
         // rewritten when the text is changed
-        uvs.push(
-            0.0, 0.0,
-            1.0, 0.0,
-            0.0, 1.0,
-            1.0, 1.0
-        );
-        
-        indexOffset += 4;
+        const letterIndex = 1;
+        uvs.push(0.0625, 1.0-0.0625,
+                 0.0625, 1.0,
+                 0.0625*2.0, 1.0,
+                 0.0625*2.0, 1.0-0.0625);
     }
 
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.DYNAMIC_DRAW);
+
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
     return {
-        vertex: vertexBuffer,
-        index: indexBuffer,
-        count: indices.length
+        vertices: vertexBuffer,
+        uvs:      texCoordBuffer,
+        indices:  indexBuffer,
+        count:    indices.length
     };
 }
 

@@ -1,7 +1,8 @@
-import { initBuffers } from './gl-buffers.js';
+import { initBuffers, initTextBuffers } from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
 import { drawPlayers } from './gl-draw-scene.js';
 import { drawHUD } from './gl-draw-scene.js';
+import { drawText } from './gl-draw-scene.js';
 import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
@@ -84,7 +85,9 @@ function main() {
     // These are a set of vertex and texture coordinates
     // That cover basically everything in the game that isn't
     // dynamically generated, like text.
-    const buffers       = initBuffers       (gl);
+    const baseBuffers   = initBuffers       (gl);
+    // A set of preloaded buffers for rendering text
+    const textBuffers   = initTextBuffers   (gl);
     const programInfo   = createProgramInfo (gl, shaderProgram);
     const fpscap        = 50;
 
@@ -101,10 +104,9 @@ function main() {
     gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
-    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
     gl.useProgram        (programInfo.program);
 
-    startRenderLoop(programInfo, buffers);
+    startRenderLoop(programInfo, baseBuffers, textBuffers);
 }
 
 function createProgramInfo(gl, shaderProgram) {
@@ -139,14 +141,13 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programInfo, baseBuffers) {
+function startRenderLoop(programInfo, baseBuffers, textBuffers) {
     let   then        = 0;
     const mapTexture  = loadTexture(gl, "map01.png");
+    const textTexture = loadTexture(gl, "BirdFont88.bmp");
     requestAnimationFrame(render);
     function render(now) {
 
-    setPositionAttribute (gl, baseBuffers.position, programInfo);
-    setTextureAttribute  (gl, baseBuffers.texCoord, programInfo);
         renderCallbacks.forEach(callback => {
             callback(deltaTime);
         });
@@ -168,6 +169,9 @@ function startRenderLoop(programInfo, baseBuffers) {
         gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
                             false,
                             perspMatrix);
+        setPositionAttribute (gl, baseBuffers.vertices, programInfo);
+        setTextureAttribute  (gl, baseBuffers.uvs, programInfo);
+        gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
         drawMapPlane  (gl, 
                        programInfo, 
                        mapTexture, 
@@ -176,6 +180,8 @@ function startRenderLoop(programInfo, baseBuffers) {
                        camZoom, 
                        programInfo, 
                        locModelViewMatrix); 
+        // From this point we render UI, so we
+        // make it orthographic and disable the depth testing
         gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
                             false,
                             orthMatrix);
@@ -185,10 +191,14 @@ function startRenderLoop(programInfo, baseBuffers) {
                        programInfo,
                        mat4.create(),
                        mapTexture);
-        //drawText      (gl,
-        //               programInfo,
-        //               mat4.create());
-        gl.enable     (gl.DEPTH_TEST);
+        setPositionAttribute (gl, textBuffers.vertices, programInfo);
+        setTextureAttribute  (gl, textBuffers.uvs, programInfo);
+        gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+        drawText      (gl,
+                       programInfo,
+                       mat4.create(),
+                       textTexture,
+                       "test");
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
