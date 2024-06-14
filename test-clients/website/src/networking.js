@@ -5,29 +5,29 @@ import { getMyNetID } from  './game-logic.js';
 import { setMyNetID } from  './game-logic.js';
 import { setCurrentTurn } from  './game-logic.js';
 
-const scriptUrl     = new URL(window.location.href);
-const websocketUrl  = 'wss://' + scriptUrl.hostname + ':' + scriptUrl.port;
-const opcodeSize    = 2;
-const int64Size     = 8;
-let   connected     = false; // Have we done an initial connection?
-let   socket;
+const _scriptUrl     = new URL(window.location.href);
+const _websocketUrl  = 'wss://' + _scriptUrl.hostname + ':' + _scriptUrl.port;
+const _opcodeSize    = 2;
+const _int64Size     = 8;
+let   _connected     = false; // Have we done an initial connection?
+let   _socket;
 
 window.onload = function() {
-    socket            = new WebSocket(websocketUrl);
-    socket.binaryType = "arraybuffer";
-    socket.onmessage  = e => handleIncoming(e.data);
-    socket.onopen = () => {
+    _socket            = new WebSocket(_websocketUrl);
+    _socket.binaryType = "arraybuffer";
+    _socket.onmessage  = e => handleIncoming(e.data);
+    _socket.onopen = () => {
         console.log('WebSocket connection established');
         setInterval(sendHeartbeat, 3000);
         sendPlayerConnect();
     }
 
 
-    socket.onerror = e => console.log('WebSocket error:', e);
+    _socket.onerror = e => console.log('WebSocket error:', e);
 }
 
 export function getSocket() {
-    return socket;
+    return _socket;
 }
 
 
@@ -57,7 +57,7 @@ function handleIncoming(msg) {
 
 function handleMovePlayerResponse(dataView) {
 
-    const playerNetID = dataView.getBigInt64(opcodeSize, true);
+    const playerNetID = dataView.getBigInt64(_opcodeSize, true);
 
     const xCoord = dataView.getFloat64(10, true);
     const yCoord = dataView.getFloat64(18, true);
@@ -82,7 +82,7 @@ function sendPlayerConnect() {
     // Placeholder data, does nothing
     dataView.setInt8    (2, 0, true);
 
-    socket.send(ab);
+    _socket.send(ab);
 }
 // The C struct
 // -----------------------------------
@@ -140,8 +140,8 @@ function handlePlayerConnectResponse(dataView) {
     offset += 1;
 
     // Extract player index
-    if (!connected) {
-        connected = true;
+    if (!_connected) {
+        _connected = true;
         const playerIndex = dataView.getInt8(offset);
         setMyNetID(playerList[playerIndex]);
         console.log('Player Index:', playerIndex, '  Offset: ', offset);
@@ -158,7 +158,7 @@ function sendHeartbeat() {
     const ab = new ArrayBuffer(2);
     ab[0] = 0b0;
     ab[1] = 0b0;
-    socket.send(ab);
+    _socket.send(ab);
 }
 
 export function sendMovePacket(coordX, coordY) {
@@ -170,7 +170,7 @@ export function sendMovePacket(coordX, coordY) {
     dataView.setFloat64 (2, coordX, true);
     dataView.setFloat64 (10, coordY, true);
 
-    socket.send(ab);
+    _socket.send(ab);
 }
 
 export function sendArgs() {

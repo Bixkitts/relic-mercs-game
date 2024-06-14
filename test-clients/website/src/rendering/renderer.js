@@ -11,37 +11,37 @@ import { getGLContext } from '../canvas-getter.js'
 import { loadTexture } from './resource-loading.js';
 import { initShaderPrograms } from './shaders.js';
 
-const gl           = getGLContext();
-let   deltaTime    = 0;
-const canvas       = document.getElementById('glcanvas');
+const _gl           = getGLContext();
+let   _deltaTime    = 0;
+const _canvas       = document.getElementById('glcanvas');
 
-const canvasScale  = 2; // Larger = smaller canvas
-let   screenWidth  = window.screen.availWidth;
-let   screenHeight = window.screen.availHeight;
-let   canvasWidth  = Math.floor(screenWidth / canvasScale);
-let   canvasHeight = Math.floor(screenHeight / canvasScale);
+const _canvasScale  = 2; // Larger = smaller canvas
+let   _screenWidth  = window.screen.availWidth;
+let   _screenHeight = window.screen.availHeight;
+let   _canvasWidth  = Math.floor(_screenWidth / _canvasScale);
+let   _canvasHeight = Math.floor(_screenHeight / _canvasScale);
 // We'll want to run this refularly in case
 // the screen resolution changes e.g.
 // browser window is moved to a different monitor
 function screenResUpdate() {
-    screenWidth  = window.screen.availWidth;
-    screenHeight = window.screen.availHeight;
-    canvasWidth  = Math.floor(screenWidth / canvasScale);
-    canvasHeight = Math.floor(screenHeight / canvasScale);
+    _screenWidth  = window.screen.availWidth;
+    _screenHeight = window.screen.availHeight;
+    _canvasWidth  = Math.floor(_screenWidth / _canvasScale);
+    _canvasHeight = Math.floor(_screenHeight / _canvasScale);
 }
 
-let   perspMatrix = createPerspMatrix(45);
+let   _perspMatrix = createPerspMatrix(45);
 export function getPerspMatrix() {
-    return perspMatrix;
+    return _perspMatrix;
 }
-let   orthMatrix = createOrthMatrix();
+let   _orthMatrix = createOrthMatrix();
 export function getOrthMatrix() {
-    return orthMatrix;
+    return _orthMatrix;
 }
 
-let modelViewMatrix = mat4.create();
+let _modelViewMatrix = mat4.create();
 export function getModelViewMatrix() {
-    return modelViewMatrix;
+    return _modelViewMatrix;
 }
 
 export function getCamWorldPos() {
@@ -55,117 +55,119 @@ main();
 function main() {
     canvasInit()
     initWASD();
-    if (gl === null) {
+    if (_gl === null) {
         return;
     }
     // Flip image pixels into the bottom-to-top order that WebGL expects.
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);
 
     // These are a set of vertex and texture coordinates
     // That cover basically everything in the game that isn't
     // dynamically generated, like text.
-    const baseBuffers   = initBuffers       (gl);
+    const baseBuffers   = initBuffers       (_gl);
     // A set of preloaded buffers for rendering text
-    const textBuffers   = initTextBuffers   (gl);
-    const programs      = initShaderPrograms(gl);
+    const textBuffers   = initTextBuffers   (_gl);
+    const programs      = initShaderPrograms(_gl);
     const fpscap        = 50;
 
     document.sperframe  = (1000 / fpscap);
     document.fps        = 0;
 
-    gl.clearColor        (0.0, 0.0, 0.0, 1.0);
-    gl.clearDepth        (1.0);
-    gl.enable            (gl.DEPTH_TEST);
-    gl.enable            (gl.BLEND);
-    gl.enable            (gl.CULL_FACE);
-    gl.blendFunc         (gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthFunc         (gl.LEQUAL);
-    gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    _gl.clearColor        (0.0, 0.0, 0.0, 1.0);
+    _gl.clearDepth        (1.0);
+    _gl.enable            (_gl.DEPTH_TEST);
+    _gl.enable            (_gl.BLEND);
+    _gl.enable            (_gl.CULL_FACE);
+    _gl.blendFunc         (_gl.SRC_ALPHA, _gl.ONE_MINUS_SRC_ALPHA);
+    _gl.depthFunc         (_gl.LEQUAL);
+    _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
     startRenderLoop(programs, baseBuffers, textBuffers);
 }
 
 
 // Define an array to hold callback functions
-let renderCallbacks = [];
+let _renderCallbacks = [];
 
 // Function to subscribe to the onRender event
 export function subscribeToRender(callback) {
-    renderCallbacks.push(callback);
+    _renderCallbacks.push(callback);
 }
 
 // Function to unsubscribe from the onRender event
 export function unsubscribeFromRender(callback) {
-    const index = renderCallbacks.indexOf(callback);
+    const index = _renderCallbacks.indexOf(callback);
     if (index !== -1) {
-        renderCallbacks.splice(index, 1);
+        _renderCallbacks.splice(index, 1);
     }
 }
 
 function startRenderLoop(programs, baseBuffers, textBuffers) {
-    gl.useProgram        (programs[0].program);
-
+    _gl.useProgram        (programs[0].program);
     console.log("Programs:" + programs);
 
     const textCoords = [0.5, 0.5];
-    buildTextElement(gl, "test", textCoords);
+    buildTextElement(_gl, "test", textCoords);
     let   then        = 0;
-    const mapTexture  = loadTexture(gl, "map01.png");
-    const textTexture = loadTexture(gl, "BirdFont88.bmp");
+    const mapTexture  = loadTexture(_gl, "map01.png");
+    const textTexture = loadTexture(_gl, "BirdFont88.bmp");
     // zero our texture UV offset
     const uvOffset = vec2.create();
-    gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
+    _gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
                   uvOffset);
 
     requestAnimationFrame(render);
     function render(now) {
+        _gl.useProgram(programs[0].program);
 
-        renderCallbacks.forEach(callback => {
-            callback(deltaTime);
+        _renderCallbacks.forEach(callback => {
+            callback(_deltaTime);
         });
 
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        _gl.clear(_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
         document.fps++;
-        deltaTime = now - then;
-        const wait = document.sperframe - deltaTime;
+        _deltaTime = now - then;
+        const wait = document.sperframe - _deltaTime;
         then = now;
 
-        const camPan          = getCamPan (deltaTime);
-        const camZoom         = getZoom   (deltaTime);
+        const camPan          = getCamPan (_deltaTime);
+        const camZoom         = getZoom   (_deltaTime);
 
-        modelViewMatrix = doCameraTransforms(mat4.create(),
+        _modelViewMatrix = doCameraTransforms(mat4.create(),
                                              camZoom,
                                              camPan);
 
         let locModelViewMatrix = mat4.create();
-        mat4.copy(locModelViewMatrix, modelViewMatrix);
+        mat4.copy(locModelViewMatrix, _modelViewMatrix);
 
         setPersp             (programs[0]);
 
-        setPositionAttribute (gl, baseBuffers.vertices, programs[0]);
-        setTextureAttribute  (gl, baseBuffers.uvs, programs[0]);
-        gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
-        drawMapPlane  (gl, 
+        setPositionAttribute (_gl, baseBuffers.vertices, programs[0]);
+        setTextureAttribute  (_gl, baseBuffers.uvs, programs[0]);
+        _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
+        drawMapPlane  (_gl, 
                        programs[0], 
                        mapTexture, 
                        locModelViewMatrix);
-        drawPlayers   (gl, 
+        drawPlayers   (_gl, 
                        camZoom, 
                        programs[0], 
                        locModelViewMatrix); 
         setOrtho      (programs[0]);
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
-        gl.disable    (gl.DEPTH_TEST);
+        _gl.disable    (_gl.DEPTH_TEST);
         // TODO: Have HUD textures and not pass in placeholder
-        drawHUD       (gl,
+        drawHUD       (_gl,
                        programs[0],
                        mat4.create(),
                        mapTexture);
-        setPositionAttribute (gl, textBuffers.vertices, programs[0]);
-        gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
-        drawText      (gl,
-                       programs[0],
+        _gl.useProgram(programs[1].program);
+        setOrtho      (programs[1]);
+        setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
+        _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+        drawText      (_gl,
+                       programs[1],
                        mat4.create(),
                        textTexture);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
@@ -174,15 +176,15 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
 
 function setPersp(programInfo)
 {
-    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
+    _gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
-                        perspMatrix);
+                        _perspMatrix);
 }
 function setOrtho(programInfo)
 {
-    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
+    _gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
-                        orthMatrix);
+                        _orthMatrix);
 }
 
 function doCameraTransforms(matrix, camZoom, camPan) {
@@ -201,7 +203,7 @@ function doCameraTransforms(matrix, camZoom, camPan) {
 
 function createPerspMatrix(fov) {
     const fieldOfView      = (fov * Math.PI) / 180; // in radians
-    const aspect           = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    const aspect           = _gl.canvas.clientWidth / _gl.canvas.clientHeight;
     const zNear            = 0.1;
     const zFar             = 100.0;
     const projectionMatrix = mat4.create();
@@ -223,13 +225,13 @@ function createOrthMatrix() {
  * selection, or "createElement".
  */
 function canvasInit() {
-    canvas.width  = canvasWidth;
-    canvas.height = canvasHeight;
+    _canvas.width  = _canvasWidth;
+    _canvas.height = _canvasHeight;
 
-    canvas.style.width  = canvasWidth + 'px';
-    canvas.style.height = canvasHeight + 'px';
+    _canvas.style.width  = _canvasWidth + 'px';
+    _canvas.style.height = _canvasHeight + 'px';
 
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    _gl.viewport(0, 0, _canvas.width, _canvas.height);
 }
 
 function setPositionAttribute(gl, posBuffer, programInfo) {
@@ -267,34 +269,34 @@ export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
 function toggleFullScreen() {
     screenResUpdate();
     if (!document.fullscreenElement) {
-        canvas.requestFullscreen();
-        canvas.width  = screenWidth;
-        canvas.height = screenHeight;
+        _canvas.requestFullscreen();
+        _canvas.width  = _screenWidth;
+        _canvas.height = _screenHeight;
 
-        canvas.style.width  = screenWidth + 'px';
-        canvas.style.height = screenHeight + 'px';
-        gl.viewport(0, 0, screenWidth, screenHeight);
+        _canvas.style.width  = _screenWidth + 'px';
+        _canvas.style.height = _screenHeight + 'px';
+        _gl.viewport(0, 0, _screenWidth, _screenHeight);
     } else {
         if (document.exitFullscreen) {
             document.exitFullscreen();
-            canvas.width  = canvasWidth;
-            canvas.height = canvasHeight;
+            _canvas.width  = _canvasWidth;
+            _canvas.height = _canvasHeight;
 
-            canvas.style.width  = canvasWidth + 'px';
-            canvas.style.height = canvasHeight + 'px';
+            _canvas.style.width  = _canvasWidth + 'px';
+            _canvas.style.height = _canvasHeight + 'px';
 
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            _gl.viewport(0, 0, _canvas.width, _canvas.height);
         }
     }
 }
 document.addEventListener('fullscreenchange', function() {
     screenResUpdate();
     if (!document.fullscreenElement) {
-        canvas.width  = canvasWidth;
-        canvas.height = canvasHeight;
+        _canvas.width  = _canvasWidth;
+        _canvas.height = _canvasHeight;
 
-        canvas.style.width  = canvasWidth + 'px';
-        canvas.style.height = canvasHeight + 'px';
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        _canvas.style.width  = _canvasWidth + 'px';
+        _canvas.style.height = _canvasHeight + 'px';
+        _gl.viewport(0, 0, _canvas.width, _canvas.height);
     }
 });

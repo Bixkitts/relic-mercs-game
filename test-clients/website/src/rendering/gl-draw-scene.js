@@ -1,6 +1,5 @@
 import { ProgramInfo } from "./type-hints.js";
 import { getAllPlayers } from "../game-logic.js";
-import { Player } from "../game-logic.js";
 import { loadTexture } from "./resource-loading.js";
 import { getTextElements } from "./gl-buffers.js";
 import { setTextureAttribute } from "./renderer.js";

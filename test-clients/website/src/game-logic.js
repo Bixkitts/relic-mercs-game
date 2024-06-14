@@ -4,21 +4,22 @@ import { loadTexture } from './resource-loading.js';
 // Where we should position the player
 // models so they align with the map plane
 // on Z axis
-const playerZHeight = 0.0125;
+const _playerZHeight = 0.0125;
 
 // We get this from the server and use it to know
 // who's turn it currently is
-let currentTurn = 0;
-let myNetID     = 0;
+let _currentTurn = 0;
+let _myNetID     = 0;
 
 export class Player {
     constructor(netID, x, y, vigour, violence, cunning, image, name) {
-        this.netID = netID;
-        this.position = vec3.fromValues(x, y, playerZHeight);
+        this.netID    = netID;
+        this.position = vec3.fromValues(x, y, _playerZHeight);
         this.vigour   = vigour;
         this.violence = violence;
         this.cunning  = cunning;
         this.image    = loadTexture(getGLContext(), image);
+        this.name     = name;
     }
     move(targetX, targetY) {
         this.position[0] = targetX;
@@ -50,13 +51,13 @@ export function getAllPlayers() {
 }
 
 export function setCurrentTurn(netID) {
-    currentTurn = netID;
+    _currentTurn = netID;
 }
 
 export function setMyNetID(netID) {
-    myNetID = netID;
+    _myNetID = netID;
 }
 
 export function getMyNetID() {
-    return myNetID;
+    return _myNetID;
 }

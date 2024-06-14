@@ -57,6 +57,16 @@ const _shaderConfigs = [
                          "uUVOffset",
                          "uSampler"]
     },
+    {
+        vertexSource:   _basicVertShaderSource,
+        fragmentSource: _textFragShaderSource,
+        attributes:     ["aVertexPosition",
+                         "aTextureCoord"],
+        uniforms:       ["uProjectionMatrix",
+                         "uModelViewMatrix",
+                         "uUVOffset",
+                         "uSampler"]
+    },
     // Add more shader configurations here
 ];
 
