@@ -82,9 +82,18 @@ function main() {
     _gl.depthFunc         (_gl.LEQUAL);
     _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
+    initVAOs              ();
+
     startRenderLoop(programs, baseBuffers, textBuffers);
 }
 
+function initVAOs()
+{
+    const vao = _gl.createVertexArray();
+    _gl.bindVertexArray(vao);
+
+    _gl.bindVertexArray(null);
+}
 
 // Define an array to hold callback functions
 let _renderCallbacks = [];
@@ -107,10 +116,10 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
     console.log("Programs:" + programs);
 
     const textCoords = [0.5, 0.5];
-    buildTextElement(_gl, "test", textCoords);
+    buildTextElement("Hello world.", textCoords, 0.2);
     let   then        = 0;
-    const mapTexture  = loadTexture(_gl, "map01.png");
-    const textTexture = loadTexture(_gl, "BirdFont88.bmp");
+    const mapTexture  = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR);
+    const textTexture = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST);
     // zero our texture UV offset
     const uvOffset = vec2.create();
     _gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
@@ -162,14 +171,14 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
                        programs[0],
                        mat4.create(),
                        mapTexture);
-        _gl.useProgram(programs[1].program);
-        setOrtho      (programs[1]);
-        setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
-        _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
-        drawText      (_gl,
-                       programs[1],
-                       mat4.create(),
-                       textTexture);
+        //_gl.useProgram(programs[1].program);
+        //setOrtho      (programs[1]);
+        //setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
+        //_gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+        //drawText      (_gl,
+        //               programs[1],
+        //               mat4.create(),
+        //               textTexture);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
@@ -263,6 +272,22 @@ export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
                            normalize,
                            stride,
                            offset,);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
+}
+export function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureCoord"], 1);
     gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
 }
 

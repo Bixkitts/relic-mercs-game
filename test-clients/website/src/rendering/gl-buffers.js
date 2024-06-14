@@ -1,3 +1,5 @@
+import { getGLContext } from '../canvas-getter.js';
+
 export function initBuffers(gl) 
 {
     const positionBuffer = initPositionBuffer(gl);
@@ -105,9 +107,9 @@ export function initTextBuffers(gl) {
     const vertices    = [];
     const indices     = [];
     const uvs         = [];
-    const charWidth   = 0.1;
+    const charWidth   = 0.06;
     const charHeight  = 0.1;
-    const charCount   = 80;
+    const charCount   = 1;
     let   indexOffset = 0;
     for (let i = 0; i < charCount; i++) {
         const xOffset = i * charWidth;
@@ -161,7 +163,8 @@ export function getTextElements()
     return textElements;
 }
 
-export function buildTextElement(gl, string, coords) {
+export function buildTextElement(string, coords, size) {
+    const gl           = getGLContext();
     const uvs          = [];
     const charWidthUV  = 1.0 / 16.0;  // Assuming 16x16 grid
     const charHeightUV = 1.0 / 16.0;  // Assuming 16x16 grid
@@ -195,5 +198,5 @@ export function buildTextElement(gl, string, coords) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
 
     // Store the buffer and coordinates
-    textElements.push({ texCoordBuffer, coords, len});
+    textElements.push({ texCoordBuffer, coords, len, size});
 }

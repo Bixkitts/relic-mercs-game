@@ -1,36 +1,69 @@
 import { initShaderProgram } from './resource-loading';
 
-const _basicVertShaderSource = `
-attribute vec4 aVertexPosition;
-attribute vec2 aTextureCoord; 
+const _basicVertShaderSource = 
+`#version 300 es
+
+in vec4 aVertexPosition;
+in vec2 aTextureCoord; 
 
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform vec2 uUVOffset;
 
-varying highp vec2 vTextureCoord;
+out vec2 vTextureCoord;
 
 void main(void) {
     gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
     vTextureCoord = aTextureCoord + uUVOffset;
 }
 `;
-const _basicFragShaderSource = `
-precision mediump float;
-varying highp vec2 vTextureCoord;
+const _basicFragShaderSource =
+`#version 300 es
+
+precision highp float;
+in vec2 vTextureCoord;
 uniform sampler2D uSampler;
 
+out vec4 fragColor;
+
 void main(void) {
-    gl_FragColor = texture2D(uSampler, vTextureCoord);
+    fragColor = texture(uSampler, vTextureCoord);
 }
 `;
-const _textFragShaderSource = `
-precision mediump float;
-varying highp vec2 vTextureCoord;
-uniform sampler2D uSampler;
+const _textVertShaderSource = 
+`#version 300 es
+
+in vec4 aVertexPosition;
+in vec2 aTextureCoord; 
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform vec2 uUVOffset;
+
+out vec2 vTextureCoord;
 
 void main(void) {
-    vec4 textureColor = texture2D(uSampler, vTextureCoord);
+    // Calculate the position of the vertex
+    vec4 instanceOffset = vec4(float(gl_InstanceID) * uInstanceOffset, 0.0, 0.0, 0.0);
+    gl_Position = uProjectionMatrix * uModelViewMatrix * (aVertexPosition + instanceOffset);
+    
+    // Pass the texture coordinate to the fragment shader
+    vTextureCoord = aTextureCoord + uUVOffset;
+}
+`;
+const _textFragShaderSource = 
+`#version 300 es
+
+precision highp float;
+
+in vec2 vTextureCoord;
+
+uniform sampler2D uSampler;
+
+out vec4 fragColor;
+
+void main(void) {
+    vec4 textureColor = texture(uSampler, vTextureCoord);
     
     // Hardcoded magenta color
     vec3 transparentColor = vec3(1.0, 1.0, 1.0);
@@ -42,7 +75,7 @@ void main(void) {
     // If the difference is less than the threshold, set alpha to zero
     float alpha =  step(threshold, max(diff.r, max(diff.g, diff.b)));
 
-    gl_FragColor = vec4(textureColor.rgb, textureColor.a * alpha);
+    fragColor = vec4(textureColor.rgb, textureColor.a * alpha);
 }
 `;
 
@@ -54,8 +87,7 @@ const _shaderConfigs = [
                          "aTextureCoord"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
-                         "uUVOffset",
-                         "uSampler"]
+                         "uUVOffset"]
     },
     {
         vertexSource:   _basicVertShaderSource,
@@ -64,8 +96,7 @@ const _shaderConfigs = [
                          "aTextureCoord"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
-                         "uUVOffset",
-                         "uSampler"]
+                         "uUVOffset"]
     },
     // Add more shader configurations here
 ];

@@ -2,7 +2,7 @@
 
 const canvasQuery = "#glcanvas";
 const canvas = document.querySelector(canvasQuery);
-const context = canvas.getContext("webgl", {alpha:false});
+const context = canvas.getContext("webgl2", {alpha:false});
 if (context === null) {
     alert("Unable to initialize WebGL. Your browser or machine may not support it.");
 }

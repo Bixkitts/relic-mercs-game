@@ -18,7 +18,7 @@ export class Player {
         this.vigour   = vigour;
         this.violence = violence;
         this.cunning  = cunning;
-        this.image    = loadTexture(getGLContext(), image);
+        this.image    = loadTexture(getGLContext(), image, getGLContext().LINEAR);
         this.name     = name;
     }
     move(targetX, targetY) {
