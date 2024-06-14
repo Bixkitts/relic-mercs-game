@@ -8,7 +8,8 @@ import { drawText } from './gl-draw-scene.js';
 import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
-import { initShaderProgram, loadTexture } from './resource-loading.js';
+import { loadTexture } from './resource-loading.js';
+import { initShaderPrograms } from './shaders.js';
 
 const gl           = getGLContext();
 let   deltaTime    = 0;
@@ -54,57 +55,19 @@ main();
 function main() {
     canvasInit()
     initWASD();
-    const vertexShaderSource = `
-attribute vec4 aVertexPosition;
-attribute vec2 aTextureCoord; 
-
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
-uniform vec2 uUVOffset;
-
-varying highp vec2 vTextureCoord;
-
-void main(void) {
-    gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vTextureCoord = aTextureCoord + uUVOffset;
-}
-          `;
-    const fragmentShaderSource = `
-precision mediump float;
-varying highp vec2 vTextureCoord;
-uniform sampler2D uSampler;
-
-void main(void) {
-    vec4 textureColor = texture2D(uSampler, vTextureCoord);
-    
-    // Hardcoded magenta color
-    vec3 transparentColor = vec3(1.0, 1.0, 1.0);
-    float threshold = 0.01; // Tolerance for color matching
-
-    // Calculate the difference between the texture color and the transparent color
-    vec3 diff = abs(textureColor.rgb - transparentColor);
-
-    // If the difference is less than the threshold, set alpha to zero
-    float alpha =  step(threshold, max(diff.r, max(diff.g, diff.b)));
-
-    gl_FragColor = vec4(textureColor.rgb, textureColor.a * alpha);
-}
-
-          `;
     if (gl === null) {
         return;
     }
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    const shaderProgram = initShaderProgram (gl, vertexShaderSource, fragmentShaderSource);
     // These are a set of vertex and texture coordinates
     // That cover basically everything in the game that isn't
     // dynamically generated, like text.
     const baseBuffers   = initBuffers       (gl);
     // A set of preloaded buffers for rendering text
     const textBuffers   = initTextBuffers   (gl);
-    const programInfo   = createProgramInfo (gl, shaderProgram);
+    const programs      = initShaderPrograms(gl);
     const fpscap        = 50;
 
     document.sperframe  = (1000 / fpscap);
@@ -120,27 +83,11 @@ void main(void) {
     gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
-    gl.useProgram        (programInfo.program);
+    gl.useProgram        (programs[0].program);
 
-    startRenderLoop(programInfo, baseBuffers, textBuffers);
+    startRenderLoop(programs[0], baseBuffers, textBuffers);
 }
 
-function createProgramInfo(gl, shaderProgram) {
-    const programInfo = {
-        program: shaderProgram,
-        attribLocations: {
-            vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-            textureCoord:   gl.getAttribLocation(shaderProgram, "aTextureCoord"),
-        },
-        uniformLocations: {
-            projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-            modelViewMatrix:  gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
-            uvOffset:         gl.getUniformLocation(shaderProgram, "uUVOffset"),
-            uSampler:         gl.getUniformLocation(shaderProgram, "uSampler"),
-        },
-    };
-    return programInfo;
-}
 
 // Define an array to hold callback functions
 let renderCallbacks = [];
