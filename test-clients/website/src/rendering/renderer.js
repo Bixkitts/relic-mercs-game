@@ -82,10 +82,7 @@ function main() {
     gl.depthFunc         (gl.LEQUAL);
     gl.clear             (gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
-    gl.useProgram        (programs[0].program);
-
-    startRenderLoop(programs[0], baseBuffers, textBuffers);
+    startRenderLoop(programs, baseBuffers, textBuffers);
 }
 
 
@@ -105,7 +102,11 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programInfo, baseBuffers, textBuffers) {
+function startRenderLoop(programs, baseBuffers, textBuffers) {
+    gl.useProgram        (programs[0].program);
+
+    console.log("Programs:" + programs);
+
     const textCoords = [0.5, 0.5];
     buildTextElement(gl, "test", textCoords);
     let   then        = 0;
@@ -113,7 +114,7 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
     const textTexture = loadTexture(gl, "BirdFont88.bmp");
     // zero our texture UV offset
     const uvOffset = vec2.create();
-    gl.uniform2fv(programInfo.uniformLocations.uvOffset,
+    gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
                   uvOffset);
 
     requestAnimationFrame(render);
@@ -132,37 +133,39 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
         const camPan          = getCamPan (deltaTime);
         const camZoom         = getZoom   (deltaTime);
 
-        modelViewMatrix = doCameraTransforms(mat4.create(), camZoom, camPan);
+        modelViewMatrix = doCameraTransforms(mat4.create(),
+                                             camZoom,
+                                             camPan);
 
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, modelViewMatrix);
 
-        setPersp             (programInfo);
+        setPersp             (programs[0]);
 
-        setPositionAttribute (gl, baseBuffers.vertices, programInfo);
-        setTextureAttribute  (gl, baseBuffers.uvs, programInfo);
+        setPositionAttribute (gl, baseBuffers.vertices, programs[0]);
+        setTextureAttribute  (gl, baseBuffers.uvs, programs[0]);
         gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
         drawMapPlane  (gl, 
-                       programInfo, 
+                       programs[0], 
                        mapTexture, 
                        locModelViewMatrix);
         drawPlayers   (gl, 
                        camZoom, 
-                       programInfo, 
+                       programs[0], 
                        locModelViewMatrix); 
-        setOrtho      (programInfo);
+        setOrtho      (programs[0]);
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
         gl.disable    (gl.DEPTH_TEST);
         // TODO: Have HUD textures and not pass in placeholder
         drawHUD       (gl,
-                       programInfo,
+                       programs[0],
                        mat4.create(),
                        mapTexture);
-        setPositionAttribute (gl, textBuffers.vertices, programInfo);
+        setPositionAttribute (gl, textBuffers.vertices, programs[0]);
         gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
         drawText      (gl,
-                       programInfo,
+                       programs[0],
                        mat4.create(),
                        textTexture);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
@@ -171,13 +174,13 @@ function startRenderLoop(programInfo, baseBuffers, textBuffers) {
 
 function setPersp(programInfo)
 {
-    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
                         perspMatrix);
 }
 function setOrtho(programInfo)
 {
-    gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix,
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
                         orthMatrix);
 }
@@ -236,30 +239,13 @@ function setPositionAttribute(gl, posBuffer, programInfo) {
     const stride        = 0; 
     const offset        = 0;
     gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
-    gl.vertexAttribPointer    (programInfo.attribLocations.vertexPosition,
+    gl.vertexAttribPointer    (programInfo.attribLocations["aVertexPosition"],
                                numComponents,
                                type,
                                normalize,
                                stride,
                                offset);
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-}
-
-function setColorAttribute(gl, buffers, programInfo) {
-    const numComponents = 4;
-    const type          = gl.FLOAT;
-    const normalize     = false;
-    const stride        = 0;
-    const offset        = 0;
-    gl.bindBuffer             (gl.ARRAY_BUFFER, 
-                               buffers.color);
-    gl.vertexAttribPointer    (programInfo.attribLocations.vertexColor,
-                               numComponents,
-                               type,
-                               normalize,
-                               stride,
-                               offset);
-    gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
 }
 
 export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
@@ -269,13 +255,13 @@ export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
     const stride    = 0;
     const offset    = 0;
     gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.vertexAttribPointer(programInfo.attribLocations.textureCoord,
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
                            num,
                            type,
                            normalize,
                            stride,
                            offset,);
-    gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
 }
 
 function toggleFullScreen() {

@@ -14,13 +14,13 @@ import { setTextureAttribute } from "./renderer.js";
  * @returns 
  */
 export function drawMapPlane(gl, programInfo, texture, modelViewMatrix) {
-    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                         false,
                         modelViewMatrix);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture  (gl.TEXTURE_2D, texture);
-    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+    gl.uniform1i    (programInfo.uniformLocations["uSampler"], 0);
 
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
@@ -51,13 +51,13 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
                         mv,
                         [0.05, 0.05, 0.05],);
 
-        gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             mv);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture  (gl.TEXTURE_2D, player.image);
-        gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+        gl.uniform1i    (programInfo.uniformLocations["uSampler"], 0);
 
         {
             const offset      = 16;
@@ -76,13 +76,13 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
     mat4.scale     (modelViewMatrix,
                     modelViewMatrix,
                     [0.1, 0.1, 1]);
-    gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                         false,
                         modelViewMatrix);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture  (gl.TEXTURE_2D, texture);
-    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+    gl.uniform1i    (programInfo.uniformLocations["uSampler"], 0);
 
     const offset      = 8;
     const type        = gl.UNSIGNED_SHORT;
@@ -100,7 +100,7 @@ export function drawText(gl, programInfo, modelViewMatrix, texture)
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture  (gl.TEXTURE_2D, texture);
-    gl.uniform1i    (programInfo.uniformLocations.uSampler, 0);
+    gl.uniform1i    (programInfo.uniformLocations["uSampler"], 0);
 
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
@@ -110,7 +110,7 @@ export function drawText(gl, programInfo, modelViewMatrix, texture)
         mat4.translate (modelViewMatrix,
                         modelViewMatrix,
                         [coords[0], coords[1], 0.0]);
-        gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix,
+        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             modelViewMatrix);
         gl.drawElements(gl.TRIANGLES, len * 6, type, offset);

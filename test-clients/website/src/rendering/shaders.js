@@ -45,29 +45,53 @@ void main(void) {
     gl_FragColor = vec4(textureColor.rgb, textureColor.a * alpha);
 }
 `;
-function createProgramInfo(gl, shaderProgram) {
+
+const _shaderConfigs = [
+    {
+        vertexSource:   _basicVertShaderSource,
+        fragmentSource: _basicFragShaderSource,
+        attributes:     ["aVertexPosition",
+                         "aTextureCoord"],
+        uniforms:       ["uProjectionMatrix",
+                         "uModelViewMatrix",
+                         "uUVOffset",
+                         "uSampler"]
+    },
+    // Add more shader configurations here
+];
+
+function createProgramInfo(gl, shaderProgram, attributes, uniforms) {
     const programInfo = {
-        program: shaderProgram,
-        attribLocations: {
-            vertexPosition: gl.getAttribLocation(shaderProgram, "aVertexPosition"),
-            textureCoord:   gl.getAttribLocation(shaderProgram, "aTextureCoord"),
-        },
-        uniformLocations: {
-            projectionMatrix: gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
-            modelViewMatrix:  gl.getUniformLocation(shaderProgram, "uModelViewMatrix"),
-            uvOffset:         gl.getUniformLocation(shaderProgram, "uUVOffset"),
-            uSampler:         gl.getUniformLocation(shaderProgram, "uSampler"),
-        },
+        program:          shaderProgram,
+        attribLocations:  {},
+        uniformLocations: {},
     };
+
+    for (const attr of attributes) {
+        programInfo.attribLocations[attr] = gl.getAttribLocation(shaderProgram, attr);
+    }
+
+    for (const uniform of uniforms) {
+        programInfo.uniformLocations[uniform] = gl.getUniformLocation(shaderProgram, uniform);
+    }
+
     return programInfo;
 }
 
-export function initShaderPrograms(gl)
-{
-    const programs      = [];
-    const shaderProgram = initShaderProgram(gl,
-                                            _basicVertShaderSource,
-        _basicFragShaderSource);
-    programs.push(createProgramInfo(gl, shaderProgram));
+export function initShaderPrograms(gl) {
+    const programs = [];
+
+    for (const config of _shaderConfigs) {
+        const shaderProgram = initShaderProgram(gl,
+                                                config.vertexSource,
+                                                config.fragmentSource);
+        const programInfo   = createProgramInfo(gl,
+                                                shaderProgram,
+                                                config.attributes,
+                                                config.uniforms);
+        programs.push(programInfo);
+    }
+
     return programs;
 }
+
