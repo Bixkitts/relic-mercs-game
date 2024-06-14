@@ -82,17 +82,29 @@ function main() {
     _gl.depthFunc         (_gl.LEQUAL);
     _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
-    initVAOs              ();
+    const vaos = initVAOs(programs, baseBuffers, textBuffers);
 
-    startRenderLoop(programs, baseBuffers, textBuffers);
+    startRenderLoop(programs, vaos, textBuffers);
 }
 
-function initVAOs()
+function initVAOs(programs, baseBuffers, textBuffers)
 {
-    const vao = _gl.createVertexArray();
-    _gl.bindVertexArray(vao);
-
+    const vaos = [];
+    const basicVao = _gl.createVertexArray();
+    const textVao  = _gl.createVertexArray();
+    _gl.bindVertexArray(basicVao);
+    setPositionAttribute (_gl, baseBuffers.vertices, programs[0]);
+    setTextureAttribute  (_gl, baseBuffers.uvs, programs[0]);
+    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
     _gl.bindVertexArray(null);
+    _gl.bindVertexArray(textVao);
+    setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
+    setTextureAttribute  (_gl, textBuffers.uvs, programs[1]);
+    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+    _gl.bindVertexArray(null);
+    vaos.push(basicVao);
+    vaos.push(textVao);
+    return vaos;
 }
 
 // Define an array to hold callback functions
@@ -111,23 +123,24 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programs, baseBuffers, textBuffers) {
+function startRenderLoop(programs, vaos, textBuffers) {
     _gl.useProgram        (programs[0].program);
     console.log("Programs:" + programs);
 
-    const textCoords = [0.5, 0.5];
-    buildTextElement("Hello world.", textCoords, 0.2);
+    const textCoords = [0.3, 0.1];
+    buildTextElement("Hello world.", textCoords, 0.4);
     let   then        = 0;
     const mapTexture  = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR);
     const textTexture = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST);
     // zero our texture UV offset
     const uvOffset = vec2.create();
     _gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
-                  uvOffset);
+                   uvOffset);
 
     requestAnimationFrame(render);
     function render(now) {
         _gl.useProgram(programs[0].program);
+        _gl.bindVertexArray(vaos[0]);
 
         _renderCallbacks.forEach(callback => {
             callback(_deltaTime);
@@ -139,8 +152,8 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
         const wait = document.sperframe - _deltaTime;
         then = now;
 
-        const camPan          = getCamPan (_deltaTime);
-        const camZoom         = getZoom   (_deltaTime);
+        const camPan    = getCamPan (_deltaTime);
+        const camZoom   = getZoom   (_deltaTime);
 
         _modelViewMatrix = doCameraTransforms(mat4.create(),
                                              camZoom,
@@ -149,11 +162,8 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, _modelViewMatrix);
 
-        setPersp             (programs[0]);
+        setPersp      (programs[0]);
 
-        setPositionAttribute (_gl, baseBuffers.vertices, programs[0]);
-        setTextureAttribute  (_gl, baseBuffers.uvs, programs[0]);
-        _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
         drawMapPlane  (_gl, 
                        programs[0], 
                        mapTexture, 
@@ -165,20 +175,21 @@ function startRenderLoop(programs, baseBuffers, textBuffers) {
         setOrtho      (programs[0]);
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
-        _gl.disable    (_gl.DEPTH_TEST);
+        _gl.disable   (_gl.DEPTH_TEST);
         // TODO: Have HUD textures and not pass in placeholder
         drawHUD       (_gl,
                        programs[0],
                        mat4.create(),
                        mapTexture);
-        //_gl.useProgram(programs[1].program);
-        //setOrtho      (programs[1]);
-        //setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
-        //_gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
-        //drawText      (_gl,
-        //               programs[1],
-        //               mat4.create(),
-        //               textTexture);
+        _gl.useProgram(programs[1].program);
+        _gl.bindVertexArray(null);
+        _gl.bindVertexArray(vaos[1]);
+        setOrtho      (programs[1]);
+        drawText      (_gl,
+                       programs[1],
+                       mat4.create(),
+                       textTexture);
+        _gl.bindVertexArray(null);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
@@ -281,14 +292,14 @@ export function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
     const stride    = 0;
     const offset    = 0;
     gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureOffsets"]);
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureOffsets"],
                            num,
                            type,
                            normalize,
                            stride,
                            offset,);
-    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureCoord"], 1);
-    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureOffsets"], 1);
 }
 
 function toggleFullScreen() {

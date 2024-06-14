@@ -108,6 +108,8 @@ export function drawText(gl, programInfo, modelViewMatrix, texture)
         mat4.scale     (modelViewMatrix,
                         modelViewMatrix,
                         [size, size, 0.0]);
+        gl.uniform1f      (programInfo.uniformLocations["uInstanceOffset"],
+                           0.0625);
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             modelViewMatrix);

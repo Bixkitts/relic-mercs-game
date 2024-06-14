@@ -107,34 +107,32 @@ export function initTextBuffers(gl) {
     const vertices    = [];
     const indices     = [];
     const uvs         = [];
-    const charWidth   = 0.06;
+    const charWidth   = 0.0625;
     const charHeight  = 0.1;
     const charCount   = 1;
     let   indexOffset = 0;
-    for (let i = 0; i < charCount; i++) {
-        const xOffset = i * charWidth;
-        // Each character is a quad (2 triangles)
-        vertices.push(xOffset, 0.0, 0.0,                   // bottom left
-                      xOffset, charHeight, 0.0,            // top left
-                      xOffset + charWidth, charHeight, 0.0,// top right
-                      xOffset + charWidth, 0.0, 0.0,       // bottom right
-                      );
+    const xOffset     = 0 * charWidth;
 
-        indices.push(indexOffset,
-                     indexOffset + 2,
-                     indexOffset + 1,
-                     indexOffset,
-                     indexOffset + 3,
-                     indexOffset + 2);
-        indexOffset += 4;
-        // placeholders, this will get
-        // rewritten when the text is changed
-        const letterIndex = 1;
-        uvs.push(0.0625, 1.0-0.0625,
-                 0.0625, 1.0,
-                 0.0625*2.0, 1.0,
-                 0.0625*2.0, 1.0-0.0625);
-    }
+    // Each character is a quad (2 triangles)
+    vertices.push(xOffset, 0.0, 0.0,                   // bottom left
+                  xOffset, charHeight, 0.0,            // top left
+                  xOffset + charWidth, charHeight, 0.0,// top right
+                  xOffset + charWidth, 0.0, 0.0,       // bottom right
+                  );
+
+    indices.push(indexOffset,
+                 indexOffset + 2,
+                 indexOffset + 1,
+                 indexOffset,
+                 indexOffset + 3,
+                 indexOffset + 2);
+    indexOffset += 4;
+    // placeholders, this will get
+    // rewritten when the text is changed
+    uvs.push(0.0, 1.0-0.0625,
+             0.0, 1.0,
+             0.0625, 1.0,
+             0.0625, 1.0-0.0625);
 
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
@@ -181,15 +179,12 @@ export function buildTextElement(string, coords, size) {
 
         // Calculate the UV offsets
         const uMin = col * charWidthUV;
-        const vMin = 1.0 - (row + 1) * charHeightUV; // Flip V coordinate
+        const vMin = 0.0 - row * charHeightUV;
         const uMax = uMin + charWidthUV;
         const vMax = vMin + charHeightUV;
 
         // Push the UV coordinates for the character's quad
-        uvs.push(uMin, vMin,
-                 uMin, vMax,
-                 uMax, vMax,
-                 uMax, vMin);
+        uvs.push(uMin, vMin);
     }
 
     // Create and bind the texture coordinate buffer

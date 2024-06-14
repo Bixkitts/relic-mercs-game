@@ -35,20 +35,23 @@ const _textVertShaderSource =
 
 in vec4 aVertexPosition;
 in vec2 aTextureCoord; 
+in vec2 aTextureOffsets;
 
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform vec2 uUVOffset;
+uniform float uInstanceOffset;
 
 out vec2 vTextureCoord;
 
 void main(void) {
     // Calculate the position of the vertex
     vec4 instanceOffset = vec4(float(gl_InstanceID) * uInstanceOffset, 0.0, 0.0, 0.0);
-    gl_Position = uProjectionMatrix * uModelViewMatrix * (aVertexPosition + instanceOffset);
+    vec4 worldPosition = aVertexPosition + instanceOffset;
+    gl_Position = uProjectionMatrix * uModelViewMatrix * worldPosition;
     
     // Pass the texture coordinate to the fragment shader
-    vTextureCoord = aTextureCoord + uUVOffset;
+    vTextureCoord = aTextureCoord + uUVOffset + aTextureOffsets;
 }
 `;
 const _textFragShaderSource = 
@@ -90,13 +93,15 @@ const _shaderConfigs = [
                          "uUVOffset"]
     },
     {
-        vertexSource:   _basicVertShaderSource,
+        vertexSource:   _textVertShaderSource,
         fragmentSource: _textFragShaderSource,
         attributes:     ["aVertexPosition",
-                         "aTextureCoord"],
+                         "aTextureCoord",
+                         "aTextureOffsets"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
-                         "uUVOffset"]
+                         "uUVOffset",
+                         "uInstanceOffset"]
     },
     // Add more shader configurations here
 ];
