@@ -9,7 +9,9 @@ import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
 import { loadTexture } from './resource-loading.js';
-import { initShaderPrograms } from './shaders.js';
+import { initShaderPrograms,
+         setPositionAttribute,
+         setTextureAttribute } from './shaders.js';
 
 const _gl           = getGLContext();
 let   _deltaTime    = 0;
@@ -127,8 +129,8 @@ function startRenderLoop(programs, vaos, textBuffers) {
     _gl.useProgram        (programs[0].program);
     console.log("Programs:" + programs);
 
-    const textCoords = [0.3, 0.1];
-    buildTextElement("Hello world.", textCoords, 0.4);
+    const textCoords = [0.4, 0.08];
+    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to work!", textCoords, 0.2, programs[1], textBuffers);
     let   then        = 0;
     const mapTexture  = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR);
     const textTexture = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST);
@@ -183,13 +185,11 @@ function startRenderLoop(programs, vaos, textBuffers) {
                        mapTexture);
         _gl.useProgram(programs[1].program);
         _gl.bindVertexArray(null);
-        _gl.bindVertexArray(vaos[1]);
         setOrtho      (programs[1]);
         drawText      (_gl,
                        programs[1],
                        mat4.create(),
                        textTexture);
-        _gl.bindVertexArray(null);
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
@@ -252,54 +252,6 @@ function canvasInit() {
     _canvas.style.height = _canvasHeight + 'px';
 
     _gl.viewport(0, 0, _canvas.width, _canvas.height);
-}
-
-function setPositionAttribute(gl, posBuffer, programInfo) {
-    const numComponents = 3;
-    const type          = gl.FLOAT;
-    const normalize     = false;
-    const stride        = 0; 
-    const offset        = 0;
-    gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
-    gl.vertexAttribPointer    (programInfo.attribLocations["aVertexPosition"],
-                               numComponents,
-                               type,
-                               normalize,
-                               stride,
-                               offset);
-    gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
-}
-
-export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
-    const num       = 2; // every coordinate composed of 2 values
-    const type      = gl.FLOAT;
-    const normalize = false;
-    const stride    = 0;
-    const offset    = 0;
-    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
-                           num,
-                           type,
-                           normalize,
-                           stride,
-                           offset,);
-    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
-}
-export function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
-    const num       = 2; // every coordinate composed of 2 values
-    const type      = gl.FLOAT;
-    const normalize = false;
-    const stride    = 0;
-    const offset    = 0;
-    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureOffsets"]);
-    gl.vertexAttribPointer(programInfo.attribLocations["aTextureOffsets"],
-                           num,
-                           type,
-                           normalize,
-                           stride,
-                           offset,);
-    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureOffsets"], 1);
 }
 
 function toggleFullScreen() {

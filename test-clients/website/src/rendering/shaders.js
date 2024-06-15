@@ -36,21 +36,19 @@ const _textVertShaderSource =
 in vec4 aVertexPosition;
 in vec2 aTextureCoord; 
 in vec2 aTextureOffsets;
+in vec2 aLineDisplace;
 
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform vec2 uUVOffset;
-uniform float uInstanceOffset;
 
 out vec2 vTextureCoord;
 
 void main(void) {
-    // Calculate the position of the vertex
-    vec4 instanceOffset = vec4(float(gl_InstanceID) * uInstanceOffset, 0.0, 0.0, 0.0);
+
+    vec4 instanceOffset = vec4(aLineDisplace.x, -aLineDisplace.y, 0.0, 0.0);
     vec4 worldPosition = aVertexPosition + instanceOffset;
     gl_Position = uProjectionMatrix * uModelViewMatrix * worldPosition;
-    
-    // Pass the texture coordinate to the fragment shader
     vTextureCoord = aTextureCoord + uUVOffset + aTextureOffsets;
 }
 `;
@@ -97,7 +95,8 @@ const _shaderConfigs = [
         fragmentSource: _textFragShaderSource,
         attributes:     ["aVertexPosition",
                          "aTextureCoord",
-                         "aTextureOffsets"],
+                         "aTextureOffsets",
+                         "aLineDisplace"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
                          "uUVOffset",
@@ -141,3 +140,34 @@ export function initShaderPrograms(gl) {
     return programs;
 }
 
+export function setPositionAttribute(gl, posBuffer, programInfo) {
+    const numComponents = 3;
+    const type          = gl.FLOAT;
+    const normalize     = false;
+    const stride        = 0; 
+    const offset        = 0;
+    gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
+    gl.vertexAttribPointer    (programInfo.attribLocations["aVertexPosition"],
+                               numComponents,
+                               type,
+                               normalize,
+                               stride,
+                               offset);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
+}
+
+export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
+}

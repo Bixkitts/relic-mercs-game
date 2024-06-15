@@ -1,4 +1,7 @@
 import { getGLContext } from '../canvas-getter.js';
+import { initShaderPrograms,
+         setPositionAttribute,
+         setTextureAttribute } from './shaders.js';
 
 export function initBuffers(gl) 
 {
@@ -107,10 +110,12 @@ export function initTextBuffers(gl) {
     const vertices    = [];
     const indices     = [];
     const uvs         = [];
+
     const charWidth   = 0.0625;
     const charHeight  = 0.1;
     const charCount   = 1;
     let   indexOffset = 0;
+    
     const xOffset     = 0 * charWidth;
 
     // Each character is a quad (2 triangles)
@@ -129,6 +134,10 @@ export function initTextBuffers(gl) {
     indexOffset += 4;
     // placeholders, this will get
     // rewritten when the text is changed
+    uvs.push(0.0, 1.0-0.0625,
+             0.0, 1.0,
+             0.0625, 1.0,
+             0.0625, 1.0-0.0625);
     uvs.push(0.0, 1.0-0.0625,
              0.0, 1.0,
              0.0625, 1.0,
@@ -161,16 +170,27 @@ export function getTextElements()
     return textElements;
 }
 
-export function buildTextElement(string, coords, size) {
+export function buildTextElement(string, coords, size, programInfo, buffers) {
+    const charWidth    = 0.0625;
     const gl           = getGLContext();
     const uvs          = [];
+    const pos          = [];
     const charWidthUV  = 1.0 / 16.0;  // Assuming 16x16 grid
     const charHeightUV = 1.0 / 16.0;  // Assuming 16x16 grid
-    const len          = string.length;
+    let   len          = 0;
+    let   lineCount    = 0;
+    const vao          = gl.createVertexArray();
+    let   counter      = 0;
 
     // Loop through each character in the string
     for (let i = 0; i < string.length; i++) {
+        counter ++;
         const char      = string[i];
+        if (char == '\n') {
+            lineCount ++;
+            counter   = 0;
+            continue;
+        }
         const charIndex = char.charCodeAt(0); // ASCII index
 
         // Calculate the row and column in the texture atlas
@@ -180,11 +200,11 @@ export function buildTextElement(string, coords, size) {
         // Calculate the UV offsets
         const uMin = col * charWidthUV;
         const vMin = 0.0 - row * charHeightUV;
-        const uMax = uMin + charWidthUV;
-        const vMax = vMin + charHeightUV;
 
         // Push the UV coordinates for the character's quad
         uvs.push(uMin, vMin);
+        pos.push(counter * charWidth, lineCount * charWidth * 1.45);
+        len ++;
     }
 
     // Create and bind the texture coordinate buffer
@@ -192,6 +212,49 @@ export function buildTextElement(string, coords, size) {
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
 
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+
+    gl.bindVertexArray(vao);
+    setPositionAttribute         (gl, buffers.vertices, programInfo);
+    setTextureAttribute          (gl, buffers.uvs, programInfo);
+    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+    setTextureAttributeInstanced (gl, texCoordBuffer, programInfo);
+    setPosAttributeInstanced     (gl, posBuffer, programInfo);
+    gl.bindVertexArray(null);
     // Store the buffer and coordinates
-    textElements.push({ texCoordBuffer, coords, len, size});
+    textElements.push({ vao, coords, len, size});
+}
+function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureOffsets"]);
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureOffsets"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureOffsets"], 1);
+}
+function setPosAttributeInstanced(gl, posBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, posBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aLineDisplace"]);
+    gl.vertexAttribPointer(programInfo.attribLocations["aLineDisplace"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aLineDisplace"], 1);
 }

@@ -2,7 +2,6 @@ import { ProgramInfo } from "./type-hints.js";
 import { getAllPlayers } from "../game-logic.js";
 import { loadTexture } from "./resource-loading.js";
 import { getTextElements } from "./gl-buffers.js";
-import { setTextureAttribute, setTextureAttributeInstanced } from "./renderer.js";
 
 /**
  * @param {WebGLRenderingContext} gl 
@@ -100,19 +99,18 @@ export function drawText(gl, programInfo, modelViewMatrix, texture)
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
     for (const textElement of textElements) {
-        const { texCoordBuffer, coords, len, size } = textElement;
-        setTextureAttributeInstanced(gl, texCoordBuffer, programInfo);
+        const { vao, coords, len, size } = textElement;
+        gl.bindVertexArray(vao);
         mat4.translate (modelViewMatrix,
                         modelViewMatrix,
                         [coords[0], coords[1], 0.0]);
         mat4.scale     (modelViewMatrix,
                         modelViewMatrix,
                         [size, size, 0.0]);
-        gl.uniform1f      (programInfo.uniformLocations["uInstanceOffset"],
-                           0.0625);
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             modelViewMatrix);
         gl.drawElementsInstanced(gl.TRIANGLES, 6, type, offset, len);
+        gl.bindVertexArray(null);
     }
 }
