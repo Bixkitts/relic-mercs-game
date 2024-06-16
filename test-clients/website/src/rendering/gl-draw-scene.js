@@ -11,13 +11,10 @@ import { getTextElements } from "./gl-buffers.js";
  * @param {mat4} modelViewMatrix 
  * @returns 
  */
-export function drawMapPlane(gl, programInfo, texture, modelViewMatrix) {
+export function drawMapPlane(gl, programInfo, modelViewMatrix) {
     gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                         false,
                         modelViewMatrix);
-
-    gl.activeTexture(gl.TEXTURE0 + 0);
-    gl.bindTexture  (gl.TEXTURE_2D, texture);
 
     const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
@@ -51,10 +48,6 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             mv);
-
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture  (gl.TEXTURE_2D, player.image);
-
         {
             const offset      = 16;
             const type        = gl.UNSIGNED_SHORT;
@@ -64,22 +57,12 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
     });
 }
 
-export function drawHUD(gl, programInfo, modelViewMatrix, texture)
+export function drawHUD(gl, programInfo, modelViewMatrix)
 {
-    mat4.translate (modelViewMatrix,
-                    modelViewMatrix,
-                    [0.5, 0.1, 0.0]);
-    mat4.scale     (modelViewMatrix,
-                    modelViewMatrix,
-                    [0.1, 0.1, 1]);
     gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                         false,
                         modelViewMatrix);
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture  (gl.TEXTURE_2D, texture);
-
-    const offset      = 8;
+    const offset      = 0;
     const type        = gl.UNSIGNED_SHORT;
     const vertexCount = 4;
     gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
@@ -89,15 +72,11 @@ export function drawHUD(gl, programInfo, modelViewMatrix, texture)
 // text, it's coordinates, and size from a buffer
 // and draws that in a loop, similar to how the players
 // are drawn.
-export function drawText(gl, programInfo, modelViewMatrix, texture)
+export function drawText(gl, programInfo, modelViewMatrix)
 {
     const textElements = getTextElements();
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture  (gl.TEXTURE_2D, texture);
-
-    const offset      = 0;
-    const type        = gl.UNSIGNED_SHORT;
+    const offset       = 0;
+    const type         = gl.UNSIGNED_SHORT;
     for (const textElement of textElements) {
         const { vao, coords, len, size } = textElement;
         gl.bindVertexArray(vao);
@@ -110,7 +89,7 @@ export function drawText(gl, programInfo, modelViewMatrix, texture)
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             modelViewMatrix);
-        gl.drawElementsInstanced(gl.TRIANGLES, 6, type, offset, len);
+        gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, type, offset, len);
         gl.bindVertexArray(null);
     }
 }

@@ -30,6 +30,36 @@ void main(void) {
     fragColor = texture(uSampler, vTextureCoord);
 }
 `;
+const _hudVertShaderSource = 
+`#version 300 es
+
+in vec4 aVertexPosition;
+in vec2 aTextureCoord; 
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform vec2 uUVOffset;
+
+out vec2 vTextureCoord;
+
+void main(void) {
+    gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vTextureCoord = aTextureCoord + uUVOffset;
+}
+`;
+const _hudFragShaderSource =
+`#version 300 es
+
+precision highp float;
+in vec2 vTextureCoord;
+uniform sampler2D uSampler;
+
+out vec4 fragColor;
+
+void main(void) {
+    fragColor = texture(uSampler, vTextureCoord);
+}
+`;
 const _textVertShaderSource = 
 `#version 300 es
 
@@ -68,7 +98,7 @@ void main(void) {
     
     // Hardcoded magenta color
     vec3 transparentColor = vec3(1.0, 1.0, 1.0);
-    float threshold = 0.01; // Tolerance for color matching
+    float threshold = 0.05; // Tolerance for color matching
 
     // Calculate the difference between the texture color and the transparent color
     vec3 diff = abs(textureColor.rgb - transparentColor);
@@ -84,6 +114,15 @@ const _shaderConfigs = [
     {
         vertexSource:   _basicVertShaderSource,
         fragmentSource: _basicFragShaderSource,
+        attributes:     ["aVertexPosition",
+                         "aTextureCoord"],
+        uniforms:       ["uProjectionMatrix",
+                         "uModelViewMatrix",
+                         "uUVOffset"]
+    },
+    {
+        vertexSource:   _hudVertShaderSource,
+        fragmentSource: _hudFragShaderSource,
         attributes:     ["aVertexPosition",
                          "aTextureCoord"],
         uniforms:       ["uProjectionMatrix",
@@ -140,12 +179,25 @@ export function initShaderPrograms(gl) {
     return programs;
 }
 
-export function setPositionAttribute(gl, posBuffer, programInfo) {
+export function setPositionAttribute(gl, posBuffer, programInfo, offset) {
     const numComponents = 3;
     const type          = gl.FLOAT;
     const normalize     = false;
     const stride        = 0; 
-    const offset        = 0;
+    gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
+    gl.vertexAttribPointer    (programInfo.attribLocations["aVertexPosition"],
+                               numComponents,
+                               type,
+                               normalize,
+                               stride,
+                               offset);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
+}
+export function setPositionAttribute2d(gl, posBuffer, programInfo, offset) {
+    const numComponents = 2;
+    const type          = gl.FLOAT;
+    const normalize     = false;
+    const stride        = 0; 
     gl.bindBuffer             (gl.ARRAY_BUFFER, posBuffer);
     gl.vertexAttribPointer    (programInfo.attribLocations["aVertexPosition"],
                                numComponents,
@@ -156,12 +208,11 @@ export function setPositionAttribute(gl, posBuffer, programInfo) {
     gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
 }
 
-export function setTextureAttribute(gl, texCoordBuffer, programInfo) {
+export function setTextureAttribute(gl, texCoordBuffer, programInfo, offset) {
     const num       = 2; // every coordinate composed of 2 values
     const type      = gl.FLOAT;
     const normalize = false;
     const stride    = 0;
-    const offset    = 0;
     gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
     gl.vertexAttribPointer(programInfo.attribLocations["aTextureCoord"],
                            num,

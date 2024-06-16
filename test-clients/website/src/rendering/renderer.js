@@ -1,4 +1,5 @@
-import { initBuffers,
+import { initGeoBuffers,
+         initHudBuffers,
          initTextBuffers,
          buildTextElement} from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
@@ -11,6 +12,7 @@ import { getGLContext } from '../canvas-getter.js'
 import { loadTexture } from './resource-loading.js';
 import { initShaderPrograms,
          setPositionAttribute,
+         setPositionAttribute2d,
          setTextureAttribute } from './shaders.js';
 
 const _gl           = getGLContext();
@@ -63,12 +65,11 @@ function main() {
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    // These are a set of vertex and texture coordinates
-    // That cover basically everything in the game that isn't
-    // dynamically generated, like text.
-    const baseBuffers   = initBuffers       (_gl);
-    // A set of preloaded buffers for rendering text
-    const textBuffers   = initTextBuffers   (_gl);
+    const buffers = [];
+    buffers.push(initGeoBuffers(_gl));
+    buffers.push(initHudBuffers(_gl));
+    buffers.push(initTextBuffers(_gl));
+
     const programs      = initShaderPrograms(_gl);
     const fpscap        = 50;
 
@@ -84,28 +85,35 @@ function main() {
     _gl.depthFunc         (_gl.LEQUAL);
     _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
-    const vaos = initVAOs(programs, baseBuffers, textBuffers);
+    const vaos = initVAOs(programs, buffers);
 
-    startRenderLoop(programs, vaos, textBuffers);
+    startRenderLoop(programs, vaos, buffers);
 }
 
-function initVAOs(programs, baseBuffers, textBuffers)
+function initVAOs(programs, buffers)
 {
     const vaos = [];
-    const basicVao = _gl.createVertexArray();
-    const textVao  = _gl.createVertexArray();
-    _gl.bindVertexArray(basicVao);
-    setPositionAttribute (_gl, baseBuffers.vertices, programs[0]);
-    setTextureAttribute  (_gl, baseBuffers.uvs, programs[0]);
-    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, baseBuffers.indices);
+    const mapVao     = _gl.createVertexArray();
+    const playerVao  = _gl.createVertexArray();
+    const hudVao     = _gl.createVertexArray();
+    _gl.bindVertexArray(mapVao);
+    setPositionAttribute (_gl, buffers[0].vertices, programs[0], 0);
+    setTextureAttribute  (_gl, buffers[0].uvs, programs[0], 0);
+    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
     _gl.bindVertexArray(null);
-    _gl.bindVertexArray(textVao);
-    setPositionAttribute (_gl, textBuffers.vertices, programs[1]);
-    setTextureAttribute  (_gl, textBuffers.uvs, programs[1]);
-    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+    _gl.bindVertexArray(playerVao);
+    setPositionAttribute (_gl, buffers[0].vertices, programs[0], 0);
+    setTextureAttribute  (_gl, buffers[0].uvs, programs[0], 0);
+    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
     _gl.bindVertexArray(null);
-    vaos.push(basicVao);
-    vaos.push(textVao);
+    _gl.bindVertexArray(hudVao);
+    setPositionAttribute2d(_gl, buffers[1].vertices, programs[1], 0);
+    setTextureAttribute   (_gl, buffers[1].uvs, programs[1], 0);
+    _gl.bindBuffer        (_gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
+    _gl.bindVertexArray(null);
+    vaos.push(mapVao);
+    vaos.push(playerVao);
+    vaos.push(hudVao);
     return vaos;
 }
 
@@ -125,24 +133,21 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programs, vaos, textBuffers) {
+function startRenderLoop(programs, vaos, buffers) {
+    const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
+    const mapTexture    = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
+    const playerTexture = loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);
+    const hudTexture    = loadTexture(_gl, "hud01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     _gl.useProgram        (programs[0].program);
+    setPersp(programs[0]);
     console.log("Programs:" + programs);
 
-    const textCoords = [0.4, 0.08];
-    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to work!", textCoords, 0.2, programs[1], textBuffers);
+    const textCoords = [0.3, 0.1];
+    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to gorg!", textCoords, 0.25, programs[2], buffers[2]);
     let   then        = 0;
-    const mapTexture  = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR);
-    const textTexture = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST);
-    // zero our texture UV offset
-    const uvOffset = vec2.create();
-    _gl.uniform2fv(programs[0].uniformLocations["uUVOffset"],
-                   uvOffset);
 
     requestAnimationFrame(render);
     function render(now) {
-        _gl.useProgram(programs[0].program);
-        _gl.bindVertexArray(vaos[0]);
 
         _renderCallbacks.forEach(callback => {
             callback(_deltaTime);
@@ -158,38 +163,52 @@ function startRenderLoop(programs, vaos, textBuffers) {
         const camZoom   = getZoom   (_deltaTime);
 
         _modelViewMatrix = doCameraTransforms(mat4.create(),
-                                             camZoom,
-                                             camPan);
+                                              camZoom,
+                                              camPan);
 
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, _modelViewMatrix);
 
-        setPersp      (programs[0]);
 
+        _gl.useProgram(programs[0].program);
+        _gl.bindVertexArray(vaos[0]);
+        _gl.activeTexture    (_gl.TEXTURE0);
+        _gl.bindTexture      (_gl.TEXTURE_2D, mapTexture);
         drawMapPlane  (_gl, 
                        programs[0], 
-                       mapTexture, 
                        locModelViewMatrix);
+        _gl.bindVertexArray(null);
+
+        _gl.bindVertexArray(vaos[1]);
+        _gl.activeTexture    (_gl.TEXTURE0);
+        _gl.bindTexture      (_gl.TEXTURE_2D, playerTexture);
         drawPlayers   (_gl, 
                        camZoom, 
                        programs[0], 
                        locModelViewMatrix); 
-        setOrtho      (programs[0]);
+        _gl.bindVertexArray(null);
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
         _gl.disable   (_gl.DEPTH_TEST);
+
         // TODO: Have HUD textures and not pass in placeholder
+        _gl.useProgram       (programs[1].program);
+        setOrtho             (programs[1]);
+        _gl.bindVertexArray  (vaos[2]);
+        _gl.activeTexture    (_gl.TEXTURE0);
+        _gl.bindTexture      (_gl.TEXTURE_2D, hudTexture);
         drawHUD       (_gl,
-                       programs[0],
-                       mat4.create(),
-                       mapTexture);
-        _gl.useProgram(programs[1].program);
-        _gl.bindVertexArray(null);
-        setOrtho      (programs[1]);
-        drawText      (_gl,
                        programs[1],
-                       mat4.create(),
-                       textTexture);
+                       mat4.create());
+        _gl.bindVertexArray(null);
+        _gl.useProgram    (programs[2].program);
+        setOrtho(programs[2]);
+        _gl.activeTexture (_gl.TEXTURE0);
+        _gl.bindTexture   (_gl.TEXTURE_2D, textTexture);
+        drawText      (_gl,
+                       programs[2],
+                       mat4.create());
+
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
 }
@@ -207,7 +226,8 @@ function setOrtho(programInfo)
                         _orthMatrix);
 }
 
-function doCameraTransforms(matrix, camZoom, camPan) {
+function doCameraTransforms(matrix, camZoom, camPan)
+{
     mat4.translate (matrix,
                     matrix,
                     [0.0, 0.0, (camZoom - 1.2) * 2]);
@@ -221,7 +241,8 @@ function doCameraTransforms(matrix, camZoom, camPan) {
     return matrix;
 }
 
-function createPerspMatrix(fov) {
+function createPerspMatrix(fov)
+{
     const fieldOfView      = (fov * Math.PI) / 180; // in radians
     const aspect           = _gl.canvas.clientWidth / _gl.canvas.clientHeight;
     const zNear            = 0.1;
@@ -232,7 +253,8 @@ function createPerspMatrix(fov) {
 
     return projectionMatrix;
 }
-function createOrthMatrix() {
+function createOrthMatrix()
+{
     const orthMatrix = mat4.create();
     mat4.ortho(orthMatrix, 0, 1, 0, 1, -1, 1);
 
@@ -244,7 +266,8 @@ function createOrthMatrix() {
  * Maybe replace this with just a resolution
  * selection, or "createElement".
  */
-function canvasInit() {
+function canvasInit()
+{
     _canvas.width  = _canvasWidth;
     _canvas.height = _canvasHeight;
 
@@ -277,7 +300,8 @@ function toggleFullScreen() {
         }
     }
 }
-document.addEventListener('fullscreenchange', function() {
+document.addEventListener('fullscreenchange', function()
+{
     screenResUpdate();
     if (!document.fullscreenElement) {
         _canvas.width  = _canvasWidth;
