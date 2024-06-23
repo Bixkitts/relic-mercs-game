@@ -95,16 +95,12 @@ out vec4 fragColor;
 
 void main(void) {
     vec4 textureColor = texture(uSampler, vTextureCoord);
-    
-    // Hardcoded magenta color
-    vec3 transparentColor = vec3(1.0, 1.0, 1.0);
-    float threshold = 0.05; // Tolerance for color matching
 
-    // Calculate the difference between the texture color and the transparent color
-    vec3 diff = abs(textureColor.rgb - transparentColor);
+    // Define white color
+    vec3 whiteColor = vec3(1.0, 1.0, 1.0);
 
-    // If the difference is less than the threshold, set alpha to zero
-    float alpha =  step(threshold, max(diff.r, max(diff.g, diff.b)));
+    // Calculate alpha to discard pure white pixels
+    float alpha = 1.0 - step(1.0, dot(textureColor.rgb, whiteColor) / 3.0);
 
     fragColor = vec4(textureColor.rgb, textureColor.a * alpha);
 }

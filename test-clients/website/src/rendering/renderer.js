@@ -134,7 +134,7 @@ export function unsubscribeFromRender(callback) {
 }
 
 function startRenderLoop(programs, vaos, buffers) {
-    const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
+    const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, true);
     const mapTexture    = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     const playerTexture = loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     const hudTexture    = loadTexture(_gl, "hud01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
@@ -142,8 +142,8 @@ function startRenderLoop(programs, vaos, buffers) {
     setPersp(programs[0]);
     console.log("Programs:" + programs);
 
-    const textCoords = [0.3, 0.1];
-    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to gorg!", textCoords, 0.25, programs[2], buffers[2]);
+    const textCoords = [0.3, 0.5];
+    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to work!", textCoords, 0.25, programs[2], buffers[2]);
     let   then        = 0;
 
     requestAnimationFrame(render);

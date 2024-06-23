@@ -46,16 +46,20 @@ export function initGeoBuffers(gl)
             indices:  indexBuffer};
 }
 
-export function initHudBuffers(gl) 
+export function initHudBuffers(gl)
 {
     const positions = [
-        0.01, 0.01,
+        0.01, 0.01,       // Bottom Bar
         1.0 - 0.01, 0.01,
         0.01, 0.24,
         1.0 - 0.01, 0.24
     ];
     const uvs = [
-        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+        // Bottom Bar
+        0.0029, 0.9,
+        0.49, 0.9,
+        0.0029, 0.9985,
+        0.49, 0.9985
     ];
     const indices = [
         0, 1, 2, 3, 
@@ -159,7 +163,7 @@ export function buildTextElement(string, coords, size, programInfo, buffers) {
 
         // Calculate the UV offsets
         const uMin = col * charWidthUV;
-        const vMin = 0.0 - row * charHeightUV;
+        const vMin = -(row * charHeightUV);
 
         // Push the UV coordinates for the character's quad
         uvs.push(uMin, vMin);
