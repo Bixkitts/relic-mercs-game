@@ -3,7 +3,30 @@ import { initShaderPrograms,
          setPositionAttribute2d,
          setTextureAttribute } from './shaders.js';
 
-export function initGeoBuffers(gl) 
+let _vertBuffersInitialized = false;
+const _vertBuffers = [];
+const _geoBuffers  = [];
+const _hudBuffers  = [];
+const _textBuffers = [];
+
+function initVertBuffers(gl)
+{
+    _geoBuffers  = initGeoBuffers (gl);
+    _hudBuffers  = initHudBuffers (gl);
+    _textBuffers = initTextBuffers(gl);
+    _vertBuffers.push(_geoBuffers);
+    _vertBuffers.push(_hudBuffers);
+    _vertBuffers.push(_textBuffers);
+}
+export function getVertBuffers()
+{
+    if (!_vertBuffersInitialized) {
+        initVertBuffers(getGLContext);
+    }
+    return _vertBuffers;
+}
+
+function initGeoBuffers(gl) 
 {
     const positions = [
         -1.618, -1.0, 0.0, // Mesh for map 
@@ -46,7 +69,7 @@ export function initGeoBuffers(gl)
             indices:  indexBuffer};
 }
 
-export function initHudBuffers(gl)
+function initHudBuffers(gl)
 {
     const positions = [
         0.01, 0.01,       // Bottom Bar
@@ -88,7 +111,7 @@ export function initHudBuffers(gl)
  * line of text and send it to the
  * GPU
  */
-export function initTextBuffers(gl) {
+function initTextBuffers(gl) {
     const charWidth   = 0.0625;
     const charHeight  = 0.1;
 
