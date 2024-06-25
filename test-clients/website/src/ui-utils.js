@@ -1,10 +1,12 @@
 import { getShaders,
          setPositionAttribute2d,
+         setTextureAttribute,
          setTextureAttributeInstanced,
          setPosAttributeInstanced } from './rendering/shaders.js';
+import { getVertBuffers } from './rendering/gl-buffers.js';
 import { getGLContext } from './canvas-getter';
 
-let _textElements = [];
+const _textElements = [];
 
 export function getTextElements()
 {
@@ -13,6 +15,8 @@ export function getTextElements()
 
 export function buildTextElement(string, coords, size) {
     const shaders      = getShaders();
+    const buffers      = getVertBuffers();
+    const textBuffers  = buffers[2];
     const textShader   = shaders[2];
     const charWidth    = 0.0625;
     const gl           = getGLContext();
@@ -60,9 +64,9 @@ export function buildTextElement(string, coords, size) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
 
     gl.bindVertexArray(vao);
-    setPositionAttribute2d       (gl, _textBuffers.vertices, textShader);
-    setTextureAttribute          (gl, _textBuffers.uvs, textShader);
-    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, _textBuffers.indices);
+    setPositionAttribute2d       (gl, textBuffers.vertices, textShader);
+    setTextureAttribute          (gl, textBuffers.uvs, textShader);
+    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
     setTextureAttributeInstanced (gl, texCoordBuffer, textShader);
     setPosAttributeInstanced     (gl, posBuffer, textShader);
     gl.bindVertexArray(null);

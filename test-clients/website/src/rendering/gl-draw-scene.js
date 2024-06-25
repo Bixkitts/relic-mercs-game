@@ -1,7 +1,6 @@
 import { ProgramInfo } from "./type-hints.js";
 import { getAllPlayers } from "../game-logic.js";
-import { loadTexture } from "./resource-loading.js";
-import { getTextElements } from "./gl-buffers.js";
+import { getTextElements } from "../ui-utils.js";
 
 /**
  * @param {WebGLRenderingContext} gl 
@@ -59,6 +58,9 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
 
 export function drawHUD(gl, programInfo, modelViewMatrix)
 {
+    // TODO:
+    // Render from a list of active HUD elements
+    // from another higher level source file
     gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                         false,
                         modelViewMatrix);
