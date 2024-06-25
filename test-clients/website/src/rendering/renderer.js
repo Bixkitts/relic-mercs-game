@@ -109,8 +109,8 @@ function startRenderLoop(programs, vaos, buffers) {
     setPersp(programs[0]);
     console.log("Programs:" + programs);
 
-    const textCoords = [0.3, 0.5];
-    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to work!", textCoords, 0.25, programs[2], buffers[2]);
+    const textCoords = [0.3, 0.2];
+    buildTextElement("Hello world.\nAlso, this is a test of inserting\nnewlines.\nSeems to work!", textCoords, 0.25);
     let   then        = 0;
 
     requestAnimationFrame(render);

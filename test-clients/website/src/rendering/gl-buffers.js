@@ -122,20 +122,20 @@ function initTextBuffers(gl) {
 
     // Each character is a quad (2 triangles)
     const positions = [
-        0.0, 0.0,              // bottom left
-        charWidth,0.0,         // bottom right
-        0.0, charHeight,       // top left
-        charWidth, charHeight  // top right
+        0.0, 0.0,
+        0.0, -charHeight,
+        charWidth,0.0,
+        charWidth, -charHeight,
     ];
 
     const indices = [
         0, 1, 2, 3
     ];
     const uvs = [
-        0.0, 1.0-0.0625,
-        0.0625, 1.0-0.0625,
         0.0, 1.0,
-        0.0625, 1.0
+        0.0, 1.0-0.0625,
+        0.0625, 1.0,
+        0.0625, 1.0-0.0625,
     ];
 
     const vertexBuffer = gl.createBuffer();
@@ -197,7 +197,7 @@ export function buildTextElement(string, coords, size) {
 
         // Push the UV coordinates for the character's quad
         uvs.push(uMin, vMin);
-        pos.push(counter * charWidth, lineCount * charWidth * 1.45);
+        pos.push(counter * charWidth, lineCount * charWidth * 1.52);
         len ++;
     }
 
