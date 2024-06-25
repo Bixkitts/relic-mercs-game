@@ -1,13 +1,17 @@
 import { getGLContext } from '../canvas-getter.js';
-import { initShaderPrograms,
+import { getShaders,
          setPositionAttribute2d,
+         setPositionAttribute,
          setTextureAttribute } from './shaders.js';
 
-let _vertBuffersInitialized = false;
+// All the other buffers are
+// collected into _vertBuffers
+let   _vertBuffersInitialized = false;
 const _vertBuffers = [];
-const _geoBuffers  = [];
-const _hudBuffers  = [];
-const _textBuffers = [];
+
+let _geoBuffers  = [];
+let _hudBuffers  = [];
+let _textBuffers = [];
 
 function initVertBuffers(gl)
 {
@@ -21,7 +25,8 @@ function initVertBuffers(gl)
 export function getVertBuffers()
 {
     if (!_vertBuffersInitialized) {
-        initVertBuffers(getGLContext);
+        initVertBuffers(getGLContext());
+        _vertBuffersInitialized = true;
     }
     return _vertBuffers;
 }
@@ -85,7 +90,7 @@ function initHudBuffers(gl)
         0.49, 0.9985
     ];
     const indices = [
-        0, 1, 2, 3, 
+        0, 1, 2, 3,
     ];
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -157,7 +162,9 @@ export function getTextElements()
     return textElements;
 }
 
-export function buildTextElement(string, coords, size, programInfo, buffers) {
+export function buildTextElement(string, coords, size) {
+    const shaders      = getShaders();
+    const textShader   = shaders[2];
     const charWidth    = 0.0625;
     const gl           = getGLContext();
     const uvs          = [];
@@ -204,11 +211,11 @@ export function buildTextElement(string, coords, size, programInfo, buffers) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
 
     gl.bindVertexArray(vao);
-    setPositionAttribute2d       (gl, buffers.vertices, programInfo);
-    setTextureAttribute          (gl, buffers.uvs, programInfo);
-    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-    setTextureAttributeInstanced (gl, texCoordBuffer, programInfo);
-    setPosAttributeInstanced     (gl, posBuffer, programInfo);
+    setPositionAttribute2d       (gl, _textBuffers.vertices, textShader);
+    setTextureAttribute          (gl, _textBuffers.uvs, textShader);
+    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, _textBuffers.indices);
+    setTextureAttributeInstanced (gl, texCoordBuffer, textShader);
+    setPosAttributeInstanced     (gl, posBuffer, textShader);
     gl.bindVertexArray(null);
     // Store the buffer and coordinates
     textElements.push({ vao, coords, len, size});
@@ -244,4 +251,44 @@ function setPosAttributeInstanced(gl, posBuffer, programInfo) {
                            stride,
                            offset,);
     gl.vertexAttribDivisor(programInfo.attribLocations["aLineDisplace"], 1);
+}
+
+let   _vaosInitialized = false;
+const _vaos = [];
+
+
+// We need to pass in the results from
+// getVertBuffers() and getShaders()
+function initVAOs(programs, buffers)
+{
+    const gl         = getGLContext();
+    const mapVao     = gl.createVertexArray();
+    const playerVao  = gl.createVertexArray();
+    const hudVao     = gl.createVertexArray();
+    gl.bindVertexArray(mapVao);
+    setPositionAttribute (gl, buffers[0].vertices, programs[0], 0);
+    setTextureAttribute  (gl, buffers[0].uvs, programs[0], 0);
+    gl.bindBuffer       (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    gl.bindVertexArray(null);
+    gl.bindVertexArray(playerVao);
+    setPositionAttribute (gl, buffers[0].vertices, programs[0], 0);
+    setTextureAttribute  (gl, buffers[0].uvs, programs[0], 0);
+    gl.bindBuffer       (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    gl.bindVertexArray(null);
+    gl.bindVertexArray(hudVao);
+    setPositionAttribute2d(gl, buffers[1].vertices, programs[1], 0);
+    setTextureAttribute   (gl, buffers[1].uvs, programs[1], 0);
+    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
+    gl.bindVertexArray(null);
+    _vaos.push(mapVao);
+    _vaos.push(playerVao);
+    _vaos.push(hudVao);
+}
+
+export function getVAOs()
+{
+    if (!_vaosInitialized) {
+        initVAOs(getShaders(), getVertBuffers());
+    }
+    return _vaos;
 }

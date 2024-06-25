@@ -1,4 +1,5 @@
 import { initShaderProgram } from './resource-loading';
+import { getGLContext } from '../canvas-getter.js'
 
 const _basicVertShaderSource = 
 `#version 300 es
@@ -158,8 +159,13 @@ function createProgramInfo(gl, shaderProgram, attributes, uniforms) {
     return programInfo;
 }
 
-export function initShaderPrograms(gl) {
-    const programs = [];
+// Array of shaders where the program itself
+// is the first member, then the attributes and
+// uniforms are accessed as the subsequent members.
+const _programInfos = [];
+let   _programsInitialized = false;
+
+function initShaderPrograms(gl) {
 
     for (const config of _shaderConfigs) {
         const shaderProgram = initShaderProgram(gl,
@@ -169,10 +175,17 @@ export function initShaderPrograms(gl) {
                                                 shaderProgram,
                                                 config.attributes,
                                                 config.uniforms);
-        programs.push(programInfo);
+        _programInfos.push(programInfo);
     }
+}
 
-    return programs;
+export function getShaders()
+{
+    if (!_programsInitialized) {
+        initShaderPrograms(getGLContext());
+        _programsInitialized = true;
+    }
+    return _programInfos;
 }
 
 export function setPositionAttribute(gl, posBuffer, programInfo, offset) {

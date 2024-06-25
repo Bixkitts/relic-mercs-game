@@ -1,6 +1,5 @@
-import { initGeoBuffers,
-         initHudBuffers,
-         initTextBuffers,
+import { getVertBuffers,
+         getVAOs,
          buildTextElement} from './gl-buffers.js';
 import { drawMapPlane } from './gl-draw-scene.js';
 import { drawPlayers } from './gl-draw-scene.js';
@@ -10,10 +9,7 @@ import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
 import { loadTexture } from './resource-loading.js';
-import { initShaderPrograms,
-         setPositionAttribute,
-         setPositionAttribute2d,
-         setTextureAttribute } from './shaders.js';
+import { getShaders } from './shaders.js';
 
 const _gl           = getGLContext();
 let   _deltaTime    = 0;
@@ -65,12 +61,10 @@ function main() {
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    const buffers = [];
-    buffers.push(initGeoBuffers(_gl));
-    buffers.push(initHudBuffers(_gl));
-    buffers.push(initTextBuffers(_gl));
+    const buffers       = getVertBuffers();
+    const programs      = getShaders();
+    const vaos          = getVAOs();
 
-    const programs      = initShaderPrograms(_gl);
     const fpscap        = 50;
 
     document.sperframe  = (1000 / fpscap);
@@ -85,37 +79,10 @@ function main() {
     _gl.depthFunc         (_gl.LEQUAL);
     _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
-    const vaos = initVAOs(programs, buffers);
 
     startRenderLoop(programs, vaos, buffers);
 }
 
-function initVAOs(programs, buffers)
-{
-    const vaos = [];
-    const mapVao     = _gl.createVertexArray();
-    const playerVao  = _gl.createVertexArray();
-    const hudVao     = _gl.createVertexArray();
-    _gl.bindVertexArray(mapVao);
-    setPositionAttribute (_gl, buffers[0].vertices, programs[0], 0);
-    setTextureAttribute  (_gl, buffers[0].uvs, programs[0], 0);
-    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
-    _gl.bindVertexArray(null);
-    _gl.bindVertexArray(playerVao);
-    setPositionAttribute (_gl, buffers[0].vertices, programs[0], 0);
-    setTextureAttribute  (_gl, buffers[0].uvs, programs[0], 0);
-    _gl.bindBuffer       (_gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
-    _gl.bindVertexArray(null);
-    _gl.bindVertexArray(hudVao);
-    setPositionAttribute2d(_gl, buffers[1].vertices, programs[1], 0);
-    setTextureAttribute   (_gl, buffers[1].uvs, programs[1], 0);
-    _gl.bindBuffer        (_gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
-    _gl.bindVertexArray(null);
-    vaos.push(mapVao);
-    vaos.push(playerVao);
-    vaos.push(hudVao);
-    return vaos;
-}
 
 // Define an array to hold callback functions
 let _renderCallbacks = [];
