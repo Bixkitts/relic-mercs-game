@@ -231,3 +231,36 @@ export function setTextureAttribute(gl, texCoordBuffer, programInfo, offset) {
                            offset,);
     gl.enableVertexAttribArray(programInfo.attribLocations["aTextureCoord"]);
 }
+
+export function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aTextureOffsets"]);
+    gl.vertexAttribPointer(programInfo.attribLocations["aTextureOffsets"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aTextureOffsets"], 1);
+}
+export function setPosAttributeInstanced(gl, posBuffer, programInfo) {
+    const num       = 2; // every coordinate composed of 2 values
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer         (gl.ARRAY_BUFFER, posBuffer);
+    gl.enableVertexAttribArray(programInfo.attribLocations["aLineDisplace"]);
+    gl.vertexAttribPointer(programInfo.attribLocations["aLineDisplace"],
+                           num,
+                           type,
+                           normalize,
+                           stride,
+                           offset,);
+    gl.vertexAttribDivisor(programInfo.attribLocations["aLineDisplace"], 1);
+}
