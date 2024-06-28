@@ -14,10 +14,16 @@
         padding: 0;
     }
     
-    h1, h2 {
+    h2 {
         color: #6c533d; /* Brown headings */
         margin-top: 20px;
         position: relative;
+    }
+    h1 {
+        color: #6c533d; /* Brown headings */
+        margin-top: 20px;
+        position: relative;
+        text-align: center;
     }
     h3 {
         color: #6c533d; /* Brown headings */
@@ -48,7 +54,6 @@
         max-width: 50%;
         color: #222; /* Dark gray text */
     }
-        /* Styling hyperlinks */
     a {
         color: #6c533d; /* Brown color for hyperlinks */
         text-decoration: none; /* Remove underline by default */
@@ -107,6 +112,27 @@
         opacity: 0;
         animation: fadeInAnimation ease 1s forwards;
     }
+
+    .toc-container {
+        text-align: center;
+    }
+    .toc-container h2 {
+        color: #6c533d; /* Brown headings */
+        margin-top: 20px;
+        position: relative;
+    }
+    .toc-container h2:after {
+    }
+
+    .toc a {
+        display: block; /* Each link on a new line */
+        margin: 5px 0;  /* Add space between links */
+        text-decoration: none; /* Optional: Remove underline */
+        color: #6c533d; /* Brown color for hyperlinks */
+    }
+    .toc a:hover {
+        color: #b68f6e; /* Darker brown color on hover */
+    }
     
     @keyframes fadeInAnimation {
         0% {
@@ -119,9 +145,21 @@
 </style></head>
 <body>
 <h1>Relic Mercs Game Project Plan</h1>
-<h2>Index Of Important Sections</h2>
-<a href="#charValidation">Player Character Validation</a><br/>
-<h2>What To Write In This Document</h2>
+<div class="toc-container">
+    <h2>Table of Contents</h2>
+    <div class="toc">
+        <a href="#1">What To Write In This Document</a>
+        <a href="#2">What Is This Game?</a>
+        <a href="#3">How Does The Game Start?</a>
+        <a href="#4">Player Character Validation</a>
+        <a href="#5">The Game Interface</a>
+        <a href="#6">Core Gameplay Concepts</a>
+        <a href="#7">Protocols and Serialisation</a>
+        <a href="#8">Robustness and Convenience</a>
+        <a href="#9">Rendering</a>
+    </div>
+</div>
+<h2 id="1">What To Write In This Document</h2>
 <p>
 This document should contain descriptions of gameplay systems,
 graphical effects, protocols, user interfaces, how they interact with eachother
@@ -129,7 +167,7 @@ and how they should be coded.
 This should be a helpful resource to anybody working on this project,
 mostly to see what to implement next and how.
 </p>
-<h2>What is this game?</h2>
+<h2 id="2">What Is This Game?</h2>
 <p>
 A turn based role playing co-petetive game running in a browser.
 The players take turns moving their characters on a map, encountering
@@ -138,7 +176,7 @@ making themselves more powerful.
 The ultimate goal is to gather information and recover an ancient relic for a 
 benefactor, while denying the relic to the other players.
 </p>
-<h2>How does it start?</h2>
+<h2 id="3">How Does The Game Start?</h2>
 <p>
 The players, upon loading into the website, are greeted by a login screen
 prompting a playername, player password and game password with a html form.
@@ -148,7 +186,7 @@ a character creation html form.
 They fill in their character details, submit the form and it's validated
 before spawning the player on the board and last in the turn order.
 </p>
-<h3 id="charValidation">Player Character Validation</h3>
+<h3 id="4">Player Character Validation</h3>
 <p>
 <ul>
     <li>Usernames can't be duplicates</li>
@@ -156,7 +194,7 @@ before spawning the player on the board and last in the turn order.
     <p class="todo"> What more do we need to validate?</p>
 </ul>
 </p>
-<h2>The Game Interface</h2>
+<h2 id="5">The Game Interface</h2>
 <ul>
     <li>A horizontal 3d planar map occupies the center of the screen and allows
         for camera panning and zooming (but no rotation, as it would only be confusing).</li>
@@ -174,7 +212,7 @@ before spawning the player on the board and last in the turn order.
         providing details to most elements of the game</li>
 </ul>
 
-<h2>Core Gameplay Concepts</h2>
+<h2 id="6">Core Gameplay Concepts</h2>
     <h3>Turn Order</h3>
     <p>The players take it in turns to play based on who joined the game first.</p>
     <p class="optional"> The game is configured with a minimum player count, it waits
@@ -289,7 +327,7 @@ before spawning the player on the board and last in the turn order.
             <li>Each injury adds it's own amount of damage to a pool and the player dies at a certain threshold.</li>
             <li>Dead players observe the game, MAYBE respawn.</li>
             <p class="optional"> It might be cooler if the players could influence the game as ghosts, rerolling player checks or controlling
-            animal companions and such.</p>
+            animgl companions and such.</p>
         </ul>
     <h3>Winning The Game</h3>
     <ul>
@@ -300,7 +338,7 @@ before spawning the player on the board and last in the turn order.
             location with an ancient temple where the relic could be.</li>
         <p class="todo">Flesh this out completely, not a priority until other systems work.</p>
     </ul>
-<h2>Protocols and Serialisation</h2>
+<h2 id="7">Protocols and Serialisation</h2>
     <h3>Overview</h3>
     <p>The player character sheet and login information will be transferred through HTML form submission,
     but after that a websocket channel is opened and a custom protocol begins.
@@ -377,12 +415,12 @@ before spawning the player on the board and last in the turn order.
                 Server side, it's raw numbers. Client side, it needs to show the right strings based on
                 the UID for the state change.</li>
         </ul>
-<h2>Robustness and Convenience</h2>
+<h2 id="8">Robustness and Convenience</h2>
 <h3>Handling a Disconnection</h3>
 <h3>Vote Kicking</h3>
 <h3>Vote Banning?</h3>
 <h3>Malformed Input and Validation</h3>
-<h2>Rendering</h2>
+<h2 id="9">Rendering</h2>
 <h3>Intro</h3>
 <p>
 The rendering is done with WebGL2, which depends on OpenGL 3.3 and is supported by all major
