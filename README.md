@@ -40,3 +40,11 @@ The game server is written in C, and resides in the "source" directory and
 depends on the libraries in the "dependencies" directory.
 
 The client is written in Javascript+WebGL and will reside in the "test-client/website" directory.
+
+## Project Plan
+I try to keep an up to date project plan in the "project-plan"
+folder.
+This should serve as a reference for people looking to contribute,
+and as information for people simply interested in the game and how
+it will work from a technical and gameplay perspective.
+You can (hopefully) also view the project plan directly at https://bixkitts.de/relic-mercs/Project_Plan.html
