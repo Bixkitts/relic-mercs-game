@@ -28,6 +28,7 @@ export function buildTextElement(string, coords, size) {
     let   lineCount    = 0;
     const vao          = gl.createVertexArray();
     let   counter      = 0;
+    let   isHidden     = true;
 
     // Loop through each character in the string
     for (let i = 0; i < string.length; i++) {
@@ -71,5 +72,25 @@ export function buildTextElement(string, coords, size) {
     setPosAttributeInstanced     (gl, posBuffer, textShader);
     gl.bindVertexArray(null);
     // Store the buffer and coordinates
-    _textElements.push({ vao, coords, len, size});
+    _textElements.push({ vao, coords, len, size, isHidden, posBuffer, texCoordBuffer});
+    return _textElements.length - 1;
+}
+
+// Assumes a valid index.
+// Deletes the text to free up memory.
+// Expensive operation.
+export function removeTextElement(index) {
+    const gl      = getGLContext();
+    const element = _textElements[index];
+    
+    // Clean up WebGL resources
+    gl.deleteVertexArray (element.vao);
+    gl.deleteBuffer      (element.posBuffer);
+    gl.deleteBuffer      (element.texCoordBuffer);
+
+    // You might also need to delete other buffers associated with the element if created separately
+    // Example: gl.deleteBuffer(element.someBuffer);
+
+    // Remove the element from the array
+    _textElements.splice(index, 1);
 }

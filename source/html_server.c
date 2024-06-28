@@ -128,7 +128,7 @@ void sendContent(char* dir,
     const char    status          [HEADER_LENGTH] = "HTTP/1.1 200 OK\r\n";
     const char    contentType     [HEADER_LENGTH] = "Content-Type: ";
     const char    contentLenString[HEADER_LENGTH] = "Content-Length: ";
-    const char    corsHeader[HEADER_LENGTH]       = "Access-Control-Allow-Origin: *\r\n";
+    const char    corsHeader      [HEADER_LENGTH] = "Access-Control-Allow-Origin: *\r\n";
 
     char *content               = NULL;
     int   contentLen            = 0;
