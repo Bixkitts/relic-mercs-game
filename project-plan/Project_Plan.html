@@ -161,13 +161,19 @@ before spawning the player on the board and last in the turn order.
     <li>A horizontal 3d planar map occupies the center of the screen and allows
         for camera panning and zooming (but no rotation, as it would only be confusing).</li>
     <li>The portraits for all the participants in the game should be shown
-        in the top left, along with vital statistics.</li>
+        in the top left, along with vital statistics visible at all times.</li>
     <li>The player should be able to open their own and other character's statistics by
         clicking on the portraits.
-        This should open a popup in the middle of the screen listing known statistics</li>
-    <li>The player should have one button to see their Resources (covered later)</lig
-g   <li>The player should have one button to see their Reputations (covered later)</li>
+        This should open a popup in the middle of the screen listing known statistics.</li>
+    <li>A "Big Main Bar" occupies about 20% of the bottom of the screen. It has two
+        selectable tabs, one shows the player's "Resources" and the other shows the player's
+        "Reputations".</li>
+    <li>The obvious colour and theme choice for the UI would be ragged yellowing paper,
+        or sandstone, but I'm trying a transluscent sky blue theme first.</li>
+    <li>The information shown overall should be minimal, with quick mouseover tooltips
+        providing details to most elements of the game</li>
 </ul>
+
 <h2>Core Gameplay Concepts</h2>
     <h3>Turn Order</h3>
     <p>The players take it in turns to play based on who joined the game first.</p>
@@ -192,7 +198,7 @@ g   <li>The player should have one button to see their Reputations (covered late
             can be applied to solve it, making some skills more or less applicable for an encounter.</li>
         <li>A success or failure on a skill check can have a range of possible outcomes.</li>
         <li>Before selecting an option, the player should be shown a chance of getting a neutral or better result for each skill check.</li>
-        <li>The chance of success that the player is shown should scale with a wisdom chance, with lower wisdom characters
+        <li>The chance of success that the player is shown should scale with their Cunning, with lower Cunning characters
             getting less precise chances of success shown to them.</li>
     </ul>
     <h3>Action Points</h3>
@@ -223,7 +229,8 @@ g   <li>The player should have one button to see their Reputations (covered late
     </ul>
     <h3>Player Resources</h3>
     <ul>
-        <li>Players have a "Resources" button that shows their inventory and retinue.</li>
+        <li>Shown on the big bottom bar with small icons that reveal the resources as a mouse-over tooltip</li>
+        <li>"Resources" is one of two tabs on the Big Main Bar, the other being "Reputations"</li>
         <li>Certain items should be able to be equipped to modify chances of success with certain skills.</li>
         <p class="todo">How complex should the equipment system be? Clothing + held item, or something more complex?</p>
         <li>Items like consumables should be usable at any point and be consumed or have multiple uses.</li>
@@ -240,9 +247,13 @@ g   <li>The player should have one button to see their Reputations (covered late
         <li>It should be a gameplay element to uncover what resources other players actually have.</li>
         <li>Information should be a resource. There should literally be an item a player can own that has the passive
             effect of displaying certain information that would otherwise be hidden. This should be trade-able with other players exclusively.</li>
+        <li>Items will generally be either Active (player needs to use them and they are consumed/degraded), Passive (influence statistics as long
+            as they are possessed). You could also have an item a player needs to activate in order to enable a passive effect. </li>
     </ul>
     <h3>Player Reputation</h3>
         <ul>
+            <li>These stats occupy the big main bar at the bottom of a screen</li>
+            <li>Is one of two tabs on the Big Main Bar, the other being "Resources" (see above)</li>
             <li>Players have a separate reputation for each community of sentient beings in the game.</li>
             <li>Reputation can be modified by performing actions in fixed or random encounters that helps/hinders members of that group.</li>
             <li>Reputation will modify the outcome of events dramatically e.g. You encounter bandits, but you happen to have a great reputation
@@ -299,7 +310,6 @@ g   <li>The player should have one button to see their Reputations (covered late
     <h3>Keepalive</h3>
     <p>
     The client send a keepalive ping every few seconds to keep the TCP connection open.
-    Otherwise it times out after 5 seconds.
     </p>
     <h3>On First Connection</h3>
     <ol type= "1">
@@ -347,7 +357,7 @@ g   <li>The player should have one button to see their Reputations (covered late
     </p>
     <h3>Encounters</h3>
     <p>
-    The client asks the server for a random encounter at intervals, moving the character smoothly along the map.
+    The client asks the server for a random encounter at 1km intervals.
     The server responds with whether there was an encounter or not and if there was, the character is snapped to the position of
     the encounter. The client side triggers the encounter UI, and then the client eventually responds with the same UID code
     but packet data to convey what decision they made for the encounter.
@@ -356,8 +366,7 @@ g   <li>The player should have one button to see their Reputations (covered late
     </p>
     <h3>Prediction</h3>
     <p>
-    Some things in the game, like movement can be predicted and interpolated.
-    However, it's a turn based game where we'll be waiting on the results of
+    It's a turn based game where we'll be waiting on the results of
     random numbers a lot which cannot be predicted client side as most of the
     game is non-deterministic and relies on the server state.
     This simplifies the code a lot.
@@ -373,5 +382,37 @@ g   <li>The player should have one button to see their Reputations (covered late
 <h3>Vote Kicking</h3>
 <h3>Vote Banning?</h3>
 <h3>Malformed Input and Validation</h3>
+<h2>Rendering</h2>
+<h3>Intro</h3>
+<p>
+The rendering is done with WebGL2, which depends on OpenGL 3.3 and is supported by all major
+browsers since around 2017 and all hardware+OSes since around 2007.
+</p>
+<h3>Technical Overview</h3>
+<p>
+The bulk of the rendering code resides in the "renderer" folder.
+There, on initialising, the renderer prepares several shaders and vertex buffers.
+One for 3D geometry, like the map and players, one for the HUD elements,
+and one for text.
+This is handled all internally.
+In higher level gameplay code, there are global buffers of elements like players
+or text elements.
+The renderer will use getters to read these buffers and draw these objects with it's internal
+vertex buffers and shaders (and vertex array objects).
+The exception is Text rendering, which is slightly more complex.
+</p>
+<p>
+<b>Text rendering</b> is more complex because of complex instancing behaviour.
+Not only does the renderer expect simple attributes from us at the higher level like
+position and size, but it expects us to build a custom vertex buffer for each text element
+containing (most importantly) texture coordinates for each character.
+Because we do this, the renderer can now consume these buffers and apply efficient instanced
+rendering for dynamically buildable text elements.
+This is all handled in the "buildTextElement()" function in "ui-utils.js".
+</p>
+<p>
+Here's a diagram I've prepared of generally how the rendering works on the client.
+<img src="renderer.png"/>
+</p>
 </body>
 </html>

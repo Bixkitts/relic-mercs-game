@@ -1,9 +1,9 @@
 import { getVertBuffers,
          getVAOs } from './gl-buffers.js';
-import { drawMapPlane } from './gl-draw-scene.js';
-import { drawPlayers } from './gl-draw-scene.js';
-import { drawHUD } from './gl-draw-scene.js';
-import { drawText } from './gl-draw-scene.js';
+import { drawMapPlane } from './drawing.js';
+import { drawPlayers } from './drawing.js';
+import { drawHUD } from './drawing.js';
+import { drawText } from './drawing.js';
 import { initWASD } from '../user-inputs.js';
 import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'

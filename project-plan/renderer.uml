@@ -1,0 +1,100 @@
+@startuml
+title JavaScript Frontend Rendering Architecture
+
+package "JavaScript Frontend" {
+  
+  folder "Renderer" {
+    interface renderer {
+      + main()
+    }
+    interface glBuffers {
+      - vertBuffers[]
+      - geoBuffers[]
+      - hudBuffers[]
+      - textBuffers[]
+      - vaos[]
+      + getVertBuffers()
+      + getVAOS()
+    }
+    interface resourceLoading {
+      + loadTexture()
+      + loadShader()
+    }
+    interface shaders {
+      - _programInfos[]
+      + getShaders()
+      + setXAttribute()
+      + setXAttributeInstanced()
+    }
+    interface drawing {
+      + drawMapPlane()
+      + drawPlayers()
+      + drawHUD()
+      + drawText()
+    }
+  }
+  
+  interface uiUtils {
+    - _textElements[]
+    + buildTextElement()
+    + deleteTextElement()
+    + getTextElements()
+  }
+  interface gameLogic {
+    - _players[]
+    + getPlayers()
+  }
+  interface canvasGetter {
+    + getGLContext()
+  }
+  
+  renderer --> glBuffers
+  renderer --> shaders
+  renderer --> drawing : calls
+  renderer --> resourceLoading
+  shaders --> resourceLoading
+  uiUtils --> glBuffers
+  uiUtils --> shaders : setXAttributeInstanced()
+  drawing --> glBuffers
+  drawing --> uiUtils : getTextElements()
+  drawing --> gameLogic : getPlayers()
+  
+  note as Nrendering
+    Initialises rendering and
+    runs main rendering loop
+  end note
+
+  note as NcanvasGetter
+    Everything everywhere will
+    hit this interface up for
+    the GL context or canvas
+  end note
+
+  note as NgetIsInit
+    The getters will initialise
+    the resources on first call
+  end note
+
+  note as Ndrawing
+    Draws categorised objects from a combination of
+    buffers from gl-buffers
+    and data (and more vertex buffers!) taken from higher level
+    systems
+  end note
+
+  note as NuiUtils
+    Needs to build (and destroy) it's own
+    vertex buffers and VAOs in order
+    to effectively control instanced rendering
+  end note
+
+  renderer .. Nrendering
+  drawing .. Ndrawing
+  canvasGetter .. NcanvasGetter
+  uiUtils .. NuiUtils
+  glBuffers .. NgetIsInit
+  shaders .. NgetIsInit
+}
+
+@enduml
+
