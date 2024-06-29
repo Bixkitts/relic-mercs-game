@@ -13,6 +13,15 @@ export function getTextElements()
     return _textElements;
 }
 
+export function hideTextElement(index)
+{
+    _textElements[index].isHidden = true;
+}
+export function unhideTextElement(index)
+{
+    _textElements[index].isHidden = false;
+}
+
 export function buildTextElement(string, coords, size) {
     const shaders      = getShaders();
     const buffers      = getVertBuffers();
