@@ -6,6 +6,18 @@ import { getShaders,
 import { getVertBuffers } from './rendering/gl-buffers.js';
 import { getGLContext } from './canvas-getter';
 
+class TextElement {
+    constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer) {
+        this.vao            = vao;
+        this.coords         = coords;
+        this.len            = len;
+        this.size           = size;
+        this.isHidden       = isHidden;
+        this.posBuffer      = posBuffer;
+        this.texCoordBuffer = texCoordBuffer;
+    }
+}
+
 const _textElements = [];
 
 export function getTextElements()
@@ -80,8 +92,16 @@ export function buildTextElement(string, coords, size) {
     setTextureAttributeInstanced (gl, texCoordBuffer, textShader);
     setPosAttributeInstanced     (gl, posBuffer, textShader);
     gl.bindVertexArray(null);
-    // Store the buffer and coordinates
-    _textElements.push({ vao, coords, len, size, isHidden, posBuffer, texCoordBuffer});
+
+    const textElement = new TextElement(vao,
+                                        coords,
+                                        len,
+                                        size,
+                                        isHidden,
+                                        posBuffer,
+                                        texCoordBuffer);
+    _textElements.push(textElement);
+
     return _textElements.length - 1;
 }
 
