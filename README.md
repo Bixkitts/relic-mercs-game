@@ -47,4 +47,4 @@ folder.
 This should serve as a reference for people looking to contribute,
 and as information for people simply interested in the game and how
 it will work from a technical and gameplay perspective.
-You can (hopefully) also view the project plan directly at https://bixkitts.de/relic-mercs/Project_Plan.html
+You can (hopefully) also view the project plan directly at https://www.bixkitts.de/relic-mercs/Project_Plan.html
