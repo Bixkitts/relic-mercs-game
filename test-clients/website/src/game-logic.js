@@ -1,6 +1,8 @@
 import { getGLContext } from '../canvas-getter.js';
 import { loadTexture } from './resource-loading.js';
-import { buildTextElement } from './ui-utils.js';
+import { buildTextElement,
+         deleteTextElement,
+         TextElement} from './ui-utils.js';
 
 // Where we should position the player
 // models so they align with the map plane
@@ -43,7 +45,7 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     const invalidNetID = 0;
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
-        buildTextElement(welcomeMsg, textCoords, 0.25);
+        let te = buildTextElement(welcomeMsg, textCoords, 0.25);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }

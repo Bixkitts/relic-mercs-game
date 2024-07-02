@@ -6,7 +6,7 @@ import { getShaders,
 import { getVertBuffers } from './rendering/gl-buffers.js';
 import { getGLContext } from './canvas-getter';
 
-class TextElement {
+export class TextElement {
     constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer) {
         this.vao            = vao;
         this.coords         = coords;
@@ -15,6 +15,10 @@ class TextElement {
         this.isHidden       = isHidden;
         this.posBuffer      = posBuffer;
         this.texCoordBuffer = texCoordBuffer;
+        // Is this text element still in the
+        // primary array with it's GL buffers
+        // intact?
+        this.deleted        = false;
     }
 }
 
@@ -23,15 +27,6 @@ const _textElements = [];
 export function getTextElements()
 {
     return _textElements;
-}
-
-export function hideTextElement(index)
-{
-    _textElements[index].isHidden = true;
-}
-export function unhideTextElement(index)
-{
-    _textElements[index].isHidden = false;
 }
 
 export function buildTextElement(string, coords, size) {
@@ -102,24 +97,26 @@ export function buildTextElement(string, coords, size) {
                                         texCoordBuffer);
     _textElements.push(textElement);
 
-    return _textElements.length - 1;
+    return textElement;
 }
 
-// Assumes a valid index.
 // Deletes the text to free up memory.
-// Expensive operation.
-export function removeTextElement(index) {
+// Expensive operation, and you need
+// to rebuild the TextElement if you need
+// it again.
+// Only do this if the text will not be shown again,
+// otherwise set isHidden
+export function deleteTextElement(textElement) {
+    if (textElement.deleted) {
+        return;
+    }
+    textElement.deleted = true;
     const gl      = getGLContext();
-    const element = _textElements[index];
+    const element = _textElements[_textElements.indexOf(textElement)];
     
-    // Clean up WebGL resources
     gl.deleteVertexArray (element.vao);
     gl.deleteBuffer      (element.posBuffer);
     gl.deleteBuffer      (element.texCoordBuffer);
 
-    // You might also need to delete other buffers associated with the element if created separately
-    // Example: gl.deleteBuffer(element.someBuffer);
-
-    // Remove the element from the array
     _textElements.splice(index, 1);
 }
