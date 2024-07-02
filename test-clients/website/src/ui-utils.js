@@ -111,12 +111,12 @@ export function deleteTextElement(textElement) {
         return;
     }
     textElement.deleted = true;
+    const index   = _textElements.indexOf(textElement);
     const gl      = getGLContext();
-    const element = _textElements[_textElements.indexOf(textElement)];
     
-    gl.deleteVertexArray (element.vao);
-    gl.deleteBuffer      (element.posBuffer);
-    gl.deleteBuffer      (element.texCoordBuffer);
+    gl.deleteVertexArray (textElement.vao);
+    gl.deleteBuffer      (textElement.posBuffer);
+    gl.deleteBuffer      (textElement.texCoordBuffer);
 
     _textElements.splice(index, 1);
 }
