@@ -157,12 +157,12 @@ void sendWebSocketResponse(char *httpString, ssize_t packetSize, Host remotehost
     char  response[WEBSOCK_HEADERS_LEN]  = { 0 };
     // We append the calculated hash to this
     // Then build the response
-    char *tempResponse = 
+    const char *tempResponse = 
         "HTTP/1.1 101 Switching Protocols\n"
         "Upgrade: websocket\n"
         "Connection: Upgrade\n"
         "Sec-WebSocket-Accept: ";
-    char *finResponse =
+    const char *finResponse =
         "\n\n";
 
     char receivedCode[WEBSOCK_CODE_LEN] = { 0 };
