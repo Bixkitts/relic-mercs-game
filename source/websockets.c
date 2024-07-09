@@ -138,14 +138,16 @@ writeWebsocketHeader (char inOutData[static WEBSOCKET_HEADER_SIZE_MAX],
 
 static int generateAcceptCode(unsigned char *outCode, char *inCode, ssize_t codeLen)
 {
-    char temp1[WEBSOCK_CODE_LEN] = {0};
+    const int     codeMaxLen              = 20;
+    char          temp1[WEBSOCK_CODE_LEN] = {0};
     unsigned char temp2[WEBSOCK_CODE_LEN] = {0};
     strncpy (temp1, inCode, codeLen);
+    // Constant string that's part of the websocket standard
     strcat  (temp1, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     if (compute_sha1(temp1, strlen(temp1), temp2) < 0) {
         return -1;
     } 
-    base64_encode ((char*)temp2, 20, (char*)outCode);
+    base64_encode ((char*)temp2, codeMaxLen, (char*)outCode);
 #ifdef DEBUG
     printf ("\n%s\n", outCode);
 #endif
