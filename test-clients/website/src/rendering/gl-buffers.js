@@ -80,25 +80,17 @@ function initHudBuffers(gl)
         0.01, 0.01,       // Bottom Bar
         1.0 - 0.01, 0.01,
         0.01, 0.24,
-        1.0 - 0.01, 0.24,
-        0.0, 0.0,         // Buttons.
-        1.0, 0.0,         // We use this as a base and
-        0.0, 1.0,         // scale each button
-        1.0, 1.0
+        1.0 - 0.01, 0.24
     ];
     const uvs = [
-        0.0029, 0.9,      // Bottom Bar
+        // Bottom Bar
+        0.0029, 0.9,
         0.49, 0.9,
         0.0029, 0.9985,
-        0.49, 0.9985,
-        0.079, 0.83,      // Button Style #1
-        0.19, 0.83,
-        0.079, 0.89,
-        0.19, 0.89
+        0.49, 0.9985
     ];
     const indices = [
         0, 1, 2, 3,
-        4, 5, 6, 7,
     ];
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);

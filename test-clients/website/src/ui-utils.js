@@ -100,44 +100,6 @@ export function buildTextElement(string, coords, size) {
     return textElement;
 }
 
-const _buttons = [];
-
-export function getUiButtons()
-{
-    return _buttons;
-}
-export class UiButton {
-    constructor(scale, pos, style, callback = null) {
-        this.scale = scale;  // How much to scale the unit square when drawing
-        this.pos = pos;
-        this.style = style;
-        this.callback = callback;  // Assignable callback function
-    }
-
-    // Method to set the callback function
-    setCallback(callback) {
-        this.callback = callback;
-    }
-
-    // Method to invoke the callback function
-    invokeCallback(...args) {
-        if (this.callback) {
-            this.callback(...args);
-        }
-    }
-}
-
-export function buildUiButton(topLeft, bottomRight, style, callback = null) {
-    const scale  = [bottomRight[0] - topLeft[0],
-                    bottomRight[1] - topLeft[1]];
-    const button = new UiButton(scale,
-                                topLeft,
-                                style,
-                                callback);
-    buttons.push(button);
-    return button;
-}
-
 // Deletes the text to free up memory.
 // Expensive operation, and you need
 // to rebuild the TextElement if you need
