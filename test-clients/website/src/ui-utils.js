@@ -6,6 +6,8 @@ import { getShaders,
 import { getVertBuffers } from './rendering/gl-buffers.js';
 import { getGLContext } from './canvas-getter';
 
+// TODO:
+// probably don't need some of this data
 export class TextElement {
     constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer) {
         this.vao            = vao;
@@ -22,7 +24,31 @@ export class TextElement {
     }
 }
 
+// TODO:
+// probably don't need some of this data
+export class Button {
+    constructor(vao, pos, isHidden, posBuffer, texCoordBuffer) {
+        this.vao            = vao;
+        this.coords         = coords;
+        this.len            = len;
+        this.size           = size;
+        this.isHidden       = isHidden;
+        this.posBuffer      = posBuffer;
+        this.texCoordBuffer = texCoordBuffer;
+        // Is this text element still in the
+        // primary array with it's GL buffers
+        // intact?
+        this.deleted        = false;
+    }
+}
+
 const _textElements = [];
+const _buttons      = [];
+
+export function getButtons()
+{
+    return _buttons;
+}
 
 export function getTextElements()
 {
@@ -43,11 +69,10 @@ export function buildTextElement(string, coords, size) {
     let   len          = 0;
     let   lineCount    = 0;
     const vao          = gl.createVertexArray();
-    let   counter      = 0;
     let   isHidden     = true;
 
     // Loop through each character in the string
-    for (let i = 0; i < string.length; i++) {
+    for (let i = 0, counter = 0; i < string.length; i++) {
         counter ++;
         const char      = string[i];
         if (char == '\n') {
@@ -119,4 +144,45 @@ export function deleteTextElement(textElement) {
     gl.deleteBuffer      (textElement.texCoordBuffer);
 
     _textElements.splice(index, 1);
+}
+
+export function buildButton(pos, width, style) {
+    const shaders      = getShaders();
+    const buffers      = getVertBuffers();
+    const textBuffers  = buffers[2];
+    const textShader   = shaders[2];
+    const gl           = getGLContext();
+    const uvs          = [];
+    const pos          = [pos];
+    let   len          = 0;
+    const vao          = gl.createVertexArray();
+    let   isHidden     = true;
+
+    // Create and bind the texture coordinate buffer
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+
+    gl.bindVertexArray(vao);
+    setPositionAttribute2d       (gl, textBuffers.vertices, textShader);
+    setTextureAttribute          (gl, textBuffers.uvs, textShader);
+    gl.bindBuffer                (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+    setTextureAttributeInstanced (gl, texCoordBuffer, textShader);
+    setPosAttributeInstanced     (gl, posBuffer, textShader);
+    gl.bindVertexArray(null);
+
+    const textElement = new Button(vao,
+                                   coords,
+                                   len,
+                                   size,
+                                   isHidden,
+                                   posBuffer,
+                                   texCoordBuffer);
+    _textElements.push(textElement);
+
+    return textElement;
 }
