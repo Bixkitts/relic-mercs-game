@@ -107,6 +107,8 @@ void main(void) {
 }
 `;
 
+// This correlates to the shader
+// indices returned from "GetShaders"
 const _shaderConfigs = [
     {
         vertexSource:   _basicVertShaderSource,
