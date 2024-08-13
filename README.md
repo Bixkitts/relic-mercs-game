@@ -20,7 +20,6 @@ but I may write a gameplay guide if it is necessary.
 - libpthread                             (You should already have it)
 - https://github.com/Bixkitts/bb-net-lib (This is a git submodule, no need to install)
 - OpenSSL v3.2.x+                        (Have it installed when building)
-
 ### Building The Project:
 - clone the repo: 
   git clone https://github.com/Bixkitts/relic-mercs-game.git
@@ -35,11 +34,29 @@ but I may write a gameplay guide if it is necessary.
 - Connect with client browser to https://SERVER_IP:7676
 ### Frontend Test Server
 There's also a node server for frontend testing in the test-clients folder, if you're so inclined.
+(note: Node server is deprecated)
+
 ## Code Organisation
 The game server is written in C, and resides in the "source" directory and
 depends on the libraries in the "dependencies" directory.
 
 The client is written in Javascript+WebGL and will reside in the "test-client/website" directory.
+
+There are also miscellaneous tools littered in the root directory,
+like:
+ - A python UV coordinate picker
+ - A bash script to make TLS certs
+
+## Contributing
+Fork this repository, make a feature branch and
+then make a pull request.
+There are a lot of things that could be implemented better,
+ranging from hard to beginner level!
+Refer to the project plan.
+Contact me at bixkitts@gmail.com or @Bixkitts on Telegram,
+I don't bite and I'm happy to discuss the project,
+exchange commits on projects, or just explain stuff
+for the sake of sharing knowledge!
 
 ## Project Plan
 I try to keep an up to date project plan in the "project-plan"
