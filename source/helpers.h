@@ -16,33 +16,33 @@
                    // TODO: Find a way to automate this.
 #endif
 
-struct HTMLForm {
+struct html_form {
     char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
-    int fieldCount;
+    int field_count;
 };
 /* Helper functions */
 
 // returns the index of the first occurence of the pattern or -1 on failure.
 // Max length should be the size of the buffer we're searching
-int stringSearch(const char *text, const char *pattern, int maxLength);
+int string_search(const char *text, const char *pattern, int max_length);
 
 // returns the index at which c is found or -1
-int charSearch(const char *restrict text, char c, int bufLen);
+int char_search(const char *restrict text, char c, int buf_len);
 
-void cap(int *intToCap, int maxValue);
+void cap(int *int_to_cap, int max_value);
 
-void printBufferInHex(char *data, int size);
-void parseHTMLForm(const char *inBuffer,
-                   struct HTMLForm *outBuffer,
-                   ssize_t inBufferLen);
-void checkDataSizes();
-bool isEmptyString(const char *string);
+void print_buffer_in_hex(char *data, int size);
+void parse_html_form(const char *in_buffer,
+                     struct html_form *out_buffer,
+                     ssize_t in_buffer_len);
+void check_data_sizes();
+bool is_empty_string(const char *string);
 
 double clamp(double x, double min, double max);
 
 // random numbers
-long long int getRandomInt();
-float getRandomFloat(float min, float max);
-double getRandomDouble(double min, double max);
+long long int get_random_int();
+float get_random_float(float min, float max);
+double get_random_double(double min, double max);
 
 #endif

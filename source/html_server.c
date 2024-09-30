@@ -13,20 +13,20 @@
 
 #define FILE_EXTENSION_LEN 16
 
-static char allowedFileTable[MAX_FILENAME_LEN * MAX_FILE_COUNT] = {0};
-static int allowedFileTableLen                                  = 0;
+static char allowed_file_table[MAX_FILENAME_LEN * MAX_FILE_COUNT] = {0};
+static int allowed_file_table_len                                 = 0;
 
-static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] =
+static const char content_type_strings[HTTP_FLAG_COUNT][STATUS_LENGTH] =
     {"text/html\r\n",
      "image/jpg\r\n",
      "image/png\r\n",
      "image/bmp\r\n",
      "text/javascript\r\n",
      "text/css\r\n"};
-static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] =
+static const char content_type_mapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] =
     {"html", "jpg", "png", "bmp", "js", "css"};
 
-void sendForbiddenPacket(struct host *remotehost)
+void send_forbidden_packet(struct host *remotehost)
 {
     const char *data = "HTTP/1.1 403 Forbidden\r\n"
                        "Content-Type: text/html\r\n"
@@ -34,7 +34,7 @@ void sendForbiddenPacket(struct host *remotehost)
     send_data_tcp(data, strlen(data), remotehost);
     return;
 }
-void sendBadRequestPacket(struct host *remotehost)
+void send_bad_request_packet(struct host *remotehost)
 {
     const char *data = "HTTP/1.1 400 Bad Request\r\n"
                        "Content-Type: text/html\r\n"
@@ -42,9 +42,9 @@ void sendBadRequestPacket(struct host *remotehost)
     send_data_tcp(data, strlen(data), remotehost);
     return;
 }
-static const char *getContentTypeString(enum HTTPContentType type)
+static const char *get_content_type_string(enum http_content_type type)
 {
-    return contentTypeStrings[type];
+    return content_type_strings[type];
 }
 
 /*
@@ -53,14 +53,14 @@ static const char *getContentTypeString(enum HTTPContentType type)
  * Also returns the entire directory name
  * in an out parameter.
  */
-bool isFileAllowed(const char *inName, char **outDir)
+bool is_file_allowed(const char *in_name, char **out_dir)
 {
-    for (int i = 0; i < allowedFileTableLen; i++) {
-        char *fileTableEntry = &allowedFileTable[i * MAX_FILENAME_LEN];
-        if (stringSearch(fileTableEntry,
-                         inName,
-                         allowedFileTableLen * MAX_FILENAME_LEN) >= 0) {
-            *outDir = fileTableEntry;
+    for (int i = 0; i < allowed_file_table_len; i++) {
+        char *file_table_entry = &allowed_file_table[i * MAX_FILENAME_LEN];
+        if (string_search(file_table_entry,
+                          in_name,
+                          allowed_file_table_len * MAX_FILENAME_LEN) >= 0) {
+            *out_dir = file_table_entry;
             return 1;
         }
     }
@@ -71,20 +71,20 @@ bool isFileAllowed(const char *inName, char **outDir)
  * Assumes NUL terminated string,
  * parses file extension
  */
-enum HTTPContentType getContentTypeEnumFromFilename(char *name)
+enum http_content_type get_content_type_enum_from_filename(char *name)
 {
-    int extensionIndex = charSearch(&name[1], '.', MAX_FILENAME_LEN) + 2;
+    int extension_index = char_search(&name[1], '.', MAX_FILENAME_LEN) + 2;
     // When a malformed filename comes, MIME type doesn't matter
     // just return default
-    if (extensionIndex < 1) {
+    if (extension_index < 1) {
         return 0;
     }
-    char *extension = &name[extensionIndex];
+    char *extension = &name[extension_index];
     int i           = 0;
     while (i < HTTP_FLAG_COUNT) {
-        if (stringSearch(contentTypeMapping[i],
-                         extension,
-                         FILE_EXTENSION_LEN) >= 0) {
+        if (string_search(content_type_mapping[i],
+                          extension,
+                          FILE_EXTENSION_LEN) >= 0) {
             return i;
         }
         i++;
@@ -100,71 +100,72 @@ enum HTTPContentType getContentTypeEnumFromFilename(char *name)
  * create a list of files that
  * are whitelisted to be served
  */
-void createAllowedFileTable(void)
+void create_allowed_file_table(void)
 {
     // Currently just whitelists everything
-    allowedFileTableLen = listFiles(allowedFileTable);
+    allowed_file_table_len = list_files(allowed_file_table);
 #ifdef DEBUG
-    for (int i = 0; i < allowedFileTableLen; i++) {
-        printf("%s\n", &allowedFileTable[i * MAX_FILENAME_LEN]);
+    for (int i = 0; i < allowed_file_table_len; i++) {
+        printf("%s\n", &allowed_file_table[i * MAX_FILENAME_LEN]);
     }
 #endif
 }
 
-void sendContent(char *dir,
-                 enum HTTPContentType type,
-                 struct host *remotehost,
-                 const char *customHeaders)
+void send_content(char *dir,
+                  enum http_content_type type,
+                  struct host *remotehost,
+                  const char *custom_headers)
 {
-    char header[HEADER_PACKET_LENGTH]          = {0};
-    unsigned long headerLen                    = 0;
-    const char status[HEADER_LENGTH]           = "HTTP/1.1 200 OK\r\n";
-    const char contentType[HEADER_LENGTH]      = "Content-Type: ";
-    const char contentLenString[HEADER_LENGTH] = "Content-Length: ";
-    const char corsHeader[HEADER_LENGTH] = "Access-Control-Allow-Origin: *\r\n";
+    char header[HEADER_PACKET_LENGTH]            = {0};
+    unsigned long header_len                     = 0;
+    const char status[HEADER_LENGTH]             = "HTTP/1.1 200 OK\r\n";
+    const char content_type[HEADER_LENGTH]       = "Content-Type: ";
+    const char content_len_string[HEADER_LENGTH] = "Content-Length: ";
+    const char cors_header[HEADER_LENGTH] =
+        "Access-Control-Allow-Origin: *\r\n";
 
-    char *content              = NULL;
-    int contentLen             = 0;
-    char lenStr[STATUS_LENGTH] = {0};
-    char *packet               = NULL;
-    int packetLen              = 0;
+    char *content               = NULL;
+    int content_len             = 0;
+    char len_str[STATUS_LENGTH] = {0};
+    char *packet                = NULL;
+    int packet_len              = 0;
 
-    contentLen = getFileData(dir, &content);
-    if (contentLen < 0) {
-        printError(BB_ERR_FILE_NOT_FOUND);
+    content_len = get_file_data(dir, &content);
+    if (content_len < 0) {
+        print_error(BB_ERR_FILE_NOT_FOUND);
         if (content != NULL) {
             free(content);
         }
         return;
     }
-    sprintf(lenStr, "%d\r\n", contentLen);
+    sprintf(len_str, "%d\r\n", content_len);
 
     // Status:
     strncpy(header, status, HEADER_LENGTH);
     // Content-Type:
-    strncat(header, contentType, HEADER_LENGTH);
-    strncat(header, getContentTypeString(type), STATUS_LENGTH);
+    strncat(header, content_type, HEADER_LENGTH);
+    strncat(header, get_content_type_string(type), STATUS_LENGTH);
     // Content-Length:
-    strncat(header, contentLenString, HEADER_LENGTH);
-    strncat(header, lenStr, STATUS_LENGTH);
+    strncat(header, content_len_string, HEADER_LENGTH);
+    strncat(header, len_str, STATUS_LENGTH);
     // Access-Control:
-    strncat(header, corsHeader, HEADER_LENGTH);
+    strncat(header, cors_header, HEADER_LENGTH);
 
-    headerLen = strnlen(header, HEADER_PACKET_LENGTH);
+    header_len = strnlen(header, HEADER_PACKET_LENGTH);
     // Custom Header:
-    if (customHeaders != NULL) {
-        strncat(header, customHeaders, HEADER_PACKET_LENGTH - headerLen);
+    if (custom_headers != NULL) {
+        strncat(header, custom_headers, HEADER_PACKET_LENGTH - header_len);
     }
     strncat(header, "\r\n", 3);
 
-    headerLen = strnlen(header, HEADER_PACKET_LENGTH);
+    header_len = strnlen(header, HEADER_PACKET_LENGTH);
 
     // ------ Header Over -----------//
 
-    packetLen = headerLen + contentLen;
-    packet = malloc((headerLen * sizeof(char)) + (contentLen * sizeof(char)));
+    packet_len = header_len + content_len;
+    packet = malloc((header_len * sizeof(char)) + (content_len * sizeof(char)));
     if (!packet) {
-        printError(BB_ERR_MALLOC);
+        print_error(BB_ERR_MALLOC);
         exit(1);
     }
 
@@ -172,10 +173,10 @@ void sendContent(char *dir,
     // I only call send() once, or do I avoid a malloc
     // and memcpy of the content but use two send() calls?
     // (header, and then content)
-    memcpy(packet, header, headerLen);
-    memcpy(&packet[headerLen], content, contentLen);
+    memcpy(packet, header, header_len);
+    memcpy(&packet[header_len], content, content_len);
 
-    send_data_tcp(packet, packetLen, remotehost);
+    send_data_tcp(packet, packet_len, remotehost);
 
     free(packet);
 }

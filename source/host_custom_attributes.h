@@ -10,15 +10,15 @@
  * Most notably, the application level protocol
  * in use by the TCP connection in "handler".
  */
-struct HostCustomAttributes {
-    enum Handler handler;  // Which handler should be called when receiving a
+struct host_custom_attr {
+    enum handler handler;  // Which handler should be called when receiving a
                            // packet from this host
-    struct Player *player; // Which player this host controls
+    struct player *player; // Which player this host controls
 };
 
-static inline struct Player *getPlayerFromHost(struct host *remotehost)
+static inline struct player *get_player_from_host(struct host *remotehost)
 {
-    struct HostCustomAttributes *attr = get_host_custom_attr(remotehost);
+    struct host_custom_attr *attr = get_host_custom_attr(remotehost);
     return attr->player;
 }
 

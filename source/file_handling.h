@@ -6,6 +6,6 @@
 #define MAX_FILE_COUNT   256
 // Returns amount of bytes read
 // -1 on error
-int getFileData(const char *dir, char **buffer);
-int listFiles(char *outArray);
+int get_file_data(const char *dir, char **buffer);
+int list_files(char *out_array);
 #endif

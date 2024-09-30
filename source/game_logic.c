@@ -16,69 +16,69 @@
 #include "validators.h"
 #include "websockets.h"
 
-#define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX + sizeof(Opcode)
+#define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX + sizeof(opcode_t)
 
 // This is coupled with enum PlayerBackground
 // and also coupled on the clientside
-static const char playerBackgroundStrings[PLAYER_BACKGROUND_COUNT]
-                                         [HTMLFORM_FIELD_MAX_LEN] =
-                                             {"Trader",
-                                              "Farmer",
-                                              "Warrior",
-                                              "Priest",
-                                              "Cultist",
-                                              "Diplomat",
-                                              "Slaver",
-                                              "Monster+Hunter",
-                                              "Clown"};
+static const char player_background_strings[PLAYER_BACKGROUND_COUNT]
+                                           [HTMLFORM_FIELD_MAX_LEN] =
+                                               {"Trader",
+                                                "Farmer",
+                                                "Warrior",
+                                                "Priest",
+                                                "Cultist",
+                                                "Diplomat",
+                                                "Slaver",
+                                                "Monster+Hunter",
+                                                "Clown"};
 
 // This is coupled with enum Gender
-static const char playerGenderStrings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] =
+static const char player_gender_strings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] =
     {"Male", "Female"};
 
-pthread_mutex_t netObjMutexes[MAX_NETOBJS] = {0};
+pthread_mutex_t net_obj_mutexes[MAX_NETOBJS] = {0};
 
-const char testGameName[MAX_CREDENTIAL_LEN] = "test game";
+const char test_game_name[MAX_CREDENTIAL_LEN] = "test game";
 
 /*
  * Handler type definitions
  */
-typedef void (*GameMessageHandler)(char *data,
-                                   ssize_t dataSize,
-                                   struct host *remotehost);
-typedef void (*UseResourceHandler)(enum ResourceID resource,
-                                   struct Player *user,
-                                   struct Player *target);
-typedef void (*GiveResourceHandler)(enum ResourceID resource,
-                                    struct Player *target,
-                                    int count);
-typedef void (*TakeResourceHandler)(enum ResourceID resource,
-                                    struct Player *target,
-                                    int count);
+typedef void (*game_message_handler_t)(char *data,
+                                       ssize_t data_size,
+                                       struct host *remotehost);
+typedef void (*use_resource_handler_t)(enum resource_id resource,
+                                       struct player *user,
+                                       struct player *target);
+typedef void (*give_resource_handler_t)(enum resource_id resource,
+                                        struct player *target,
+                                        int count);
+typedef void (*take_resource_handler_t)(enum resource_id resource,
+                                        struct player *target,
+                                        int count);
 
 /*
  * Central global list of games
  */
-struct GameSlot {
-    atomic_int inUse;
-    struct Game game;
-    pthread_mutex_t gameMutex;
+struct game_slot {
+    atomic_int in_use;
+    struct game game;
+    pthread_mutex_t game_mutex;
 };
-static struct GameSlot gameList[MAX_GAMES] = {0};
-atomic_int gameCount                       = 0;
+static struct game_slot game_list[MAX_GAMES] = {0};
+atomic_int game_count                        = 0;
 
 /*
  * Returns a pointer to the corresponding
  * game from the global list, or NULL
  * if no name matched
  */
-struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
+struct game *get_game_from_name(const char name[static MAX_CREDENTIAL_LEN])
 {
     int cmp = -1;
     for (int i = 0; i < MAX_GAMES; i++) {
-        cmp = strncmp(gameList[i].game.name, name, MAX_CREDENTIAL_LEN);
+        cmp = strncmp(game_list[i].game.name, name, MAX_CREDENTIAL_LEN);
         if (cmp == 0) {
-            return &gameList[i].game;
+            return &game_list[i].game;
         }
     }
     return NULL;
@@ -92,14 +92,21 @@ struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN])
  *  to lock the game state they are modifying.
  */
 // TODO: move these to validator.h
-static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize);
-static void genPlayerStartPos(struct Coordinates *outCoords);
+static inline int is_game_message_valid_length(opcode_t opcode,
+                                               ssize_t message_size);
+static void gen_player_start_pos(struct coordinates *out_coords);
 /*
  * Handlers for incoming messages from the websocket connection
  */
-static void pingHandler(char *data, ssize_t dataSize, struct host *remotehost);
-static void movePlayerHandler(char *data, ssize_t dataSize, struct host *remotehost);
-static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remotehost);
+static void ping_handler(char *data,
+                         ssize_t data_size,
+                         struct host *remotehost);
+static void move_player_handler(char *data,
+                                ssize_t data_size,
+                                struct host *remotehost);
+static void player_connect_handler(char *data,
+                                   ssize_t data_size,
+                                   struct host *remotehost);
 
 /*
  * Primary interpreter for incoming websocket messages
@@ -108,21 +115,21 @@ static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remo
  * and are not seen by the websocket layer.
  */
 #define MESSAGE_HANDLER_COUNT 3
-static GameMessageHandler gameMessageHandlers[MESSAGE_HANDLER_COUNT] = {
-    pingHandler,
-    movePlayerHandler,
-    playerConnectHandler,
+static game_message_handler_t game_message_handlers[MESSAGE_HANDLER_COUNT] = {
+    ping_handler,
+    move_player_handler,
+    player_connect_handler,
 };
 #define EMPTY_OPCODE 0 // Some opcodes just give the server no data
-static int requestSizes[MESSAGE_HANDLER_COUNT] = {
+static int request_sizes[MESSAGE_HANDLER_COUNT] = {
     EMPTY_OPCODE,
-    sizeof(struct MovePlayerReq),
-    sizeof(struct PlayerConnectReq),
+    sizeof(struct player_move_req),
+    sizeof(struct player_conn_req),
 };
-static int responseSizes[MESSAGE_HANDLER_COUNT] = {
+static int response_sizes[MESSAGE_HANDLER_COUNT] = {
     EMPTY_OPCODE,
-    sizeof(struct MovePlayerRes),
-    sizeof(struct PlayerConnectRes),
+    sizeof(struct player_move_res),
+    sizeof(struct player_conn_res),
 };
 
 /*
@@ -132,9 +139,10 @@ static int responseSizes[MESSAGE_HANDLER_COUNT] = {
  * corresponding data structure perfectly,
  * or be rejected.
  */
-static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
+static inline int is_game_message_valid_length(opcode_t opcode,
+                                               ssize_t message_size)
 {
-    return messageSize == requestSizes[opcode];
+    return message_size == request_sizes[opcode];
 }
 
 /*
@@ -145,60 +153,62 @@ static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
  * Decoded websocket data and it's length
  * without the websocket headers.
  */
-void handleGameMessage(char *data, ssize_t dataSize, struct host *remotehost)
+void handle_game_message(char *data, ssize_t data_size, struct host *remotehost)
 {
-    Opcode opcode = 0;
+    opcode_t opcode = 0;
     // memcpy because of pointer aliasing
     memcpy(&opcode, data, sizeof(opcode));
     if (opcode >= MESSAGE_HANDLER_COUNT) {
 #ifdef DEBUG
-        fprintf(stderr, "\nBad websocket Opcode.\n");
+        fprintf(stderr, "\nBad websocket opcode_t.\n");
 #endif
         return;
     }
 #ifdef DEBUG
-    printBufferInHex(data, dataSize);
+    print_buffer_in_hex(data, data_size);
 #endif
 
-    if (isGameMessageValidLength(opcode, dataSize - sizeof(Opcode))) {
-        gameMessageHandlers[opcode](&data[sizeof(Opcode)],
-                                    dataSize,
-                                    remotehost);
+    if (is_game_message_valid_length(opcode, data_size - sizeof(opcode_t))) {
+        game_message_handlers[opcode](&data[sizeof(opcode_t)],
+                                      data_size,
+                                      remotehost);
     };
 }
 
-static inline int getFreeGame()
+static inline int get_free_game()
 {
     int expected = 0;
     for (int i = 0; i < MAX_GAMES; i++) {
-        if (atomic_compare_exchange_strong(&gameList[i].inUse, &expected, 1)) {
+        if (atomic_compare_exchange_strong(&game_list[i].in_use,
+                                           &expected,
+                                           1)) {
             return i;
         }
     }
     return -1;
 }
 
-struct Game *createGame(struct GameConfig *config)
+struct game *create_game(struct game_config *config)
 {
-    int gameIndex = getFreeGame();
-    if (gameIndex == -1) {
+    int game_index = get_free_game();
+    if (game_index == -1) {
         return NULL;
     }
-    struct Game *game = &gameList[gameIndex].game;
+    struct game *game = &game_list[game_index].game;
 
-    game->threadlock = &gameList[gameIndex].gameMutex;
+    game->threadlock = &game_list[game_index].game_mutex;
 
     strncpy(game->password, config->password, MAX_CREDENTIAL_LEN);
     strncpy(game->name, config->name, MAX_CREDENTIAL_LEN);
-    game->maxPlayerCount = config->maxPlayerCount;
-    game->minPlayerCount = config->minPlayerCount;
+    game->max_player_count = config->max_player_count;
+    game->min_player_count = config->min_player_count;
 
-    atomic_store(&game->playerCount, 0);
-    atomic_fetch_add(&gameCount, 1);
+    atomic_store(&game->player_count, 0);
+    atomic_fetch_add(&game_count, 1);
     return game;
 }
 
-void deleteGame(struct Game *game)
+void delete_game(struct game *game)
 {
     pthread_mutex_t *lock = game->threadlock;
     pthread_mutex_lock(lock);
@@ -207,17 +217,17 @@ void deleteGame(struct Game *game)
     // we need to lock and tell all the clients
     // that the game is deleted and make
     // sure they shutdown
-    atomic_store(&game->playerCount, 0);
+    atomic_store(&game->player_count, 0);
     memset(game, 0, sizeof(*game));
     pthread_mutex_unlock(lock);
-    atomic_fetch_sub(&gameCount, 1);
+    atomic_fetch_sub(&game_count, 1);
 }
 
-static void genPlayerStartPos(struct Coordinates *outCoords)
+static void gen_player_start_pos(struct coordinates *out_coords)
 {
-    outCoords->x = 0.0f;
-    outCoords->y = 0.0f;
-    outCoords->z = 0.0f;
+    out_coords->x = 0.0f;
+    out_coords->y = 0.0f;
+    out_coords->z = 0.0f;
 }
 /*
  * This function assumes that the player was redirected to
@@ -225,35 +235,36 @@ static void genPlayerStartPos(struct Coordinates *outCoords)
  * index in the game.
  * Caller handles concurrency.
  */
-struct Player *createPlayer(struct Game *game,
-                            struct PlayerCredentials *credentials)
+struct player *create_player(struct game *game,
+                             struct player_credentials *credentials)
 {
-    struct Player *newPlayer = &game->players[game->playerCount];
-    newPlayer->netID = createNetID(NET_TYPE_PLAYER, game, (void *)newPlayer);
-    newPlayer->threadlock = getMutexFromNetID(game, newPlayer->netID);
-    newPlayer->game       = game;
-    memcpy(&newPlayer->credentials, credentials, sizeof(*credentials));
-    genPlayerStartPos(&newPlayer->coords);
-    atomic_fetch_add(&game->playerCount, 1);
-    return newPlayer;
+    struct player *new_player = &game->players[game->player_count];
+    new_player->net_id =
+        create_net_id(NET_TYPE_PLAYER, game, (void *)new_player);
+    new_player->threadlock = get_mutex_from_net_id(game, new_player->net_id);
+    new_player->game       = game;
+    memcpy(&new_player->credentials, credentials, sizeof(*credentials));
+    gen_player_start_pos(&new_player->coords);
+    atomic_fetch_add(&game->player_count, 1);
+    return new_player;
 }
 
-void deletePlayer(struct Player *restrict player)
+void delete_player(struct player *restrict player)
 {
     pthread_mutex_t *lock = player->threadlock;
     pthread_mutex_lock(lock);
-    clearNetID(player->game, player->netID);
-    atomic_fetch_sub(&player->game->playerCount, 1);
-    player->game->playerCount--;
+    clear_net_id(player->game, player->net_id);
+    atomic_fetch_sub(&player->game->player_count, 1);
+    player->game->player_count--;
     memset(player, 0, sizeof(*player));
     pthread_mutex_unlock(lock);
 }
 
-void setPlayerCharSheet(struct Player *player,
-                        const struct CharacterSheet *charsheet)
+void set_player_char_sheet(struct player *player,
+                           const struct character_sheet *charsheet)
 {
     pthread_mutex_lock(player->threadlock);
-    memcpy(&player->charSheet, charsheet, sizeof(*charsheet));
+    memcpy(&player->char_sheet, charsheet, sizeof(*charsheet));
     pthread_mutex_unlock(player->threadlock);
 }
 
@@ -261,15 +272,16 @@ void setPlayerCharSheet(struct Player *player,
  * Returns -1 on failure,
  * you should tell the client about malformed data.
  */
-int initCharsheetFromForm(struct Player *player, const struct HTMLForm *form)
+int init_charsheet_from_form(struct player *player,
+                             const struct html_form *form)
 {
     pthread_mutex_lock(player->threadlock);
-    struct CharacterSheet *sheet = &player->charSheet;
-    if (form->fieldCount < FORM_CHARSHEET_FIELD_COUNT) {
+    struct character_sheet *sheet = &player->char_sheet;
+    if (form->field_count < FORM_CHARSHEET_FIELD_COUNT) {
         goto exit_error;
     }
     while (sheet->background < PLAYER_BACKGROUND_COUNT) {
-        if (strncmp(playerBackgroundStrings[sheet->background],
+        if (strncmp(player_background_strings[sheet->background],
                     form->fields[FORM_CHARSHEET_BACKGROUND],
                     HTMLFORM_FIELD_MAX_LEN) == 0) {
             break;
@@ -277,7 +289,7 @@ int initCharsheetFromForm(struct Player *player, const struct HTMLForm *form)
         sheet->background++;
     }
     while (sheet->gender < GENDER_COUNT) {
-        if (strncmp(playerGenderStrings[sheet->gender],
+        if (strncmp(player_gender_strings[sheet->gender],
                     form->fields[FORM_CHARSHEET_GENDER],
                     HTMLFORM_FIELD_MAX_LEN) == 0) {
             break;
@@ -294,11 +306,11 @@ int initCharsheetFromForm(struct Player *player, const struct HTMLForm *form)
     sheet->cunning = (form->fields[FORM_CHARSHEET_CUNNING][0] - ASCII_TO_INT) +
                      (9 * (form->fields[FORM_CHARSHEET_CUNNING][1] != 0));
 
-    if (validateNewCharsheet(sheet) != 0) {
+    if (validate_new_charsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(*sheet));
         goto exit_error;
     }
-    sheet->isValid = true;
+    sheet->is_valid = true;
     pthread_mutex_unlock(player->threadlock);
     return 0;
 exit_error:
@@ -307,22 +319,22 @@ exit_error:
 }
 
 /*
- * This just checks the "isValid" flag
+ * This just checks the "is_valid" flag
  * in a thread safe manner,
- * see "validateNewCharsheet()"
+ * see "validate_new_charsheet()"
  * for vibe-checking hackers
  */
-bool isCharsheetValid(const struct Player *restrict player)
+bool is_charsheet_valid(const struct player *restrict player)
 {
     bool result = 0;
     pthread_mutex_lock(player->threadlock);
-    result = player->charSheet.isValid;
+    result = player->char_sheet.is_valid;
     pthread_mutex_unlock(player->threadlock);
     return result;
 }
 
-void setGamePassword(struct Game *restrict game,
-                     const char password[static MAX_CREDENTIAL_LEN])
+void set_game_password(struct game *restrict game,
+                       const char password[static MAX_CREDENTIAL_LEN])
 {
     pthread_mutex_lock(game->threadlock);
     memset(game->password, 0, MAX_CREDENTIAL_LEN);
@@ -335,14 +347,14 @@ void setGamePassword(struct Game *restrict game,
  * It's all readonly, so it _should_ be
  * thread safe in this specific case...
  */
-struct Player *tryGetPlayerFromToken(SessionToken token,
-                                     struct Game *restrict game)
+struct player *try_get_player_from_token(session_token_t token,
+                                         struct game *restrict game)
 {
     if (token == INVALID_SESSION_TOKEN) {
         return NULL;
     }
-    for (int i = 0; i < game->playerCount; i++) {
-        if (token == game->players[i].sessionToken) {
+    for (int i = 0; i < game->player_count; i++) {
+        if (token == game->players[i].session_token) {
             return &game->players[i];
         }
     }
@@ -354,7 +366,7 @@ struct Player *tryGetPlayerFromToken(SessionToken token,
  * ======= Message handling functions ===========================
  * ==============================================================
  */
-enum ResponseOpcodes {
+enum response_opcodes {
     OPCODE_PING,
     OPCODE_PLAYER_MOVE,
     OPCODE_PLAYER_CONNECT
@@ -371,48 +383,53 @@ enum ResponseOpcodes {
  *
  * Returns the amount of bytes it wrote to the buffer.
  */
-static int initHandlerResponseBuffer(void *responseBuffer, Opcode code)
+static int init_handler_response_buffer(void *response_buffer, opcode_t code)
 {
-    int headerSize           = 0;
-    ssize_t responseDataSize = responseSizes[code];
+    int header_size            = 0;
+    ssize_t response_data_size = response_sizes[code];
 
-    headerSize =
-        writeWebsocketHeader(responseBuffer, sizeof(code) + responseDataSize);
-    memcpy(&responseBuffer[headerSize], &code, sizeof(code));
-    return headerSize + sizeof(code);
+    header_size = write_websocket_header(response_buffer,
+                                         sizeof(code) + response_data_size);
+    memcpy(&response_buffer[header_size], &code, sizeof(code));
+    return header_size + sizeof(code);
 }
 
-static void pingHandler(char *data, ssize_t dataSize, struct host *remotehost)
+static void ping_handler(char *data, ssize_t data_size, struct host *remotehost)
 {
 #ifdef DEBUG
     printf("Ping incoming!");
 #endif
-    const Opcode responseOpcode                   = OPCODE_PING;
-    char responseBuffer[MAX_RESPONSE_HEADER_SIZE] = {0};
-    int packetSize = initHandlerResponseBuffer(responseBuffer, responseOpcode);
-    send_data_tcp(responseBuffer, (ssize_t)packetSize, remotehost);
+    const opcode_t response_opcode                 = OPCODE_PING;
+    char response_buffer[MAX_RESPONSE_HEADER_SIZE] = {0};
+    int packet_size =
+        init_handler_response_buffer(response_buffer, response_opcode);
+    send_data_tcp(response_buffer, (ssize_t)packet_size, remotehost);
 }
 
-static void movePlayerHandler(char *data, ssize_t dataSize, struct host *remotehost)
+static void move_player_handler(char *data,
+                                ssize_t data_size,
+                                struct host *remotehost)
 {
-    struct MovePlayerRes *responseData   = NULL;
-    const struct MovePlayerReq *moveData = (struct MovePlayerReq *)data;
-    const Opcode responseOpcode          = OPCODE_PLAYER_MOVE;
-    int headerSize                       = 0;
-    struct Player *hostPlayer            = getPlayerFromHost(remotehost);
+    struct player_move_res *response_data   = NULL;
+    const struct player_move_req *move_data = (struct player_move_req *)data;
+    const opcode_t response_opcode          = OPCODE_PLAYER_MOVE;
+    int header_size                         = 0;
+    struct player *host_player              = get_player_from_host(remotehost);
 
-    char responseBuffer[MAX_RESPONSE_HEADER_SIZE + sizeof(*responseData)] = {0};
-    headerSize   = initHandlerResponseBuffer(responseBuffer, responseOpcode);
-    responseData = (struct MovePlayerRes *)&responseBuffer[headerSize];
+    char response_buffer[MAX_RESPONSE_HEADER_SIZE + sizeof(*response_data)] = {
+        0};
+    header_size =
+        init_handler_response_buffer(response_buffer, response_opcode);
+    response_data = (struct player_move_res *)&response_buffer[header_size];
 
-    validatePlayerMoveCoords(moveData, &responseData->coords);
-    responseData->playerNetID = hostPlayer->netID;
+    validate_player_move_coords(move_data, &response_data->coords);
+    response_data->player_net_id = host_player->net_id;
 
-    hostPlayer->coords.x = responseData->coords.xCoord;
-    hostPlayer->coords.y = responseData->coords.yCoord;
+    host_player->coords.x = response_data->coords.x_coord;
+    host_player->coords.y = response_data->coords.y_coord;
 
-    int packetSize = headerSize + sizeof(*responseData);
-    multicast_tcp(responseBuffer, packetSize, 0);
+    int packet_size = header_size + sizeof(*response_data);
+    multicast_tcp(response_buffer, packet_size, 0);
 }
 
 /*
@@ -423,74 +440,77 @@ static void movePlayerHandler(char *data, ssize_t dataSize, struct host *remoteh
  * players.
  * Caller handles game threadlock.
  */
-static int tryStartGame(struct Game *game)
+static int try_start_game(struct game *game)
 {
-    if (atomic_load(&game->playerCount) >= game->minPlayerCount) {
+    if (atomic_load(&game->player_count) >= game->min_player_count) {
         // TODO: handle turn order more
         // gracefully than first come first serve.
-        game->currentTurn = game->players[0].netID;
+        game->current_turn = game->players[0].net_id;
         return 0;
     }
     return -1;
 }
 /*
- * The client is attempting to fetch the player netIDs
+ * The client is attempting to fetch the player net_ids
  * so it can interpret messages about player state
  * changes
  */
-static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remotehost)
+static void player_connect_handler(char *data,
+                                   ssize_t data_size,
+                                   struct host *remotehost)
 {
     // TODO:
     // When somebody connects, they could be connecting to
     // an ongoing game when someone, or themselves, are
     // in the middle of an encounter or other dialog.
     // This will need to be communicated.
-    struct PlayerConnectRes *responseData = NULL;
+    struct player_conn_res *response_data = NULL;
     // Currently unused
     // ---------------------
     // const struct
     // PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data;
-    const Opcode responseOpcode = OPCODE_PLAYER_CONNECT;
-    struct Player *hostPlayer   = getPlayerFromHost(remotehost);
-    struct Game *game           = hostPlayer->game;
+    const opcode_t response_opcode = OPCODE_PLAYER_CONNECT;
+    struct player *host_player     = get_player_from_host(remotehost);
+    struct game *game              = host_player->game;
     if (game == NULL) {
         return;
     }
     const ssize_t namelen = sizeof(game->players[0].credentials.name);
 
-    char responseBuffer[MAX_RESPONSE_HEADER_SIZE +
-                        sizeof(struct PlayerConnectRes)] = {0};
+    char response_buffer[MAX_RESPONSE_HEADER_SIZE +
+                         sizeof(struct player_conn_res)] = {0};
 
-    int headerSize = initHandlerResponseBuffer(responseBuffer, responseOpcode);
-    responseData   = (struct PlayerConnectRes *)&responseBuffer[headerSize];
+    int header_size =
+        init_handler_response_buffer(response_buffer, response_opcode);
+    response_data = (struct player_conn_res *)&response_buffer[header_size];
 
     for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
-        if (game->players[i].netID == NULL_NET_ID) {
+        if (game->players[i].net_id == NULL_NET_ID) {
             continue;
         }
         pthread_mutex_lock(game->players[i].threadlock);
-        NetID id                 = game->players[i].netID;
-        responseData->players[i] = id;
-        memcpy(&responseData->playerNames[i],
+        net_id_t id               = game->players[i].net_id;
+        response_data->players[i] = id;
+        memcpy(&response_data->player_names[i],
                game->players[i].credentials.name,
                namelen);
-        memcpy(&responseData->playerCoords[i],
+        memcpy(&response_data->player_coords[i],
                &game->players[i].coords,
                sizeof(game->players[i].coords));
         pthread_mutex_unlock(game->players[i].threadlock);
-        if (hostPlayer->netID == id) {
-            responseData->playerIndex = (int8_t)i;
+        if (host_player->net_id == id) {
+            response_data->player_index = (int8_t)i;
         }
     }
     // It's *nobody's* turn?
     // This means the game hasn't started yet.
-    if (game->currentTurn == NULL_NET_ID) {
-        tryStartGame(game);
+    if (game->current_turn == NULL_NET_ID) {
+        try_start_game(game);
     }
-    responseData->currentTurn = game->currentTurn;
+    response_data->current_turn = game->current_turn;
 
-    int packetSize = headerSize + sizeof(*responseData);
-    multicast_tcp(responseBuffer, packetSize, 0);
+    int packet_size = header_size + sizeof(*response_data);
+    multicast_tcp(response_buffer, packet_size, 0);
 }
 
 /* ===================================================================
@@ -503,23 +523,23 @@ static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remo
  * Copy Paste these for different resources a player could
  * receive, lose, or use.
  */
-void baseUseResourceHandler(enum ResourceID resource,
-                            struct Player *user,
-                            struct Player *target)
+void base_use_resource_handler(enum resource_id resource,
+                               struct player *user,
+                               struct player *target)
 {
     // Implement code for using specific resources here
 }
-void baseGiveResourceHandler(enum ResourceID resource,
-                             struct Player *target,
-                             int count)
+void base_give_resource_handler(enum resource_id resource,
+                                struct player *target,
+                                int count)
 {
     // Implement code for receiving resources here, such
     // as adding it to the player's inventory or adding
     // a passive effect
 }
-void baseTakeResourceHandler(enum ResourceID resource,
-                             struct Player *target,
-                             int count)
+void base_take_resource_handler(enum resource_id resource,
+                                struct player *target,
+                                int count)
 {
     // Implement code for removing an item from a player's
     // inventory here, such as decreasing the count
@@ -532,11 +552,11 @@ void baseTakeResourceHandler(enum ResourceID resource,
  *      Make sure to list a handler FOR EACH existing resource ID
  *
  */
-static UseResourceHandler useResourceHandlers[RESOURCE_COUNT] = {
-    baseUseResourceHandler};
+static use_resource_handler_t use_resource_handlers[RESOURCE_COUNT] = {
+    base_use_resource_handler};
 // Handlers for when a resource is given to a player
-static GiveResourceHandler giveResourceHandlers[RESOURCE_COUNT] = {
-    baseGiveResourceHandler};
+static give_resource_handler_t give_resource_handlers[RESOURCE_COUNT] = {
+    base_give_resource_handler};
 // Handlers for when a resource is taken from a player
-static TakeResourceHandler takeResourceHandlers[RESOURCE_COUNT] = {
-    baseTakeResourceHandler};
+static take_resource_handler_t take_resource_handlers[RESOURCE_COUNT] = {
+    base_take_resource_handler};

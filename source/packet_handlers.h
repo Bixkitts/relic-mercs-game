@@ -5,7 +5,7 @@
 
 #define MAX_PACKET_SIZE 1024
 
-enum Handler {
+enum handler {
     HANDLER_DISCONNECT,
     HANDLER_HTTP,
     HANDLER_WEBSOCK,
@@ -14,11 +14,12 @@ enum Handler {
 
 #define HANDLER_DEFAULT HANDLER_HTTP
 
-void masterHandler(char *restrict data, ssize_t packetSize, struct host *remotehost);
+void master_handler(char *restrict data,
+                    ssize_t packet_size,
+                    struct host *remotehost);
 
-void buildFileTable(void);
+void build_file_table(void);
 
-int getCurrentHostCache(void);
+int get_current_host_cache(void);
 
-int getCurrentHostCache(void);
 #endif

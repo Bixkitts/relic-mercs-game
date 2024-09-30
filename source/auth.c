@@ -3,39 +3,39 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int isPlayerPasswordValid(const struct Player *restrict player,
-                                 const char *password);
-static struct Player *tryGetPlayerFromPlayername(struct Game *game,
-                                                 const char *playername);
-static void generateSessionToken(struct Player *player, struct Game *game);
-static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH],
-                                    SessionToken token);
+static int is_player_password_valid(const struct player *restrict player,
+                                    const char *password);
+static struct player *try_get_player_from_playername(struct game *game,
+                                                     const char *playername);
+static void generate_session_token(struct player *player, struct game *game);
+static void build_session_token_header(char out_header[static HEADER_LENGTH],
+                                       session_token_t token);
 
-static int isPlayerPasswordValid(const struct Player *restrict player,
-                                 const char *password)
+static int is_player_password_valid(const struct player *restrict player,
+                                    const char *password)
 {
-    int passwordCheck = 0;
-    passwordCheck =
+    int password_check = 0;
+    password_check =
         strncmp(password, player->credentials.password, MAX_CREDENTIAL_LEN);
-    return passwordCheck == 0;
+    return password_check == 0;
 }
 /*
  * returns the index of the player in the game
  */
-static struct Player *tryGetPlayerFromPlayername(struct Game *game,
-                                                 const char *playername)
+static struct player *try_get_player_from_playername(struct game *game,
+                                                     const char *playername)
 {
-    int playerIndex = 0;
-    int playerFound = -1;
+    int player_index = 0;
+    int player_found = -1;
 
     pthread_mutex_lock(game->threadlock);
-    for (playerIndex = 0; playerIndex < game->playerCount; playerIndex++) {
-        playerFound = strncmp(playername,
-                              game->players[playerIndex].credentials.name,
-                              MAX_CREDENTIAL_LEN);
-        if (playerFound == 0) {
+    for (player_index = 0; player_index < game->player_count; player_index++) {
+        player_found = strncmp(playername,
+                               game->players[player_index].credentials.name,
+                               MAX_CREDENTIAL_LEN);
+        if (player_found == 0) {
             pthread_mutex_unlock(game->threadlock);
-            return &game->players[playerIndex];
+            return &game->players[player_index];
         }
     }
     pthread_mutex_unlock(game->threadlock);
@@ -52,25 +52,26 @@ static struct Player *tryGetPlayerFromPlayername(struct Game *game,
  * returns -1 when the player exists but the
  * password was wrong
  */
-int tryPlayerLogin(struct Game *restrict game,
-                   struct PlayerCredentials *restrict credentials,
-                   struct host *remotehost)
+int try_player_login(struct game *restrict game,
+                     struct player_credentials *restrict credentials,
+                     struct host *remotehost)
 {
-    struct Player *player                           = NULL;
-    char sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
-    if (isEmptyString(credentials->name)) {
+    struct player *player                             = NULL;
+    char session_token_header[CUSTOM_HEADERS_MAX_LEN] = {0};
+    if (is_empty_string(credentials->name)) {
         return -1;
     }
-    player = tryGetPlayerFromPlayername(game, credentials->name);
+    player = try_get_player_from_playername(game, credentials->name);
     pthread_mutex_lock(game->threadlock);
     if (player != NULL) {
-        if (isPlayerPasswordValid(player, credentials->password)) {
-            generateSessionToken(player, game);
-            buildSessionTokenHeader(sessionTokenHeader, player->sessionToken);
-            sendContent("./game.html",
-                        HTTP_FLAG_TEXT_HTML,
-                        remotehost,
-                        sessionTokenHeader);
+        if (is_player_password_valid(player, credentials->password)) {
+            generate_session_token(player, game);
+            build_session_token_header(session_token_header,
+                                       player->session_token);
+            send_content("./game.html",
+                         HTTP_FLAG_TEXT_HTML,
+                         remotehost,
+                         session_token_header);
             pthread_mutex_unlock(game->threadlock);
             return 0;
         }
@@ -82,13 +83,13 @@ int tryPlayerLogin(struct Game *restrict game,
     }
     // Player was not found in game redirect them to character creation
     // And create a player
-    player = createPlayer(game, credentials);
-    generateSessionToken(player, game);
-    buildSessionTokenHeader(sessionTokenHeader, player->sessionToken);
-    sendContent("./charsheet.html",
-                HTTP_FLAG_TEXT_HTML,
-                remotehost,
-                sessionTokenHeader);
+    player = create_player(game, credentials);
+    generate_session_token(player, game);
+    build_session_token_header(session_token_header, player->session_token);
+    send_content("./charsheet.html",
+                 HTTP_FLAG_TEXT_HTML,
+                 remotehost,
+                 session_token_header);
 
     pthread_mutex_unlock(game->threadlock);
     return 0;
@@ -100,54 +101,54 @@ int tryPlayerLogin(struct Game *restrict game,
  * on a per game basis.
  * Caller handles concurrency.
  */
-static void generateSessionToken(struct Player *restrict player,
-                                 struct Game *restrict game)
+static void generate_session_token(struct player *restrict player,
+                                   struct game *restrict game)
 {
-    long long int nonce = getRandomInt();
+    long long int nonce = get_random_int();
     int i               = 0;
     // Make sure the token is unique, and not 0.
-    while ((tryGetPlayerFromToken(nonce, game) != NULL) ||
+    while ((try_get_player_from_token(nonce, game) != NULL) ||
            (nonce == INVALID_SESSION_TOKEN)) {
-        nonce = getRandomInt();
+        nonce = get_random_int();
         i++;
         if (i > TOKEN_GEN_LIMIT) {
             fprintf(stderr, "Too many token collisions, exiting...\n");
             exit(1);
         }
     }
-    player->sessionToken = nonce;
+    player->session_token = nonce;
 }
 
 /*
  * Builds the custom Cookie header that
  * sends the session token to the client.
  */
-static void buildSessionTokenHeader(char outHeader[static HEADER_LENGTH],
-                                    SessionToken token)
+static void build_session_token_header(char out_header[static HEADER_LENGTH],
+                                       session_token_t token)
 {
-    char headerBase[HEADER_LENGTH]  = "Set-Cookie: sessionToken=";
-    char tokenString[HEADER_LENGTH] = {0};
+    char header_base[HEADER_LENGTH]  = "Set-Cookie: sessionToken=";
+    char token_string[HEADER_LENGTH] = {0};
 
-    sprintf(tokenString, "%lld\n", token);
-    strncat(headerBase, tokenString, HEADER_LENGTH - strlen(headerBase));
-    memcpy(outHeader, headerBase, HEADER_LENGTH);
+    sprintf(token_string, "%lld\n", token);
+    strncat(header_base, token_string, HEADER_LENGTH - strlen(header_base));
+    memcpy(out_header, header_base, HEADER_LENGTH);
 }
 
 /*
  * Parses an int64 token out of a HTTP
  * message and returns it, or 0 on failure.
  */
-SessionToken getTokenFromHTTP(char *http, int httpLength)
+session_token_t get_token_from_http(char *http, int http_length)
 {
-    const char cookieName[HEADER_LENGTH] = "sessionToken=";
-    int startIndex     = stringSearch(http, cookieName, httpLength);
-    SessionToken token = 0;
+    const char cookie_name[HEADER_LENGTH] = "sessionToken=";
+    int start_index       = string_search(http, cookie_name, http_length);
+    session_token_t token = 0;
 
-    if (startIndex >= 0) {
-        startIndex += strnlen(cookieName, HEADER_LENGTH);
+    if (start_index >= 0) {
+        start_index += strnlen(cookie_name, HEADER_LENGTH);
         // TODO: This might overflow with specifically
         // malformed packets
-        token = strtoll(&http[startIndex], NULL, 10);
+        token = strtoll(&http[start_index], NULL, 10);
     }
     return token;
 }
@@ -155,7 +156,7 @@ SessionToken getTokenFromHTTP(char *http, int httpLength)
 /*
  * Returns 0 on success and -1 on failure
  */
-int tryGameLogin(struct Game *restrict game, const char *password)
+int try_game_login(struct game *restrict game, const char *password)
 {
     int match = 0;
     pthread_mutex_lock(game->threadlock);

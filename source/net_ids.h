@@ -14,7 +14,7 @@
  * partially or fully serialised
  * over the network
  */
-enum NetObjType {
+enum net_obj_type {
     NET_TYPE_NULL,
     NETID_RANGE_BEGIN,
     NET_TYPE_PLAYER,
@@ -27,25 +27,25 @@ enum NetObjType {
  * over the network as an integer to refer
  * to the specific object.
  */
-typedef long long NetID;
+typedef long long net_id_t;
 
-struct NetIDSlot {
+struct net_id_slot {
     pthread_mutex_t mutex;
     void *object;
 };
 
-struct Game;
+struct game;
 
-enum NetObjType resolveNetIDToObj(const NetID netID,
-                                  struct Game *game,
-                                  void **ret);
-NetID createNetID(enum NetObjType type, struct Game *game, void *obj);
+enum net_obj_type resolve_net_id_to_obj(const net_id_t net_id,
+                                        struct game *game,
+                                        void **ret);
+net_id_t create_net_id(enum net_obj_type type, struct game *game, void *obj);
 // Assigns the pointer that is passed
 // to the netID it finds and returns.
-NetID createNetID(enum NetObjType type, struct Game *game, void *obj);
 
-void clearNetID(struct Game *game, const NetID netID);
+void clear_net_id(struct game *game, const net_id_t net_id);
 
-pthread_mutex_t *getMutexFromNetID(struct Game *game, const NetID netID);
+pthread_mutex_t *get_mutex_from_net_id(struct game *game,
+                                       const net_id_t net_id);
 
 #endif

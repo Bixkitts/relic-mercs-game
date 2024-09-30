@@ -12,16 +12,16 @@
 #include "file_handling.h"
 #include "helpers.h"
 
-struct MemoryMappedFile {
+struct memory_mapped_file {
     char name[MAX_FILENAME_LEN];
     char *data;
     int size;
 };
 
-static struct MemoryMappedFile memoryMapBuffer[MAX_FILE_COUNT] = {0};
-static int memoryMapBufferSize                                 = 0;
+static struct memory_mapped_file memory_map_buffer[MAX_FILE_COUNT] = {0};
+static int memory_map_buffer_size                                  = 0;
 
-static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * TODO:
@@ -29,16 +29,16 @@ static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
  * hash map implementation
  * at some point
  */
-static inline int searchMmapBuffer(const char *dir, char **buffer)
+static inline int search_mmap_buffer(const char *dir, char **buffer)
 {
-    int foundInCache = -1;
-    *buffer          = NULL;
-    for (int i = 0; i < memoryMapBufferSize; i++) {
-        foundInCache =
-            stringSearch(memoryMapBuffer[i].name, dir, MAX_FILENAME_LEN);
-        if (foundInCache == 0) {
-            *buffer = memoryMapBuffer[i].data;
-            return memoryMapBuffer[i].size;
+    int found_in_cache = -1;
+    *buffer            = NULL;
+    for (int i = 0; i < memory_map_buffer_size; i++) {
+        found_in_cache =
+            string_search(memory_map_buffer[i].name, dir, MAX_FILENAME_LEN);
+        if (found_in_cache == 0) {
+            *buffer = memory_map_buffer[i].data;
+            return memory_map_buffer[i].size;
         }
     }
     return -1;
@@ -50,16 +50,16 @@ static inline int searchMmapBuffer(const char *dir, char **buffer)
  * Return the buffer from the cache if the
  * string is found there, otherwise map the file.
  */
-int getFileData(const char *dir, char **buffer)
+int get_file_data(const char *dir, char **buffer)
 {
     int ret = 0;
-    pthread_mutex_lock(&fileMutex);
-    ret = searchMmapBuffer(dir, buffer);
+    pthread_mutex_lock(&file_mutex);
+    ret = search_mmap_buffer(dir, buffer);
     if (*buffer != NULL) {
-        pthread_mutex_unlock(&fileMutex);
+        pthread_mutex_unlock(&file_mutex);
         return ret;
     }
-    if (memoryMapBufferSize >= MAX_FILE_COUNT) {
+    if (memory_map_buffer_size >= MAX_FILE_COUNT) {
         fprintf(stderr, "\nError, too many files open.\n");
     }
     // The file was not found in the cache,
@@ -67,40 +67,42 @@ int getFileData(const char *dir, char **buffer)
     int fd = open(dir, O_RDONLY);
     if (fd == -1) {
         perror("Error opening file");
-        pthread_mutex_unlock(&fileMutex);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
     struct stat file_stat;
     if (fstat(fd, &file_stat) == -1) {
         perror("Error getting file size");
         close(fd);
-        pthread_mutex_unlock(&fileMutex);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
-    memoryMapBuffer[memoryMapBufferSize].data =
+    memory_map_buffer[memory_map_buffer_size].data =
         mmap(NULL, file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    strncpy(memoryMapBuffer[memoryMapBufferSize].name, dir, MAX_FILENAME_LEN);
-    memoryMapBuffer[memoryMapBufferSize].size = file_stat.st_size;
+    strncpy(memory_map_buffer[memory_map_buffer_size].name,
+            dir,
+            MAX_FILENAME_LEN);
+    memory_map_buffer[memory_map_buffer_size].size = file_stat.st_size;
 
-    *buffer = memoryMapBuffer[memoryMapBufferSize].data;
+    *buffer = memory_map_buffer[memory_map_buffer_size].data;
     if (*buffer == MAP_FAILED) {
         perror("Error mapping file into memory");
         close(fd);
-        pthread_mutex_unlock(&fileMutex);
+        pthread_mutex_unlock(&file_mutex);
         return -1;
     }
-    memoryMapBufferSize++;
+    memory_map_buffer_size++;
 
     // Close the file
     close(fd);
-    pthread_mutex_unlock(&fileMutex);
+    pthread_mutex_unlock(&file_mutex);
     return file_stat.st_size;
 }
 
 /*
  * TODO: rewrite this spaghetti
  */
-int listFiles(char *outArray)
+int list_files(char *out_array)
 {
     DIR *d = NULL;
     int i  = 0;
@@ -128,7 +130,7 @@ int listFiles(char *outArray)
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
             if (dir->d_type == DT_REG) {
-                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                snprintf(&out_array[i * MAX_FILENAME_LEN],
                          MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 8,
                          "./src/%s",
                          dir->d_name);
@@ -144,7 +146,7 @@ int listFiles(char *outArray)
                 // This produceses a potential overflow error, but it's
                 // okay as long as I don't personally cause an overflow
                 // with long filenames
-                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                snprintf(&out_array[i * MAX_FILENAME_LEN],
                          MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 10,
                          "./images/%s",
                          dir->d_name);
@@ -157,7 +159,7 @@ int listFiles(char *outArray)
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
             if (dir->d_type == DT_REG) {
-                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                snprintf(&out_array[i * MAX_FILENAME_LEN],
                          MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 17,
                          "./src/rendering/%s",
                          dir->d_name);

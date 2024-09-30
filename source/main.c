@@ -17,26 +17,26 @@ int main(void)
     printf("\n-----------------------------------\n");
 #ifdef DEBUG
     printf("RUNNING SLOW DEBUG VERSION\n");
-    checkDataSizes();
+    check_data_sizes();
 #endif
     enable_tls();
     localhost = create_host("0.0.0.0", 7676);
 
-    createAllowedFileTable();
+    create_allowed_file_table();
 
     // TODO: Make a web interface for creating and
     // joining multiple games.
-    struct GameConfig gameConfig = {.name           = "test game",
-                                    .password       = "hello",
-                                    .maxPlayerCount = 4,
-                                    .minPlayerCount = 2};
+    struct game_config game_config = {.name             = "test game",
+                                      .password         = "hello",
+                                      .max_player_count = 4,
+                                      .min_player_count = 2};
 
-    createGame(&gameConfig);
+    create_game(&game_config);
 
     /* All incoming TCP packets
      * are given to "masterHandler()"
      * in "packet_handlers.c"
      */
-    listen_for_tcp(localhost, masterHandler);
+    listen_for_tcp(localhost, master_handler);
     return 0;
 }

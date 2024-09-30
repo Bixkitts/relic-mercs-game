@@ -16,32 +16,40 @@
 #include "packet_handlers.h"
 #include "websockets.h"
 
-enum CredentialFormFields {
+enum credential_form_fields {
     FORM_CREDENTIAL_PLAYERNAME,
     FORM_CREDENTIAL_PLAYERPASSWORD,
     FORM_CREDENTIAL_GAMEPASSWORD,
     FORM_CREDENTIAL_FIELD_COUNT
 };
-typedef void (*PacketHandler)(char *data, ssize_t packetSize, struct host *remotehost);
+typedef void (*packet_handler_t)(char *data,
+                                 ssize_t packet_size,
+                                 struct host *remotehost);
 
-static inline enum Handler initialHandlerCheck(struct host *remotehost);
+static inline enum handler initial_handler_check(struct host *remotehost);
 
-static void disconnectHandler(char *data, ssize_t packetSize, struct host *remotehost);
-static void httpHandler(char *data, ssize_t packetSize, struct host *remotehost);
-static void websockHandler(char *data, ssize_t packetSize, struct host *remotehost);
-
-static void loginHandler(char *restrict data,
-                         ssize_t packetSize,
+static void disconnect_handler(char *data,
+                               ssize_t packet_size,
+                               struct host *remotehost);
+static void http_handler(char *data,
+                         ssize_t packet_size,
                          struct host *remotehost);
-static void charsheetHandler(char *restrict data,
-                             ssize_t packetSize,
-                             struct host *remotehost);
-static void POSTHandler(char *restrict data,
-                        ssize_t packetSize,
+static void websock_handler(char *data,
+                            ssize_t packet_size,
+                            struct host *remotehost);
+
+static void login_handler(char *restrict data,
+                          ssize_t packet_size,
+                          struct host *remotehost);
+static void charsheet_handler(char *restrict data,
+                              ssize_t packet_size,
+                              struct host *remotehost);
+static void post_handler(char *restrict data,
+                         ssize_t packet_size,
+                         struct host *remotehost);
+static void get_handler(char *restrict data,
+                        ssize_t packet_size,
                         struct host *remotehost);
-static void GETHandler(char *restrict data,
-                       ssize_t packetSize,
-                       struct host *remotehost);
 
 /* disconnectHandler needs to be at index 0
  * because we use pointer math to handle
@@ -49,9 +57,9 @@ static void GETHandler(char *restrict data,
  * This is coupled with enum Handler
  * in packet_handlers.h
  */
-static PacketHandler handlers[HANDLER_COUNT] = {disconnectHandler,
-                                                httpHandler,
-                                                websockHandler};
+static packet_handler_t handlers[HANDLER_COUNT] = {disconnect_handler,
+                                                   http_handler,
+                                                   websock_handler};
 
 /*
  * Called from masterHandler,
@@ -62,23 +70,23 @@ static PacketHandler handlers[HANDLER_COUNT] = {disconnectHandler,
  * in this file,
  * and enum Handler in packet_handlers.h.
  */
-static inline enum Handler initialHandlerCheck(struct host *remotehost)
+static inline enum handler initial_handler_check(struct host *remotehost)
 {
-    struct HostCustomAttributes *customAttr = NULL;
+    struct host_custom_attr *custom_attr = NULL;
     if (get_host_custom_attr(remotehost) == NULL) {
-        customAttr = calloc(1, sizeof(*customAttr));
-        if (customAttr == NULL) {
-            printError(BB_ERR_CALLOC);
+        custom_attr = calloc(1, sizeof(*custom_attr));
+        if (custom_attr == NULL) {
+            print_error(BB_ERR_CALLOC);
             exit(1);
         }
-        customAttr->handler = HANDLER_DEFAULT;
-        set_host_custom_attr(remotehost, (void *)customAttr);
+        custom_attr->handler = HANDLER_DEFAULT;
+        set_host_custom_attr(remotehost, (void *)custom_attr);
     }
     else {
-        customAttr =
-            (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
+        custom_attr =
+            (struct host_custom_attr *)get_host_custom_attr(remotehost);
     }
-    return customAttr->handler;
+    return custom_attr->handler;
 }
 
 /*
@@ -86,84 +94,88 @@ static inline enum Handler initialHandlerCheck(struct host *remotehost)
  * every single incoming TCP packet
  * in the entire server.
  */
-void masterHandler(char *restrict data, ssize_t packetSize, struct host *remotehost)
+void master_handler(char *restrict data,
+                    ssize_t packet_size,
+                    struct host *remotehost)
 {
-    const enum Handler handler = initialHandlerCheck(remotehost);
+    const enum handler handler = initial_handler_check(remotehost);
 #ifdef DEBUG
-    if (packetSize > 0) {
+    if (packet_size > 0) {
         printf("\nReceived data:");
-        for (int i = 0; i < packetSize; i++) {
+        for (int i = 0; i < packet_size; i++) {
             printf("%c", data[i]);
         }
         printf("\n");
     }
-    else if (packetSize == 0) {
+    else if (packet_size == 0) {
         printf("\nClient disconnected\n");
     }
 #endif
 
     // Pointer math handles client disconnects
     // and calls disconnectHandler()
-    handlers[handler * (packetSize > 0)](data, packetSize, remotehost);
+    handlers[handler * (packet_size > 0)](data, packet_size, remotehost);
 
     return;
 }
 
-static void GETHandler(char *restrict data, ssize_t packetSize, struct host *remotehost)
+static void get_handler(char *restrict data,
+                        ssize_t packet_size,
+                        struct host *remotehost)
 {
-    char requestedResource[MAX_FILENAME_LEN] = {0};
+    char requested_resource[MAX_FILENAME_LEN] = {0};
 
-    char *restrict startingPoint = &data[5];
-    int stringLen        = charSearch(startingPoint, ' ', packetSize - 5);
-    char *fileTableEntry = NULL;
+    char *restrict starting_point = &data[5];
+    int string_len         = char_search(starting_point, ' ', packet_size - 5);
+    char *file_table_entry = NULL;
 
-    struct HostCustomAttributes *customAttr =
-        (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
+    struct host_custom_attr *custom_attr =
+        (struct host_custom_attr *)get_host_custom_attr(remotehost);
 
-    if (stringLen < 0 || stringLen > MAX_FILENAME_LEN) {
+    if (string_len < 0 || string_len > MAX_FILENAME_LEN) {
         return;
     }
 
-    memcpy(requestedResource, startingPoint, stringLen);
+    memcpy(requested_resource, starting_point, string_len);
 
-    struct Game *game     = getGameFromName(testGameName);
-    SessionToken token    = getTokenFromHTTP(data, packetSize);
-    struct Player *player = tryGetPlayerFromToken(token, game);
+    struct game *game     = get_game_from_name(test_game_name);
+    session_token_t token = get_token_from_http(data, packet_size);
+    struct player *player = try_get_player_from_token(token, game);
 
     /* Direct the remotehost to the login, character creation
      * or game depending on their session token.
      */
-    if (stringSearch(data, "GET / ", 10) >= 0) {
+    if (string_search(data, "GET / ", 10) >= 0) {
         if (player == NULL) {
-            sendContent("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+            send_content("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
         }
-        else if (!isCharsheetValid(player)) {
-            sendContent("./charsheet.html",
-                        HTTP_FLAG_TEXT_HTML,
-                        remotehost,
-                        NULL);
+        else if (!is_charsheet_valid(player)) {
+            send_content("./charsheet.html",
+                         HTTP_FLAG_TEXT_HTML,
+                         remotehost,
+                         NULL);
         }
-        else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
-            sendWebSocketResponse(data, packetSize, remotehost);
-            struct HostCustomAttributes *hostAttr =
-                (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
-            hostAttr->player    = player;
-            customAttr->handler = HANDLER_WEBSOCK;
-            cache_host(remotehost, getCurrentHostCache());
+        else if (string_search(data, "Sec-WebSocket-Key", packet_size) >= 0) {
+            send_web_socket_response(data, packet_size, remotehost);
+            struct host_custom_attr *host_attr =
+                (struct host_custom_attr *)get_host_custom_attr(remotehost);
+            host_attr->player    = player;
+            custom_attr->handler = HANDLER_WEBSOCK;
+            cache_host(remotehost, get_current_host_cache());
             return;
         }
         else {
-            sendContent("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+            send_content("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
         }
         return;
     }
     // Unauthenticated users are allowed the stylesheet, and login script
-    else if (stringSearch(data, "GET /styles.css", 16) >= 0) {
-        sendContent("./styles.css", HTTP_FLAG_TEXT_CSS, remotehost, NULL);
+    else if (string_search(data, "GET /styles.css", 16) >= 0) {
+        send_content("./styles.css", HTTP_FLAG_TEXT_CSS, remotehost, NULL);
         return;
     }
-    else if (stringSearch(data, "GET /login.js", 14) >= 0) {
-        sendContent("./login.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
+    else if (string_search(data, "GET /login.js", 14) >= 0) {
+        send_content("./login.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
     /*
@@ -173,45 +185,47 @@ static void GETHandler(char *restrict data, ssize_t packetSize, struct host *rem
      * otherwise we're not sending anything at all.
      */
     if (player == NULL) {
-        sendForbiddenPacket(remotehost);
+        send_forbidden_packet(remotehost);
         return;
     }
-    else if (isFileAllowed(requestedResource, &fileTableEntry)) {
-        sendContent(fileTableEntry,
-                    getContentTypeEnumFromFilename(fileTableEntry),
-                    remotehost,
-                    NULL);
+    else if (is_file_allowed(requested_resource, &file_table_entry)) {
+        send_content(file_table_entry,
+                     get_content_type_enum_from_filename(file_table_entry),
+                     remotehost,
+                     NULL);
         return;
     }
-    else if (stringSearch(data, "GET /index.js", 12) >= 0) {
-        sendContent("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
+    else if (string_search(data, "GET /index.js", 12) >= 0) {
+        send_content("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
-    sendForbiddenPacket(remotehost);
+    send_forbidden_packet(remotehost);
 }
 
-static void loginHandler(char *restrict data,
-                         ssize_t packetSize,
-                         struct host *remotehost)
+static void login_handler(char *restrict data,
+                          ssize_t packet_size,
+                          struct host *remotehost)
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
-    struct PlayerCredentials credentials          = {0};
-    int credentialIndex                           = 0;
-    const char firstFormField[MAX_CREDENTIAL_LEN] = "playerName=";
-    struct HTMLForm form                          = {0};
+    struct player_credentials credentials           = {0};
+    int credential_index                            = 0;
+    const char first_form_field[MAX_CREDENTIAL_LEN] = "playerName=";
+    struct html_form form                           = {0};
 
-    credentialIndex =
+    credential_index =
 
-        stringSearch(data, firstFormField, packetSize);
-    parseHTMLForm(&data[credentialIndex], &form, packetSize - credentialIndex);
-    if (form.fieldCount < FORM_CREDENTIAL_FIELD_COUNT) {
-        sendForbiddenPacket(remotehost); // placeholder
+        string_search(data, first_form_field, packet_size);
+    parse_html_form(&data[credential_index],
+                    &form,
+                    packet_size - credential_index);
+    if (form.field_count < FORM_CREDENTIAL_FIELD_COUNT) {
+        send_forbidden_packet(remotehost); // placeholder
         return;
     }
-    if (tryGameLogin(getGameFromName(testGameName),
-                     form.fields[FORM_CREDENTIAL_GAMEPASSWORD]) != 0) {
-        sendBadRequestPacket(remotehost);
+    if (try_game_login(get_game_from_name(test_game_name),
+                       form.fields[FORM_CREDENTIAL_GAMEPASSWORD]) != 0) {
+        send_bad_request_packet(remotehost);
         return;
     };
     strncpy(credentials.name,
@@ -220,73 +234,75 @@ static void loginHandler(char *restrict data,
     strncpy(credentials.password,
             form.fields[FORM_CREDENTIAL_PLAYERPASSWORD],
             MAX_CREDENTIAL_LEN);
-    if (tryPlayerLogin(getGameFromName(testGameName),
-                       &credentials,
-                       remotehost) < 0) {
-        sendBadRequestPacket(remotehost);
+    if (try_player_login(get_game_from_name(test_game_name),
+                         &credentials,
+                         remotehost) < 0) {
+        send_bad_request_packet(remotehost);
         return;
     }
     return;
 }
 
-static void charsheetHandler(char *restrict data,
-                             ssize_t packetSize,
-                             struct host *remotehost)
+static void charsheet_handler(char *restrict data,
+                              ssize_t packet_size,
+                              struct host *remotehost)
 {
-    SessionToken token = getTokenFromHTTP(data, packetSize);
-    struct Player *player =
-        tryGetPlayerFromToken(token, getGameFromName(testGameName));
-    struct HTMLForm form = {0};
+    session_token_t token = get_token_from_http(data, packet_size);
+    struct player *player =
+        try_get_player_from_token(token, get_game_from_name(test_game_name));
+    struct html_form form = {0};
 
-    const char firstFormField[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
+    const char first_form_field[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
 
     if (player == NULL) {
         // token was invalid, handle that
-        sendForbiddenPacket(remotehost);
+        send_forbidden_packet(remotehost);
         return;
     }
-    int htmlFormIndex = stringSearch(data, firstFormField, packetSize);
-    if (htmlFormIndex < 0) {
+    int html_form_index = string_search(data, first_form_field, packet_size);
+    if (html_form_index < 0) {
         // TODO: Malformed form data, let the client know
-        sendForbiddenPacket(remotehost); // placeholder
+        send_forbidden_packet(remotehost); // placeholder
         return;
     }
-    parseHTMLForm(&data[htmlFormIndex], &form, packetSize - htmlFormIndex);
-    if (initCharsheetFromForm(player, &form) != 0) {
+    parse_html_form(&data[html_form_index],
+                    &form,
+                    packet_size - html_form_index);
+    if (init_charsheet_from_form(player, &form) != 0) {
         // The client needs to know about malformed data
-        sendForbiddenPacket(remotehost); // placeholder
+        send_forbidden_packet(remotehost); // placeholder
         return;
     }
-    sendContent("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
+    send_content("./game.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
 }
 
-static void POSTHandler(char *restrict data,
-                        ssize_t packetSize,
-                        struct host *remotehost)
+static void post_handler(char *restrict data,
+                         ssize_t packet_size,
+                         struct host *remotehost)
 {
-    if (stringSearch(data, "login", 12) >= 0) {
-        loginHandler(data, packetSize, remotehost);
+    if (string_search(data, "login", 12) >= 0) {
+        login_handler(data, packet_size, remotehost);
     }
-    else if (stringSearch(data, "charsheet", 16) >= 0) {
-        charsheetHandler(data, packetSize, remotehost);
+    else if (string_search(data, "charsheet", 16) >= 0) {
+        charsheet_handler(data, packet_size, remotehost);
     }
 }
 
-static void httpHandler(char *restrict data,
-                        ssize_t packetSize,
-                        struct host *remotehost)
+static void http_handler(char *restrict data,
+                         ssize_t packet_size,
+                         struct host *remotehost)
 {
-    if (packetSize < 10) {
+    if (packet_size < 10) {
         return;
     }
-    if (stringSearch(data, "GET /", 8) >= 0) {
-        GETHandler(data, packetSize, remotehost);
+    if (string_search(data, "GET /", 8) >= 0) {
+        get_handler(data, packet_size, remotehost);
     }
-    else if (stringSearch(data, "POST /", 8) >= 0) {
-        POSTHandler(data, packetSize, remotehost);
+    else if (string_search(data, "POST /", 8) >= 0) {
+        post_handler(data, packet_size, remotehost);
     }
     else {
-        sendForbiddenPacket(remotehost);
+        send_forbidden_packet(remotehost);
     }
 }
 
@@ -294,15 +310,17 @@ static void httpHandler(char *restrict data,
  * Global caching state.
  * Affected by disconnections.
  */
-pthread_mutex_t cachingMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t caching_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Netlib gives us numbered caches for
 // storing hosts that connect
-int8_t currentHostCache = 0;
-int8_t lastHostCache    = 0;
+int8_t current_host_cache = 0;
+int8_t last_host_cache    = 0;
 
-static void disconnectHandler(char *data, ssize_t packetSize, struct host *remotehost)
+static void disconnect_handler(char *data,
+                               ssize_t packet_size,
+                               struct host *remotehost)
 {
-    struct HostCustomAttributes *attr = get_host_custom_attr(remotehost);
+    struct host_custom_attr *attr = get_host_custom_attr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
         uncache_host(remotehost, 0);
         // TODO: When someone disconnects,
@@ -320,27 +338,28 @@ static void disconnectHandler(char *data, ssize_t packetSize, struct host *remot
  * This function returns the up-to-date
  * multicast cache.
  */
-int getCurrentHostCache(void)
+int get_current_host_cache(void)
 {
-    pthread_mutex_lock(&cachingMutex);
-    int ret = (int)currentHostCache;
-    pthread_mutex_unlock(&cachingMutex);
+    pthread_mutex_lock(&caching_mutex);
+    int ret = (int)current_host_cache;
+    pthread_mutex_unlock(&caching_mutex);
     return ret;
 }
 
-static void websockHandler(char *restrict data,
-                           ssize_t packetSize,
-                           struct host *remotehost)
+static void websock_handler(char *restrict data,
+                            ssize_t packet_size,
+                            struct host *remotehost)
 {
-    if (packetSize < 8) {
+    if (packet_size < 8) {
         fprintf(stderr, "\nToo short websocket packet received.\n");
         return;
     }
     // After this part we can freely dereference the
     // first 8 bytes for opcodes and such.
-    char decodedData[MAX_PACKET_SIZE] = {0};
-    int decodedDataLength             = 0;
+    char decoded_data[MAX_PACKET_SIZE] = {0};
+    int decoded_data_length            = 0;
 
-    decodedDataLength = decodeWebsocketMessage(decodedData, data, packetSize);
-    handleGameMessage(decodedData, decodedDataLength, remotehost);
+    decoded_data_length =
+        decode_websocket_message(decoded_data, data, packet_size);
+    handle_game_message(decoded_data, decoded_data_length, remotehost);
 }
