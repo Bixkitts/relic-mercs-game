@@ -3,7 +3,7 @@
 
 #define BB_ERROR_STRLEN 64
 
-enum ErrorString{
+enum ErrorString {
     BB_ERR_MALLOC,
     BB_ERR_CALLOC,
     BB_ERR_FILE_NOT_FOUND,

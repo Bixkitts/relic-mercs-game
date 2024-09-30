@@ -1,35 +1,35 @@
 #ifndef BB_GAME_LOGIC
 #define BB_GAME_LOGIC
 
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include <stdatomic.h>
 
 #include "bbnetlib.h"
 #include "helpers.h"
-#include "session_token.h"
 #include "net_ids.h"
+#include "session_token.h"
 
 /*
  * Maximum amount of networked
  * objects/states
  */
-#define MAX_NETOBJS          MAX_GAMES       \
-                             + MAX_PLAYERS
+#define MAX_NETOBJS \
+    MAX_GAMES       \
+    +MAX_PLAYERS
 
 extern const char testGameName[];
 
-#define MAX_CREDENTIAL_LEN   32
-#define MAX_PLAYERS_IN_GAME  8
-#define MAX_GAMES            16
-#define MAX_PLAYERS          MAX_PLAYERS_IN_GAME * MAX_GAMES
-
+#define MAX_CREDENTIAL_LEN  32
+#define MAX_PLAYERS_IN_GAME 8
+#define MAX_GAMES           16
+#define MAX_PLAYERS         MAX_PLAYERS_IN_GAME *MAX_GAMES
 
 typedef uint16_t Opcode;
 
-// All injuries are followed immediately by their 
+// All injuries are followed immediately by their
 // healed counterparts.
-enum InjuryType{
+enum InjuryType {
     INJURY_NOTHING,
     INJURY_DEEP_CUT,
     INJURY_BIG_SCAR,
@@ -44,7 +44,7 @@ enum InjuryType{
     INJURY_COUNT
 };
 
-enum Factions{
+enum Factions {
     GAME_FACTION_SLAVERS,
     GAME_FACTION_CULTISTS,
     GAME_FACTION_ELDERS,
@@ -64,7 +64,7 @@ enum Gender {
 // These ID's will be direct
 // callbacks to handle these encounters
 // serverside
-enum EncounterID{
+enum EncounterID {
     ENCOUNTER_NONE,
     ENCOUNTER_BANDITS,
     ENCOUNTER_TROLLS,
@@ -82,7 +82,7 @@ enum EncounterID{
     ENCOUNTER_COUNT
 };
 
-enum EncounterTypeID{
+enum EncounterTypeID {
     ENCOUNTER_TYPE_NONE,
     ENCOUNTER_TYPE_ANY,
     ENCOUNTER_TYPE_BANDIT,
@@ -98,7 +98,7 @@ enum EncounterTypeID{
     ENCOUNTER_TYPE_COUNT
 };
 
-enum ResourceID{
+enum ResourceID {
     RESOURCE_KNIFE,
     RESOURCE_SWORD,
     RESOURCE_AXE,
@@ -111,24 +111,19 @@ enum ResourceID{
  */
 // NOTE: Every encounter category needs at least one specific
 // encounter in it.
-static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT]= {
+static int encounterCategories[ENCOUNTER_TYPE_COUNT][ENCOUNTER_COUNT] = {
     // ENCOUNTER_TYPE_BANDIT
     {ENCOUNTER_BANDITS},
     // ENCOUNTER_TYPE_BEASTS
-    {ENCOUNTER_WOLVES,
-     ENCOUNTER_RATS},
+    {ENCOUNTER_WOLVES, ENCOUNTER_RATS},
     // ENCOUNTER_TYPE_MONSTROSITIES
     {ENCOUNTER_TROLLS},
     // ENCOUNTER_TYPE_DRAGON
     {ENCOUNTER_DRAGONS},
     // ENCOUNTER_TYPE_MYSTICAL
-    {ENCOUNTER_RUINS_OLD,
-     ENCOUNTER_TREASURE_MAGICAL,
-     ENCOUNTER_SPELL_TOME},
+    {ENCOUNTER_RUINS_OLD, ENCOUNTER_TREASURE_MAGICAL, ENCOUNTER_SPELL_TOME},
     // ENOUNTER_TYPE_CULTISTS
-    {ENCOUNTER_CULTISTS_CANNIBAL,
-     ENCOUNTER_CULTISTS_PEACEFUL}
-};
+    {ENCOUNTER_CULTISTS_CANNIBAL, ENCOUNTER_CULTISTS_PEACEFUL}};
 // This is coupled with playerBackgroundStrings
 enum PlayerBackground {
     PLAYER_BACKGROUND_TRADER,
@@ -143,14 +138,13 @@ enum PlayerBackground {
     PLAYER_BACKGROUND_COUNT
 };
 
-
 typedef unsigned int PlayerAttr;
 struct CharacterSheet {
-    bool                  isValid; // Is this Charsheet valid at all?
-    enum Gender           gender;
-    PlayerAttr            vigour;
-    PlayerAttr            violence;
-    PlayerAttr            cunning;
+    bool isValid; // Is this Charsheet valid at all?
+    enum Gender gender;
+    PlayerAttr vigour;
+    PlayerAttr violence;
+    PlayerAttr cunning;
     enum PlayerBackground background;
 };
 
@@ -161,16 +155,15 @@ struct Coordinates {
 };
 
 struct PlayerCredentials {
-    char name     [MAX_CREDENTIAL_LEN];
-    char password [MAX_CREDENTIAL_LEN];
+    char name[MAX_CREDENTIAL_LEN];
+    char password[MAX_CREDENTIAL_LEN];
 };
 
-
 struct GameConfig {
-    char name    [MAX_CREDENTIAL_LEN];
+    char name[MAX_CREDENTIAL_LEN];
     char password[MAX_CREDENTIAL_LEN];
-    int  maxPlayerCount;
-    int  minPlayerCount;
+    int maxPlayerCount;
+    int minPlayerCount;
 };
 
 /*
@@ -201,19 +194,19 @@ enum CharsheetFormFields {
 // restore whatever encounter they were having (or other
 // UI dialogue).
 struct Player {
-    NetID                    netID;
-    pthread_mutex_t         *threadlock;
-    Host                     associatedHost;
-    struct Game             *game;
+    NetID netID;
+    pthread_mutex_t *threadlock;
+    Host associatedHost;
+    struct Game *game;
     struct PlayerCredentials credentials;
-    SessionToken             sessionToken;
-    struct CharacterSheet    charSheet;
-    struct Coordinates       coords;
+    SessionToken sessionToken;
+    struct CharacterSheet charSheet;
+    struct Coordinates coords;
     // How many of each ResourceID the player has
-    int                      resources[RESOURCE_COUNT];
+    int resources[RESOURCE_COUNT];
     // Which encounter is the player currently
     // encountering, if any.
-    enum EncounterID         currentEnc;
+    enum EncounterID currentEnc;
 };
 /*
  * Lock the threadlock before modifying
@@ -223,20 +216,20 @@ struct Player {
  * data.
  */
 struct Game {
-    NetID              netID;
-    pthread_mutex_t   *threadlock;
-    char               name    [MAX_CREDENTIAL_LEN];
-    char               password[MAX_CREDENTIAL_LEN];
-    struct NetIDSlot   netIDs  [MAX_NETOBJS];
+    NetID netID;
+    pthread_mutex_t *threadlock;
+    char name[MAX_CREDENTIAL_LEN];
+    char password[MAX_CREDENTIAL_LEN];
+    struct NetIDSlot netIDs[MAX_NETOBJS];
     // Which player (identified by NetID) is currently
     // taking their turn.
     // When this is 0, the game hasn't started yet
     // and the first turn needs to be assigned.
-    NetID              currentTurn;
-    int                maxPlayerCount;
-    int                minPlayerCount;
-    struct Player      players [MAX_PLAYERS_IN_GAME];
-    atomic_int         playerCount;
+    NetID currentTurn;
+    int maxPlayerCount;
+    int minPlayerCount;
+    struct Player players[MAX_PLAYERS_IN_GAME];
+    atomic_int playerCount;
 };
 
 /*
@@ -245,67 +238,58 @@ struct Game {
  */
 // REQUESTS //
 struct MovePlayerReq {
-    double    xCoord;
-    double    yCoord;
-}__attribute__((packed));
+    double xCoord;
+    double yCoord;
+} __attribute__((packed));
 struct PlayerConnectReq {
     // We don't actually need anything from
     // the client on connection.
     // But one day we might!
     char placeholder;
-}__attribute__((packed));
+} __attribute__((packed));
 
 // RESPONSES //
 struct MovePlayerRes {
-    NetID                playerNetID;
+    NetID playerNetID;
     struct MovePlayerReq coords;
 } __attribute__((packed));
 struct PlayerConnectRes {
-    NetID              players      [MAX_PLAYERS_IN_GAME];
-    char               playerNames  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
-    struct Coordinates playerCoords [MAX_PLAYERS_IN_GAME];
-    NetID              currentTurn; // NetID of the player who's turn it is
-    bool               gameOngoing; // Has the game we've joined started yet?
-    int8_t             playerIndex; // Index in the "players" array of the connecting player
-}__attribute__((packed));
+    NetID players[MAX_PLAYERS_IN_GAME];
+    char playerNames[MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
+    struct Coordinates playerCoords[MAX_PLAYERS_IN_GAME];
+    NetID currentTurn;  // NetID of the player who's turn it is
+    bool gameOngoing;   // Has the game we've joined started yet?
+    int8_t playerIndex; // Index in the "players" array of the connecting player
+} __attribute__((packed));
 
 /*
  * Primary entry point for interpreting
  * incoming websocket messages
  */
-void handleGameMessage(char *data, 
-                       ssize_t dataSize, 
-                       Host remotehost);
+void handleGameMessage(char *data, ssize_t dataSize, Host remotehost);
 
-
-void         
-setGamePassword         (struct Game *restrict game, 
-                         const char password[static MAX_CREDENTIAL_LEN]);
-struct Player 
-*tryGetPlayerFromToken  (SessionToken token,
-                         struct Game *restrict game);
-struct Game 
-*getGameFromName        (const char name[static MAX_CREDENTIAL_LEN]);
+void setGamePassword(struct Game *restrict game,
+                     const char password[static MAX_CREDENTIAL_LEN]);
+struct Player *tryGetPlayerFromToken(SessionToken token,
+                                     struct Game *restrict game);
+struct Game *getGameFromName(const char name[static MAX_CREDENTIAL_LEN]);
 // Character sheet setup stuff
-int  
-initCharsheetFromForm   (struct Player *charsheet, 
-                         const struct HTMLForm *form);
-bool 
-isCharsheetValid        (const struct Player *restrict player);
+int initCharsheetFromForm(struct Player *charsheet,
+                          const struct HTMLForm *form);
+bool isCharsheetValid(const struct Player *restrict player);
 // Note: use initCharsheetFromForm.
-void 
-setPlayerCharSheet      (struct Player *player,
-                         const struct CharacterSheet *charsheet);
+void setPlayerCharSheet(struct Player *player,
+                        const struct CharacterSheet *charsheet);
 /* --------------------------------------------- */
 
-struct Game   *createGame    (struct GameConfig *config);
-struct Player *createPlayer  (struct Game *game,
-                              struct PlayerCredentials *credentials);
-void           deletePlayer  (struct Player *restrict player);
+struct Game *createGame(struct GameConfig *config);
+struct Player *createPlayer(struct Game *game,
+                            struct PlayerCredentials *credentials);
+void deletePlayer(struct Player *restrict player);
 // returns the ID the player got
 // Returns the pointer to global Game
 // variable.
 // Not thread safe, set this exactly once
 // in the main thread.
-int   getPlayerCount     (const struct Game *game);
+int getPlayerCount(const struct Game *game);
 #endif

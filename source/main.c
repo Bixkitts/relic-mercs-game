@@ -1,17 +1,15 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "bbnetlib.h"
-#include "helpers.h"
-#include "packet_handlers.h"
-#include "html_server.h"
 #include "game_logic.h"
+#include "helpers.h"
+#include "html_server.h"
+#include "packet_handlers.h"
 
 Host localhost = NULL;
-
 
 int main(void)
 {
@@ -21,19 +19,17 @@ int main(void)
     printf("RUNNING SLOW DEBUG VERSION\n");
     checkDataSizes();
 #endif
-    enableTLS    ();
+    enableTLS();
     localhost = createHost("0.0.0.0", 7676);
 
     createAllowedFileTable();
 
     // TODO: Make a web interface for creating and
     // joining multiple games.
-    struct GameConfig gameConfig = {
-        .name           = "test game",
-        .password       = "hello",
-        .maxPlayerCount = 4,
-        .minPlayerCount = 2
-    };
+    struct GameConfig gameConfig = {.name           = "test game",
+                                    .password       = "hello",
+                                    .maxPlayerCount = 4,
+                                    .minPlayerCount = 2};
 
     createGame(&gameConfig);
 
@@ -41,6 +37,6 @@ int main(void)
      * are given to "masterHandler()"
      * in "packet_handlers.c"
      */
-    listenForTCP (localhost, masterHandler);
+    listenForTCP(localhost, masterHandler);
     return 0;
 }

@@ -1,8 +1,8 @@
 #ifndef BB_HOST_CUSTOM_ATTRIBUTES
 #define BB_HOST_CUSTOM_ATTRIBUTES
 
-#include "packet_handlers.h"
 #include "game_logic.h"
+#include "packet_handlers.h"
 
 /*
  * This struct stores all custom data we want
@@ -11,9 +11,9 @@
  * in use by the TCP connection in "handler".
  */
 struct HostCustomAttributes {
-    enum Handler  handler;  // Which handler should be called when receiving a 
+    enum Handler handler;  // Which handler should be called when receiving a
                            // packet from this host
-    struct Player *player;  // Which player this host controls
+    struct Player *player; // Which player this host controls
 };
 
 static inline struct Player *getPlayerFromHost(Host remotehost)

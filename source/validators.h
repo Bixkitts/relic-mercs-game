@@ -2,12 +2,12 @@
 #define BB_GAME_VALIDATORS
 #include "game_logic.h"
 #include "helpers.h"
-/* 
+/*
 
 This file is just a big bunch of static inline
 helper functions for validating data coming in from
 the websockets, e.g. making sure a set of coordinates
-a player wants to move to is within the bounds of 
+a player wants to move to is within the bounds of
 the map.
 These functions will probably all only
 ever have one entry point each, so they're inlined.
@@ -28,8 +28,9 @@ static inline bool validatePlayerMoveCoords(const struct MovePlayerReq *inData,
 
     outData->xCoord = clamp(inData->xCoord, mapBound_x * -1, mapBound_x);
     outData->yCoord = clamp(inData->yCoord, mapBound_y * -1, mapBound_y);
-    
-    // Currently the client can't pass "invalid" move coords, they're just clamped.
+
+    // Currently the client can't pass "invalid" move coords, they're just
+    // clamped.
     return true;
 }
 
@@ -39,21 +40,17 @@ static inline bool validatePlayerMoveCoords(const struct MovePlayerReq *inData,
  * but we need to make sure it's
  * not fudged somehow by the client.
  */
-static inline int validateNewCharsheet (struct CharacterSheet *sheet)
+static inline int validateNewCharsheet(struct CharacterSheet *sheet)
 {
     // All this math is unsigned for a reason
-    PlayerAttr playerPower = sheet->vigour
-                             + sheet->cunning
-                             + sheet->violence;
+    PlayerAttr playerPower = sheet->vigour + sheet->cunning + sheet->violence;
     if (playerPower != 13) {
         return -1;
     }
-    if (sheet->background >= PLAYER_BACKGROUND_COUNT
-        || sheet->background < 0) {
+    if (sheet->background >= PLAYER_BACKGROUND_COUNT || sheet->background < 0) {
         return -1;
     }
-    if (sheet->gender >= GENDER_COUNT
-        || sheet->gender < 0) {
+    if (sheet->gender >= GENDER_COUNT || sheet->gender < 0) {
         return -1;
     }
     return 0;

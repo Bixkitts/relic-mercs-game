@@ -6,7 +6,7 @@
 // so if encountered it's an
 // uninitialised/nonexistent object.
 #define NULL_NET_ID 0
-#define NETIDS_MAX 512
+#define NETIDS_MAX  512
 
 /*
  * Types of objects or states
@@ -30,8 +30,8 @@ enum NetObjType {
 typedef long long NetID;
 
 struct NetIDSlot {
-    pthread_mutex_t  mutex;
-    void            *object;
+    pthread_mutex_t mutex;
+    void *object;
 };
 
 struct Game;
@@ -39,19 +39,13 @@ struct Game;
 enum NetObjType resolveNetIDToObj(const NetID netID,
                                   struct Game *game,
                                   void **ret);
-NetID createNetID(enum NetObjType type,
-                  struct Game *game,
-                  void *obj);
+NetID createNetID(enum NetObjType type, struct Game *game, void *obj);
 // Assigns the pointer that is passed
 // to the netID it finds and returns.
-NetID createNetID(enum NetObjType type,
-                  struct Game *game,
-                  void *obj);
+NetID createNetID(enum NetObjType type, struct Game *game, void *obj);
 
-void  clearNetID (struct Game *game,
-                  const NetID netID);
+void clearNetID(struct Game *game, const NetID netID);
 
-pthread_mutex_t *getMutexFromNetID(struct Game *game,
-                                   const NetID netID);
+pthread_mutex_t *getMutexFromNetID(struct Game *game, const NetID netID);
 
 #endif

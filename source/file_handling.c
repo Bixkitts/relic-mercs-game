@@ -1,25 +1,25 @@
+#include <dirent.h>
+#include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/mman.h>
-#include <dirent.h> 
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "error_handling.h"
 #include "file_handling.h"
 #include "helpers.h"
 
 struct MemoryMappedFile {
-    char  name[MAX_FILENAME_LEN];
+    char name[MAX_FILENAME_LEN];
     char *data;
-    int   size;
+    int size;
 };
 
-static struct MemoryMappedFile memoryMapBuffer[MAX_FILE_COUNT] = { 0 };
-static int                     memoryMapBufferSize             = 0;          
+static struct MemoryMappedFile memoryMapBuffer[MAX_FILE_COUNT] = {0};
+static int memoryMapBufferSize                                 = 0;
 
 static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -29,15 +29,13 @@ static pthread_mutex_t fileMutex = PTHREAD_MUTEX_INITIALIZER;
  * hash map implementation
  * at some point
  */
-static inline int 
-searchMmapBuffer(const char *dir, char **buffer)
+static inline int searchMmapBuffer(const char *dir, char **buffer)
 {
     int foundInCache = -1;
-    *buffer = NULL;
+    *buffer          = NULL;
     for (int i = 0; i < memoryMapBufferSize; i++) {
-        foundInCache = stringSearch(memoryMapBuffer[i].name, 
-                                    dir, 
-                                    MAX_FILENAME_LEN);
+        foundInCache =
+            stringSearch(memoryMapBuffer[i].name, dir, MAX_FILENAME_LEN);
         if (foundInCache == 0) {
             *buffer = memoryMapBuffer[i].data;
             return memoryMapBuffer[i].size;
@@ -79,8 +77,8 @@ int getFileData(const char *dir, char **buffer)
         pthread_mutex_unlock(&fileMutex);
         return -1;
     }
-    memoryMapBuffer[memoryMapBufferSize].data = 
-    mmap(NULL, file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    memoryMapBuffer[memoryMapBufferSize].data =
+        mmap(NULL, file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     strncpy(memoryMapBuffer[memoryMapBufferSize].name, dir, MAX_FILENAME_LEN);
     memoryMapBuffer[memoryMapBufferSize].size = file_stat.st_size;
 
@@ -105,19 +103,19 @@ int getFileData(const char *dir, char **buffer)
 int listFiles(char *outArray)
 {
     DIR *d = NULL;
-    int  i = 0;
+    int i  = 0;
     struct dirent *dir;
     /*
      * Files in the same dir as the executable should not be listed.
      *
     d = opendir(".");
     if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
+        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
           if (dir->d_type == DT_REG)
           {
-              snprintf(&outArray[i * MAX_FILENAME_LEN], 
-              MAX_DIRNAME_LEN + MAX_FILENAME_LEN-3, 
-              "./%s", 
+              snprintf(&outArray[i * MAX_FILENAME_LEN],
+              MAX_DIRNAME_LEN + MAX_FILENAME_LEN-3,
+              "./%s",
               dir->d_name);
               i++;
           }
@@ -128,12 +126,11 @@ int listFiles(char *outArray)
     // TODO: make this a function instead of copy pasting
     d = opendir("./src");
     if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-            if (dir->d_type == DT_REG)
-            {
-                snprintf(&outArray[i * MAX_FILENAME_LEN], 
-                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN-8, 
-                         "./src/%s", 
+        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
+            if (dir->d_type == DT_REG) {
+                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 8,
+                         "./src/%s",
                          dir->d_name);
                 i++;
             }
@@ -142,15 +139,14 @@ int listFiles(char *outArray)
     }
     d = opendir("./images");
     if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-            if (dir->d_type == DT_REG)
-            {
+        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
+            if (dir->d_type == DT_REG) {
                 // This produceses a potential overflow error, but it's
                 // okay as long as I don't personally cause an overflow
                 // with long filenames
-                snprintf(&outArray[i * MAX_FILENAME_LEN], 
-                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 10, 
-                         "./images/%s", 
+                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 10,
+                         "./images/%s",
                          dir->d_name);
                 i++;
             }
@@ -159,12 +155,11 @@ int listFiles(char *outArray)
     closedir(d);
     d = opendir("./src/rendering");
     if (d) {
-        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {  
-            if (dir->d_type == DT_REG)
-            {
-                snprintf(&outArray[i * MAX_FILENAME_LEN], 
-                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN-17, 
-                         "./src/rendering/%s", 
+        while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
+            if (dir->d_type == DT_REG) {
+                snprintf(&outArray[i * MAX_FILENAME_LEN],
+                         MAX_DIRNAME_LEN + MAX_FILENAME_LEN - 17,
+                         "./src/rendering/%s",
                          dir->d_name);
                 i++;
             }

@@ -1,17 +1,17 @@
+#include <dirent.h>
+#include <openssl/rand.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h> 
-#include <openssl/rand.h>
 
-#include "helpers.h"
 #include "error_handling.h"
+#include "helpers.h"
 
-static void stringSearch_computeLps(const char* pattern, int m, int* lps) 
+static void stringSearch_computeLps(const char *pattern, int m, int *lps)
 {
     int len = 0;
-    lps[0] = 0; // lps[0] is always 0
+    lps[0]  = 0; // lps[0] is always 0
 
     int i = 1;
     while (i < m) {
@@ -19,10 +19,12 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
             len++;
             lps[i] = len;
             i++;
-        } else {
+        }
+        else {
             if (len != 0) {
                 len = lps[len - 1];
-            } else {
+            }
+            else {
                 lps[i] = 0;
                 i++;
             }
@@ -34,14 +36,14 @@ static void stringSearch_computeLps(const char* pattern, int m, int* lps)
  * This function makes sure the data types we use are the
  * correct length for interpreting incoming websocket packets.
  * This is ONLY to be run in debug mode and exists because I don't
- * want to consult the C standard for guarenteed type sizes, 
+ * want to consult the C standard for guarenteed type sizes,
  * or make/find custom fixed length types for all data coming in.
  */
-void checkDataSizes() {
-    if (sizeof(double) != 8
-        || sizeof(int) != 4
-        || sizeof(long long) != 8) {
-        fprintf(stderr, "ERROR: Unexpected data sizes for serialization, exiting...\n");
+void checkDataSizes()
+{
+    if (sizeof(double) != 8 || sizeof(int) != 4 || sizeof(long long) != 8) {
+        fprintf(stderr,
+                "ERROR: Unexpected data sizes for serialization, exiting...\n");
         exit(1);
     }
 }
@@ -56,11 +58,11 @@ void printBufferInHex(char *data, int size)
 /*
  *  Complicated KMP string search algo, don't bother touching
  */
-int stringSearch(const char* text, const char* pattern, int maxLength) 
+int stringSearch(const char *text, const char *pattern, int maxLength)
 {
     int textLength = strnlen(text, maxLength);
     int patLength  = strnlen(pattern, maxLength);
-    int* lps       = malloc(sizeof(*lps) * patLength);
+    int *lps       = malloc(sizeof(*lps) * patLength);
     if (!lps) {
         exit(1);
     }
@@ -76,7 +78,8 @@ int stringSearch(const char* text, const char* pattern, int maxLength)
         if (j == patLength) {
             free(lps);
             return i - j;
-        } else if (i < textLength && pattern[j] != text[i]) {
+        }
+        else if (i < textLength && pattern[j] != text[i]) {
             if (j != 0) {
                 j = lps[j - 1];
             }
@@ -94,7 +97,7 @@ int stringSearch(const char* text, const char* pattern, int maxLength)
  */
 bool isEmptyString(const char *string)
 {
-    return string[0] == '\0';    
+    return string[0] == '\0';
 }
 int charSearch(const char *restrict text, char c, int bufLen)
 {
@@ -108,7 +111,8 @@ int charSearch(const char *restrict text, char c, int bufLen)
     return i;
 }
 
-float getRandomFloat(float min, float max) {
+float getRandomFloat(float min, float max)
+{
     unsigned char buffer[sizeof(float)]; // 4 bytes to store a random integer
     if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
         fprintf(stderr, "Error generating random bytes\n");
@@ -119,12 +123,13 @@ float getRandomFloat(float min, float max) {
         randInt = (randInt << 8) | buffer[i];
     }
     float normalized = randInt / (float)UINT_MAX;
-    float result = min + normalized * (max - min);
+    float result     = min + normalized * (max - min);
 
     return result;
 }
 
-double getRandomDouble(double min, double max) {
+double getRandomDouble(double min, double max)
+{
     unsigned char buffer[sizeof(double)]; // 4 bytes to store a random integer
     if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
         fprintf(stderr, "Error generating random bytes\n");
@@ -135,15 +140,15 @@ double getRandomDouble(double min, double max) {
         randInt = (randInt << 8) | buffer[i];
     }
     double normalized = randInt / (double)UINT64_MAX;
-    double result = min + normalized * (max - min);
+    double result     = min + normalized * (max - min);
 
     return result;
 }
 
 long long int getRandomInt()
 {
-    long long     randomInteger                      = 0;
-    unsigned char randomBytes[sizeof(long long int)] = { 0 };
+    long long randomInteger                          = 0;
+    unsigned char randomBytes[sizeof(long long int)] = {0};
 
     if (RAND_bytes(randomBytes, sizeof(randomBytes)) != 1) {
         fprintf(stderr, "Error generating random bytes.\n");
@@ -171,7 +176,7 @@ double clamp(double x, double min, double max)
  * Chat GPT, idek if it works, I need a proper simple
  * hash algorithm for hash tables.
  */
-unsigned int hashDataSimple(const char *data, size_t data_len) 
+unsigned int hashDataSimple(const char *data, size_t data_len)
 {
     unsigned int hash = 0;
 
@@ -198,32 +203,34 @@ unsigned int hashDataSimple(const char *data, size_t data_len)
  *  firstElement=data&secondElement=data.....
  *
  */
-void parseHTMLForm(const char * inBuffer, struct HTMLForm *outBuffer, ssize_t inBufferLen)
+void parseHTMLForm(const char *inBuffer,
+                   struct HTMLForm *outBuffer,
+                   ssize_t inBufferLen)
 {
     // TODO: Make ABSOLUTELY sure this doesn't overflow
-    int i = 0;
+    int i        = 0;
     int fieldLen = 0;
-    while (inBuffer[i] != '\0' 
-           && i < inBufferLen 
-           && outBuffer->fieldCount < HTMLFORM_MAX_FIELDS) 
-    {
+    while (inBuffer[i] != '\0' && i < inBufferLen &&
+           outBuffer->fieldCount < HTMLFORM_MAX_FIELDS) {
         int nextField = 0;
-        fieldLen = 0;
-        nextField = charSearch(&inBuffer[i], '=', inBufferLen - i + 1 );   
-        if ( nextField < 0 ) {
+        fieldLen      = 0;
+        nextField     = charSearch(&inBuffer[i], '=', inBufferLen - i + 1);
+        if (nextField < 0) {
             // no more form fields found...
             break;
         }
-        i        += nextField + 1;
+        i += nextField + 1;
         fieldLen = charSearch(&inBuffer[i], '&', inBufferLen - i);
-        if ( fieldLen < 0 ) {
+        if (fieldLen < 0) {
             // No more '&' found, hitting
             // the end of the buffer...
             fieldLen = inBufferLen - i;
         }
 
         cap(&fieldLen, HTMLFORM_FIELD_MAX_LEN);
-        memcpy(outBuffer->fields[outBuffer->fieldCount], &inBuffer[i], fieldLen);
+        memcpy(outBuffer->fields[outBuffer->fieldCount],
+               &inBuffer[i],
+               fieldLen);
         outBuffer->fieldCount++;
     }
 }

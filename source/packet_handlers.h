@@ -3,9 +3,9 @@
 
 #include "bbnetlib.h"
 
-#define MAX_PACKET_SIZE  1024
+#define MAX_PACKET_SIZE 1024
 
-enum Handler{
+enum Handler {
     HANDLER_DISCONNECT,
     HANDLER_HTTP,
     HANDLER_WEBSOCK,
@@ -14,11 +14,11 @@ enum Handler{
 
 #define HANDLER_DEFAULT HANDLER_HTTP
 
-void masterHandler       (char *restrict data, ssize_t packetSize, Host remotehost);
+void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost);
 
-void buildFileTable      (void);
+void buildFileTable(void);
 
-int  getCurrentHostCache (void);
+int getCurrentHostCache(void);
 
-int  getCurrentHostCache (void);
+int getCurrentHostCache(void);
 #endif
