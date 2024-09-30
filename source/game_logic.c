@@ -160,7 +160,7 @@ void handle_game_message(char *data, ssize_t data_size, struct host *remotehost)
     memcpy(&opcode, data, sizeof(opcode));
     if (opcode >= MESSAGE_HANDLER_COUNT) {
 #ifdef DEBUG
-        fprintf(stderr, "\nBad websocket opcode_t.\n");
+        fprintf(stderr, "\nBad websocket opcode.\n");
 #endif
         return;
     }
