@@ -2,7 +2,30 @@ Checks: '-*,readability-identifier-naming'
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: 'lower_case' }
   - { key: readability-identifier-naming.FunctionCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.ConstantFunctionCase, value: 'lower_case' }
   - { key: readability-identifier-naming.StructCase, value: 'lower_case' }
   - { key: readability-identifier-naming.ConstantCase, value: 'lower_case' }
   - { key: readability-identifier-naming.TypedefSuffix, value: '_t' }
-HeaderFileRegex: './src/.*'
+  - { key: readability-identifier-naming.ConstantParameterCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.ConstantPointerParameterCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.EnumCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.EnumConstantCase, value: 'UPPER_CASE' }
+  - { key: readability-identifier-naming.GlobalConstantCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.GlobalConstantPointerCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.GlobalFunctionCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.GlobalPointerCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.GlobalVariableCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.LocalConstantCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.LocalConstantPointerCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.LocalPointerCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.LocalVariableCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.MacroDefinitionCase, value: 'UPPER_CASE' }
+  - { key: readability-identifier-naming.MemberCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.ParameterCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.ParamterPackCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.PointerParameterCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.PrivateMemberCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.PublicMemberCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.StaticConstantCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.StaticVariableCase, value: 'lower_case' }
+  - { key: readability-identifier-naming.UnionCase, value: 'lower_case' }
