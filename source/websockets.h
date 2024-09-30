@@ -6,7 +6,7 @@
 
 void sendWebSocketResponse(char *httpString,
                            ssize_t packetSize,
-                           Host remotehost);
+                           struct host *remotehost);
 
 int decodeWebsocketMessage(char *outData, char *inData, ssize_t dataSize);
 // returns size of entire websocket packet including header

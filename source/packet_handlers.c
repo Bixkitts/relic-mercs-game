@@ -22,26 +22,26 @@ enum CredentialFormFields {
     FORM_CREDENTIAL_GAMEPASSWORD,
     FORM_CREDENTIAL_FIELD_COUNT
 };
-typedef void (*PacketHandler)(char *data, ssize_t packetSize, Host remotehost);
+typedef void (*PacketHandler)(char *data, ssize_t packetSize, struct host *remotehost);
 
-static inline enum Handler initialHandlerCheck(Host remotehost);
+static inline enum Handler initialHandlerCheck(struct host *remotehost);
 
-static void disconnectHandler(char *data, ssize_t packetSize, Host remotehost);
-static void httpHandler(char *data, ssize_t packetSize, Host remotehost);
-static void websockHandler(char *data, ssize_t packetSize, Host remotehost);
+static void disconnectHandler(char *data, ssize_t packetSize, struct host *remotehost);
+static void httpHandler(char *data, ssize_t packetSize, struct host *remotehost);
+static void websockHandler(char *data, ssize_t packetSize, struct host *remotehost);
 
 static void loginHandler(char *restrict data,
                          ssize_t packetSize,
-                         Host remotehost);
+                         struct host *remotehost);
 static void charsheetHandler(char *restrict data,
                              ssize_t packetSize,
-                             Host remotehost);
+                             struct host *remotehost);
 static void POSTHandler(char *restrict data,
                         ssize_t packetSize,
-                        Host remotehost);
+                        struct host *remotehost);
 static void GETHandler(char *restrict data,
                        ssize_t packetSize,
-                       Host remotehost);
+                       struct host *remotehost);
 
 /* disconnectHandler needs to be at index 0
  * because we use pointer math to handle
@@ -62,21 +62,21 @@ static PacketHandler handlers[HANDLER_COUNT] = {disconnectHandler,
  * in this file,
  * and enum Handler in packet_handlers.h.
  */
-static inline enum Handler initialHandlerCheck(Host remotehost)
+static inline enum Handler initialHandlerCheck(struct host *remotehost)
 {
     struct HostCustomAttributes *customAttr = NULL;
-    if (getHostCustomAttr(remotehost) == NULL) {
+    if (get_host_custom_attr(remotehost) == NULL) {
         customAttr = calloc(1, sizeof(*customAttr));
         if (customAttr == NULL) {
             printError(BB_ERR_CALLOC);
             exit(1);
         }
         customAttr->handler = HANDLER_DEFAULT;
-        setHostCustomAttr(remotehost, (void *)customAttr);
+        set_host_custom_attr(remotehost, (void *)customAttr);
     }
     else {
         customAttr =
-            (struct HostCustomAttributes *)getHostCustomAttr(remotehost);
+            (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
     }
     return customAttr->handler;
 }
@@ -86,7 +86,7 @@ static inline enum Handler initialHandlerCheck(Host remotehost)
  * every single incoming TCP packet
  * in the entire server.
  */
-void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+void masterHandler(char *restrict data, ssize_t packetSize, struct host *remotehost)
 {
     const enum Handler handler = initialHandlerCheck(remotehost);
 #ifdef DEBUG
@@ -109,7 +109,7 @@ void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     return;
 }
 
-static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
+static void GETHandler(char *restrict data, ssize_t packetSize, struct host *remotehost)
 {
     char requestedResource[MAX_FILENAME_LEN] = {0};
 
@@ -118,7 +118,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
     char *fileTableEntry = NULL;
 
     struct HostCustomAttributes *customAttr =
-        (struct HostCustomAttributes *)getHostCustomAttr(remotehost);
+        (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
 
     if (stringLen < 0 || stringLen > MAX_FILENAME_LEN) {
         return;
@@ -146,10 +146,10 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
         else if (stringSearch(data, "Sec-WebSocket-Key", packetSize) >= 0) {
             sendWebSocketResponse(data, packetSize, remotehost);
             struct HostCustomAttributes *hostAttr =
-                (struct HostCustomAttributes *)getHostCustomAttr(remotehost);
+                (struct HostCustomAttributes *)get_host_custom_attr(remotehost);
             hostAttr->player    = player;
             customAttr->handler = HANDLER_WEBSOCK;
-            cacheHost(remotehost, getCurrentHostCache());
+            cache_host(remotehost, getCurrentHostCache());
             return;
         }
         else {
@@ -192,7 +192,7 @@ static void GETHandler(char *restrict data, ssize_t packetSize, Host remotehost)
 
 static void loginHandler(char *restrict data,
                          ssize_t packetSize,
-                         Host remotehost)
+                         struct host *remotehost)
 {
     // Read the Submitted Player Name, Player Password and Game Password
     // and link the remotehost to a specific player object based on that.
@@ -231,7 +231,7 @@ static void loginHandler(char *restrict data,
 
 static void charsheetHandler(char *restrict data,
                              ssize_t packetSize,
-                             Host remotehost)
+                             struct host *remotehost)
 {
     SessionToken token = getTokenFromHTTP(data, packetSize);
     struct Player *player =
@@ -262,7 +262,7 @@ static void charsheetHandler(char *restrict data,
 
 static void POSTHandler(char *restrict data,
                         ssize_t packetSize,
-                        Host remotehost)
+                        struct host *remotehost)
 {
     if (stringSearch(data, "login", 12) >= 0) {
         loginHandler(data, packetSize, remotehost);
@@ -274,7 +274,7 @@ static void POSTHandler(char *restrict data,
 
 static void httpHandler(char *restrict data,
                         ssize_t packetSize,
-                        Host remotehost)
+                        struct host *remotehost)
 {
     if (packetSize < 10) {
         return;
@@ -300,11 +300,11 @@ pthread_mutex_t cachingMutex = PTHREAD_MUTEX_INITIALIZER;
 int8_t currentHostCache = 0;
 int8_t lastHostCache    = 0;
 
-static void disconnectHandler(char *data, ssize_t packetSize, Host remotehost)
+static void disconnectHandler(char *data, ssize_t packetSize, struct host *remotehost)
 {
-    struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
+    struct HostCustomAttributes *attr = get_host_custom_attr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
-        uncacheHost(remotehost, 0);
+        uncache_host(remotehost, 0);
         // TODO: When someone disconnects,
         // the game will need to pause and alert everyone
         // of the disconnect and ask whether to
@@ -330,7 +330,7 @@ int getCurrentHostCache(void)
 
 static void websockHandler(char *restrict data,
                            ssize_t packetSize,
-                           Host remotehost)
+                           struct host *remotehost)
 {
     if (packetSize < 8) {
         fprintf(stderr, "\nToo short websocket packet received.\n");

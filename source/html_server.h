@@ -25,10 +25,10 @@ enum HTTPContentType {
 
 void sendContent(char *dir,
                  enum HTTPContentType type,
-                 Host remotehost,
+                 struct host *remotehost,
                  const char *customHeaders);
-void sendForbiddenPacket(Host remotehost);
-void sendBadRequestPacket(Host remotehost);
+void sendForbiddenPacket(struct host *remotehost);
+void sendBadRequestPacket(struct host *remotehost);
 
 // A list of files we're allowed to serve
 // with "sendContent()"

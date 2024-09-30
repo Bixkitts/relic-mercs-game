@@ -16,9 +16,9 @@ struct HostCustomAttributes {
     struct Player *player; // Which player this host controls
 };
 
-static inline struct Player *getPlayerFromHost(Host remotehost)
+static inline struct Player *getPlayerFromHost(struct host *remotehost)
 {
-    struct HostCustomAttributes *attr = getHostCustomAttr(remotehost);
+    struct HostCustomAttributes *attr = get_host_custom_attr(remotehost);
     return attr->player;
 }
 

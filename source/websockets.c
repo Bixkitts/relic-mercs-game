@@ -158,7 +158,7 @@ static int generateAcceptCode(unsigned char *outCode,
 
 void sendWebSocketResponse(char *httpString,
                            ssize_t packetSize,
-                           Host remotehost)
+                           struct host *remotehost)
 {
     char response[WEBSOCK_HEADERS_LEN] = {0};
     // We append the calculated hash to this
@@ -181,7 +181,7 @@ void sendWebSocketResponse(char *httpString,
     strcpy(response, tempResponse);
     strncat(response, responseCode, WEBSOCK_CODE_LEN);
     strncat(response, finResponse, strlen(finResponse));
-    sendDataTCP(response, strnlen(response, WEBSOCK_HEADERS_LEN), remotehost);
+    send_data_tcp(response, strnlen(response, WEBSOCK_HEADERS_LEN), remotehost);
 }
 
 // TODO: move encryption to it's own file?

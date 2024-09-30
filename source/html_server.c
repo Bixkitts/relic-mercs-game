@@ -26,20 +26,20 @@ static const char contentTypeStrings[HTTP_FLAG_COUNT][STATUS_LENGTH] =
 static const char contentTypeMapping[HTTP_FLAG_COUNT][FILE_EXTENSION_LEN] =
     {"html", "jpg", "png", "bmp", "js", "css"};
 
-void sendForbiddenPacket(Host remotehost)
+void sendForbiddenPacket(struct host *remotehost)
 {
     const char *data = "HTTP/1.1 403 Forbidden\r\n"
                        "Content-Type: text/html\r\n"
                        "Content-Length: 0\r\n\r\n";
-    sendDataTCP(data, strlen(data), remotehost);
+    send_data_tcp(data, strlen(data), remotehost);
     return;
 }
-void sendBadRequestPacket(Host remotehost)
+void sendBadRequestPacket(struct host *remotehost)
 {
     const char *data = "HTTP/1.1 400 Bad Request\r\n"
                        "Content-Type: text/html\r\n"
                        "Content-Length: 0\r\n\r\n";
-    sendDataTCP(data, strlen(data), remotehost);
+    send_data_tcp(data, strlen(data), remotehost);
     return;
 }
 static const char *getContentTypeString(enum HTTPContentType type)
@@ -113,7 +113,7 @@ void createAllowedFileTable(void)
 
 void sendContent(char *dir,
                  enum HTTPContentType type,
-                 Host remotehost,
+                 struct host *remotehost,
                  const char *customHeaders)
 {
     char header[HEADER_PACKET_LENGTH]          = {0};
@@ -175,7 +175,7 @@ void sendContent(char *dir,
     memcpy(packet, header, headerLen);
     memcpy(&packet[headerLen], content, contentLen);
 
-    sendDataTCP(packet, packetLen, remotehost);
+    send_data_tcp(packet, packetLen, remotehost);
 
     free(packet);
 }

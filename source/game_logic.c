@@ -45,7 +45,7 @@ const char testGameName[MAX_CREDENTIAL_LEN] = "test game";
  */
 typedef void (*GameMessageHandler)(char *data,
                                    ssize_t dataSize,
-                                   Host remotehost);
+                                   struct host *remotehost);
 typedef void (*UseResourceHandler)(enum ResourceID resource,
                                    struct Player *user,
                                    struct Player *target);
@@ -97,9 +97,9 @@ static void genPlayerStartPos(struct Coordinates *outCoords);
 /*
  * Handlers for incoming messages from the websocket connection
  */
-static void pingHandler(char *data, ssize_t dataSize, Host remotehost);
-static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost);
-static void playerConnectHandler(char *data, ssize_t dataSize, Host remotehost);
+static void pingHandler(char *data, ssize_t dataSize, struct host *remotehost);
+static void movePlayerHandler(char *data, ssize_t dataSize, struct host *remotehost);
+static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remotehost);
 
 /*
  * Primary interpreter for incoming websocket messages
@@ -145,7 +145,7 @@ static inline int isGameMessageValidLength(Opcode opcode, ssize_t messageSize)
  * Decoded websocket data and it's length
  * without the websocket headers.
  */
-void handleGameMessage(char *data, ssize_t dataSize, Host remotehost)
+void handleGameMessage(char *data, ssize_t dataSize, struct host *remotehost)
 {
     Opcode opcode = 0;
     // memcpy because of pointer aliasing
@@ -382,7 +382,7 @@ static int initHandlerResponseBuffer(void *responseBuffer, Opcode code)
     return headerSize + sizeof(code);
 }
 
-static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
+static void pingHandler(char *data, ssize_t dataSize, struct host *remotehost)
 {
 #ifdef DEBUG
     printf("Ping incoming!");
@@ -390,10 +390,10 @@ static void pingHandler(char *data, ssize_t dataSize, Host remotehost)
     const Opcode responseOpcode                   = OPCODE_PING;
     char responseBuffer[MAX_RESPONSE_HEADER_SIZE] = {0};
     int packetSize = initHandlerResponseBuffer(responseBuffer, responseOpcode);
-    sendDataTCP(responseBuffer, (ssize_t)packetSize, remotehost);
+    send_data_tcp(responseBuffer, (ssize_t)packetSize, remotehost);
 }
 
-static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
+static void movePlayerHandler(char *data, ssize_t dataSize, struct host *remotehost)
 {
     struct MovePlayerRes *responseData   = NULL;
     const struct MovePlayerReq *moveData = (struct MovePlayerReq *)data;
@@ -412,7 +412,7 @@ static void movePlayerHandler(char *data, ssize_t dataSize, Host remotehost)
     hostPlayer->coords.y = responseData->coords.yCoord;
 
     int packetSize = headerSize + sizeof(*responseData);
-    multicastTCP(responseBuffer, packetSize, 0);
+    multicast_tcp(responseBuffer, packetSize, 0);
 }
 
 /*
@@ -438,7 +438,7 @@ static int tryStartGame(struct Game *game)
  * so it can interpret messages about player state
  * changes
  */
-static void playerConnectHandler(char *data, ssize_t dataSize, Host remotehost)
+static void playerConnectHandler(char *data, ssize_t dataSize, struct host *remotehost)
 {
     // TODO:
     // When somebody connects, they could be connecting to
@@ -490,7 +490,7 @@ static void playerConnectHandler(char *data, ssize_t dataSize, Host remotehost)
     responseData->currentTurn = game->currentTurn;
 
     int packetSize = headerSize + sizeof(*responseData);
-    multicastTCP(responseBuffer, packetSize, 0);
+    multicast_tcp(responseBuffer, packetSize, 0);
 }
 
 /* ===================================================================

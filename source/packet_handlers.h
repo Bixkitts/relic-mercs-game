@@ -14,7 +14,7 @@ enum Handler {
 
 #define HANDLER_DEFAULT HANDLER_HTTP
 
-void masterHandler(char *restrict data, ssize_t packetSize, Host remotehost);
+void masterHandler(char *restrict data, ssize_t packetSize, struct host *remotehost);
 
 void buildFileTable(void);
 

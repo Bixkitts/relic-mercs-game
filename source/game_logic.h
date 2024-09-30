@@ -196,7 +196,7 @@ enum CharsheetFormFields {
 struct Player {
     NetID netID;
     pthread_mutex_t *threadlock;
-    Host associatedHost;
+    struct host *associatedHost;
     struct Game *game;
     struct PlayerCredentials credentials;
     SessionToken sessionToken;
@@ -266,7 +266,7 @@ struct PlayerConnectRes {
  * Primary entry point for interpreting
  * incoming websocket messages
  */
-void handleGameMessage(char *data, ssize_t dataSize, Host remotehost);
+void handleGameMessage(char *data, ssize_t dataSize, struct host *remotehost);
 
 void setGamePassword(struct Game *restrict game,
                      const char password[static MAX_CREDENTIAL_LEN]);

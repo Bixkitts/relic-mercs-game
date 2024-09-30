@@ -9,7 +9,7 @@
 #include "html_server.h"
 #include "packet_handlers.h"
 
-Host localhost = NULL;
+struct host *localhost = NULL;
 
 int main(void)
 {
@@ -19,8 +19,8 @@ int main(void)
     printf("RUNNING SLOW DEBUG VERSION\n");
     checkDataSizes();
 #endif
-    enableTLS();
-    localhost = createHost("0.0.0.0", 7676);
+    enable_tls();
+    localhost = create_host("0.0.0.0", 7676);
 
     createAllowedFileTable();
 
@@ -37,6 +37,6 @@ int main(void)
      * are given to "masterHandler()"
      * in "packet_handlers.c"
      */
-    listenForTCP(localhost, masterHandler);
+    listen_for_tcp(localhost, masterHandler);
     return 0;
 }

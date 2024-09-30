@@ -21,7 +21,7 @@ int tryGameLogin(struct Game *restrict game, const char *password);
 // existing one.
 int tryPlayerLogin(struct Game *restrict game,
                    struct PlayerCredentials *restrict credentials,
-                   Host remotehost);
+                   struct host *remotehost);
 
 SessionToken getTokenFromHTTP(char *http, int httpLength);
 

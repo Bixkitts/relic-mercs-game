@@ -54,7 +54,7 @@ static struct Player *tryGetPlayerFromPlayername(struct Game *game,
  */
 int tryPlayerLogin(struct Game *restrict game,
                    struct PlayerCredentials *restrict credentials,
-                   Host remotehost)
+                   struct host *remotehost)
 {
     struct Player *player                           = NULL;
     char sessionTokenHeader[CUSTOM_HEADERS_MAX_LEN] = {0};
