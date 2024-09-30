@@ -1,4 +1,4 @@
-Checks: '-*,readability-identifier-naming'
+Checks: '-*,readability-inconsistent-declaration-parameter-name,readability-redundant-access-specifiers,readability-redundant-declaration,readability-redundant-inline-specifier,readability-identifier-naming'
 CheckOptions:
   - { key: readability-identifier-naming.VariableCase, value: 'lower_case' }
   - { key: readability-identifier-naming.FunctionCase, value: 'lower_case' }
