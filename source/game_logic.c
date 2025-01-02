@@ -12,11 +12,11 @@
 #include "game_logic.h"
 #include "helpers.h"
 #include "host_custom_attributes.h"
-#include "net_ids.h"
 #include "validators.h"
 #include "websockets.h"
 
 #define MAX_RESPONSE_HEADER_SIZE WEBSOCKET_HEADER_SIZE_MAX + sizeof(opcode_t)
+#define INVALID_PLAYER_ID -1
 
 // This is coupled with enum PlayerBackground
 // and also coupled on the clientside
@@ -196,13 +196,12 @@ struct game *create_game(struct game_config *config)
     }
     struct game *game = &game_list[game_index].game;
 
-    game->threadlock = &game_list[game_index].game_mutex;
-
+    pthread_mutex_init(&game->threadlock, NULL);
     strncpy(game->password, config->password, MAX_CREDENTIAL_LEN);
     strncpy(game->name, config->name, MAX_CREDENTIAL_LEN);
     game->max_player_count = config->max_player_count;
     game->min_player_count = config->min_player_count;
-
+    game->state = GAME_STATE_NOT_STARTED;
     atomic_store(&game->player_count, 0);
     atomic_fetch_add(&game_count, 1);
     return game;
@@ -210,8 +209,7 @@ struct game *create_game(struct game_config *config)
 
 void delete_game(struct game *game)
 {
-    pthread_mutex_t *lock = game->threadlock;
-    pthread_mutex_lock(lock);
+    pthread_mutex_lock(&game->threadlock);
     // TODO:
     // Before we nuke the game,
     // we need to lock and tell all the clients
@@ -219,7 +217,7 @@ void delete_game(struct game *game)
     // sure they shutdown
     atomic_store(&game->player_count, 0);
     memset(game, 0, sizeof(*game));
-    pthread_mutex_unlock(lock);
+    pthread_mutex_unlock(&game->threadlock);
     atomic_fetch_sub(&game_count, 1);
 }
 
@@ -236,36 +234,33 @@ static void gen_player_start_pos(struct coordinates *out_coords)
  * Caller handles concurrency.
  */
 struct player *create_player(struct game *game,
-                             struct player_credentials *credentials)
+                             const struct player_credentials *credentials)
 {
-    struct player *new_player = &game->players[game->player_count];
-    new_player->net_id =
-        create_net_id(NET_TYPE_PLAYER, game, (void *)new_player);
-    new_player->threadlock = get_mutex_from_net_id(game, new_player->net_id);
-    new_player->game       = game;
+    /* TODO: make this find a free slot instead */
+    const player_id_t new_player_id = atomic_fetch_add(&game->player_count, 1);
+    struct player *new_player = &game->players[new_player_id];
+    new_player->id = new_player_id;
+    pthread_mutex_init(&new_player->threadlock, NULL);
+    new_player->game = game;
     memcpy(&new_player->credentials, credentials, sizeof(*credentials));
     gen_player_start_pos(&new_player->coords);
-    atomic_fetch_add(&game->player_count, 1);
     return new_player;
 }
 
 void delete_player(struct player *restrict player)
 {
-    pthread_mutex_t *lock = player->threadlock;
-    pthread_mutex_lock(lock);
-    clear_net_id(player->game, player->net_id);
+    pthread_mutex_lock(&player->threadlock);
     atomic_fetch_sub(&player->game->player_count, 1);
-    player->game->player_count--;
     memset(player, 0, sizeof(*player));
-    pthread_mutex_unlock(lock);
+    pthread_mutex_unlock(&player->threadlock);
 }
 
 void set_player_char_sheet(struct player *player,
                            const struct character_sheet *charsheet)
 {
-    pthread_mutex_lock(player->threadlock);
+    pthread_mutex_lock(&player->threadlock);
     memcpy(&player->char_sheet, charsheet, sizeof(*charsheet));
-    pthread_mutex_unlock(player->threadlock);
+    pthread_mutex_unlock(&player->threadlock);
 }
 
 /*
@@ -275,7 +270,7 @@ void set_player_char_sheet(struct player *player,
 int init_charsheet_from_form(struct player *player,
                              const struct html_form *form)
 {
-    pthread_mutex_lock(player->threadlock);
+    pthread_mutex_lock(&player->threadlock);
     struct character_sheet *sheet = &player->char_sheet;
     if (form->field_count < FORM_CHARSHEET_FIELD_COUNT) {
         goto exit_error;
@@ -311,10 +306,10 @@ int init_charsheet_from_form(struct player *player,
         goto exit_error;
     }
     sheet->is_valid = true;
-    pthread_mutex_unlock(player->threadlock);
+    pthread_mutex_unlock(&player->threadlock);
     return 0;
 exit_error:
-    pthread_mutex_unlock(player->threadlock);
+    pthread_mutex_unlock(&player->threadlock);
     return -1;
 }
 
@@ -327,19 +322,17 @@ exit_error:
 bool is_charsheet_valid(const struct player *restrict player)
 {
     bool result = 0;
-    pthread_mutex_lock(player->threadlock);
     result = player->char_sheet.is_valid;
-    pthread_mutex_unlock(player->threadlock);
     return result;
 }
 
 void set_game_password(struct game *restrict game,
                        const char password[static MAX_CREDENTIAL_LEN])
 {
-    pthread_mutex_lock(game->threadlock);
+    pthread_mutex_lock(&game->threadlock);
     memset(game->password, 0, MAX_CREDENTIAL_LEN);
     strncpy(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock(game->threadlock);
+    pthread_mutex_unlock(&game->threadlock);
 }
 
 /*
@@ -383,14 +376,14 @@ enum response_opcodes {
  *
  * Returns the amount of bytes it wrote to the buffer.
  */
-static int init_handler_response_buffer(void *response_buffer, opcode_t code)
+static int init_handler_response_buffer(char *response_buffer, opcode_t code)
 {
     int header_size            = 0;
     ssize_t response_data_size = response_sizes[code];
 
     header_size = write_websocket_header(response_buffer,
                                          sizeof(code) + response_data_size);
-    memcpy(&response_buffer[header_size], &code, sizeof(code));
+    memcpy(response_buffer + header_size, &code, sizeof(code));
     return header_size + sizeof(code);
 }
 
@@ -404,6 +397,11 @@ static void ping_handler(char *data, ssize_t data_size, struct host *remotehost)
     int packet_size =
         init_handler_response_buffer(response_buffer, response_opcode);
     send_data_tcp(response_buffer, (ssize_t)packet_size, remotehost);
+}
+
+static bool is_player_turn(const struct player *player)
+{
+    return player->game->current_turn == player;
 }
 
 static void move_player_handler(char *data,
@@ -423,7 +421,7 @@ static void move_player_handler(char *data,
     response_data = (struct player_move_res *)&response_buffer[header_size];
 
     validate_player_move_coords(move_data, &response_data->coords);
-    response_data->player_net_id = host_player->net_id;
+    response_data->player_id = host_player->id;
 
     host_player->coords.x = response_data->coords.x_coord;
     host_player->coords.y = response_data->coords.y_coord;
@@ -440,15 +438,14 @@ static void move_player_handler(char *data,
  * players.
  * Caller handles game threadlock.
  */
-static int try_start_game(struct game *game)
+static void try_start_game(struct game *game)
 {
     if (atomic_load(&game->player_count) >= game->min_player_count) {
         // TODO: handle turn order more
         // gracefully than first come first serve.
-        game->current_turn = game->players[0].net_id;
-        return 0;
+        game->current_turn = &game->players[0];
+        game->state = GAME_STATE_STARTED;
     }
-    return -1;
 }
 /*
  * The client is attempting to fetch the player net_ids
@@ -485,11 +482,11 @@ static void player_connect_handler(char *data,
     response_data = (struct player_conn_res *)&response_buffer[header_size];
 
     for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
-        if (game->players[i].net_id == NULL_NET_ID) {
+        if (game->players[i].game == NULL) {
+            response_data->players[i] = INVALID_PLAYER_ID;
             continue;
         }
-        pthread_mutex_lock(game->players[i].threadlock);
-        net_id_t id               = game->players[i].net_id;
+        player_id_t id            = game->players[i].id;
         response_data->players[i] = id;
         memcpy(&response_data->player_names[i],
                game->players[i].credentials.name,
@@ -497,17 +494,23 @@ static void player_connect_handler(char *data,
         memcpy(&response_data->player_coords[i],
                &game->players[i].coords,
                sizeof(game->players[i].coords));
-        pthread_mutex_unlock(game->players[i].threadlock);
-        if (host_player->net_id == id) {
-            response_data->player_index = (int8_t)i;
+        if (host_player->id == id) {
+            response_data->player_index = (int16_t)i;
         }
     }
+
     // It's *nobody's* turn?
     // This means the game hasn't started yet.
-    if (game->current_turn == NULL_NET_ID) {
+    if (game->current_turn == NULL) {
         try_start_game(game);
     }
-    response_data->current_turn = game->current_turn;
+
+    if (game->state == GAME_STATE_STARTED) {
+        response_data->current_turn = game->current_turn->id;
+    }
+    else {
+        response_data->current_turn = INVALID_PLAYER_ID;
+    }
 
     int packet_size = header_size + sizeof(*response_data);
     multicast_tcp(response_buffer, packet_size, 0);

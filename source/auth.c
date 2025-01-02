@@ -28,17 +28,17 @@ static struct player *try_get_player_from_playername(struct game *game,
     int player_index = 0;
     int player_found = -1;
 
-    pthread_mutex_lock(game->threadlock);
+    pthread_mutex_lock(&game->threadlock);
     for (player_index = 0; player_index < game->player_count; player_index++) {
         player_found = strncmp(playername,
                                game->players[player_index].credentials.name,
                                MAX_CREDENTIAL_LEN);
         if (player_found == 0) {
-            pthread_mutex_unlock(game->threadlock);
+            pthread_mutex_unlock(&game->threadlock);
             return &game->players[player_index];
         }
     }
-    pthread_mutex_unlock(game->threadlock);
+    pthread_mutex_unlock(&game->threadlock);
     return NULL;
 }
 /*
@@ -62,7 +62,7 @@ int try_player_login(struct game *restrict game,
         return -1;
     }
     player = try_get_player_from_playername(game, credentials->name);
-    pthread_mutex_lock(game->threadlock);
+    pthread_mutex_lock(&game->threadlock);
     if (player != NULL) {
         if (is_player_password_valid(player, credentials->password)) {
             generate_session_token(player, game);
@@ -72,12 +72,12 @@ int try_player_login(struct game *restrict game,
                          HTTP_FLAG_TEXT_HTML,
                          remotehost,
                          session_token_header);
-            pthread_mutex_unlock(game->threadlock);
+            pthread_mutex_unlock(&game->threadlock);
             return 0;
         }
         else {
             // Player exists, but the password was wrong
-            pthread_mutex_unlock(game->threadlock);
+            pthread_mutex_unlock(&game->threadlock);
             return -1;
         }
     }
@@ -91,7 +91,7 @@ int try_player_login(struct game *restrict game,
                  remotehost,
                  session_token_header);
 
-    pthread_mutex_unlock(game->threadlock);
+    pthread_mutex_unlock(&game->threadlock);
     return 0;
 }
 
@@ -159,9 +159,9 @@ session_token_t get_token_from_http(char *http, int http_length)
 int try_game_login(struct game *restrict game, const char *password)
 {
     int match = 0;
-    pthread_mutex_lock(game->threadlock);
+    pthread_mutex_lock(&game->threadlock);
     match = strncmp(game->password, password, MAX_CREDENTIAL_LEN);
-    pthread_mutex_unlock(game->threadlock);
+    pthread_mutex_unlock(&game->threadlock);
     match = -1 * (match != 0);
     return match;
 }

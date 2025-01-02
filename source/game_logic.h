@@ -7,7 +7,6 @@
 
 #include "bbnetlib.h"
 #include "helpers.h"
-#include "net_ids.h"
 #include "session_token.h"
 
 /*
@@ -166,6 +165,13 @@ struct game_config {
     int min_player_count;
 };
 
+enum game_state {
+    GAME_STATE_NOT_EXISTING,
+    GAME_STATE_NOT_STARTED,
+    GAME_STATE_STARTED,
+    GAME_STATE_COUNT 
+};
+
 /*
  * Form Interpreting
  */
@@ -193,9 +199,13 @@ enum charsheet_form_fields {
 // in case they disconnect and reconnect so we can
 // restore whatever encounter they were having (or other
 // UI dialogue).
+//
+
+typedef int16_t player_id_t;
+
 struct player {
-    net_id_t net_id;
-    pthread_mutex_t *threadlock;
+    player_id_t id;
+    pthread_mutex_t threadlock;
     struct host *associated_host;
     struct game *game;
     struct player_credentials credentials;
@@ -216,16 +226,15 @@ struct player {
  * data.
  */
 struct game {
-    net_id_t net_id;
-    pthread_mutex_t *threadlock;
+    pthread_mutex_t threadlock;
     char name[MAX_CREDENTIAL_LEN];
     char password[MAX_CREDENTIAL_LEN];
-    struct net_id_slot net_ids[MAX_NETOBJS];
-    // Which player (identified by NetID) is currently
+    // Which player is currently
     // taking their turn.
     // When this is 0, the game hasn't started yet
     // and the first turn needs to be assigned.
-    net_id_t current_turn;
+    struct player *current_turn;
+    enum game_state state;
     int max_player_count;
     int min_player_count;
     struct player players[MAX_PLAYERS_IN_GAME];
@@ -251,18 +260,18 @@ struct player_conn_req {
 
 // RESPONSES //
 struct player_move_res {
-    net_id_t player_net_id;
+    player_id_t player_id;
     struct player_move_req coords;
 } __attribute__((packed));
 
 struct player_conn_res {
-    net_id_t players[MAX_PLAYERS_IN_GAME];
+    player_id_t players[MAX_PLAYERS_IN_GAME];
     char player_names[MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
     struct coordinates player_coords[MAX_PLAYERS_IN_GAME];
-    net_id_t current_turn; // NetID of the player who's turn it is
-    bool game_ongoing;     // Has the game we've joined started yet?
-    int8_t
-        player_index; // Index in the "players" array of the connecting player
+    player_id_t current_turn; // ID of the player who's turn it is
+    player_id_t player_index; // Index in the "players"
+                              // array of the connecting player
+    bool game_ongoing; // Has the game we've joined started yet?
 } __attribute__((packed));
 
 /*
@@ -289,7 +298,7 @@ void set_player_char_sheet(struct player *player,
 
 struct game *create_game(struct game_config *config);
 struct player *create_player(struct game *game,
-                             struct player_credentials *credentials);
+                             const struct player_credentials *credentials);
 void delete_player(struct player *restrict player);
 // returns the ID the player got
 // Returns the pointer to global Game

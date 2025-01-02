@@ -42,7 +42,7 @@ function truncateAtNull(string)
 export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name) {
     const truncatedName = truncateAtNull(name);
     const welcomeMsg = `Welcome ${truncatedName}!`;
-    const invalidNetID = 0;
+    const invalidNetID = -1;
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
         let te = buildTextElement(welcomeMsg, textCoords, 0.25);
@@ -67,10 +67,10 @@ export function setCurrentTurn(netID) {
     _currentTurn = netID;
 }
 
-export function setMyNetID(netID) {
+export function setMyPlayerId(netID) {
     _myNetID = netID;
 }
 
-export function getMyNetID() {
+export function getMyPlayerId() {
     return _myNetID;
 }

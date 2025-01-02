@@ -1,14 +1,13 @@
 import { getAllPlayers } from  './game-logic.js';
 import { getPlayer } from  './game-logic.js';
 import { tryAddPlayer } from  './game-logic.js';
-import { getMyNetID } from  './game-logic.js';
-import { setMyNetID } from  './game-logic.js';
+import { getMyPlayerId } from  './game-logic.js';
+import { setMyPlayerId } from  './game-logic.js';
 import { setCurrentTurn } from  './game-logic.js';
 
 const _scriptUrl     = new URL(window.location.href);
 const _websocketUrl  = 'wss://' + _scriptUrl.hostname + ':' + _scriptUrl.port;
 const _opcodeSize    = 2;
-const _int64Size     = 8;
 let   _connected     = false; // Have we done an initial connection?
 let   _socket;
 
@@ -56,20 +55,18 @@ function handleIncoming(msg) {
 }
 
 function handleMovePlayerResponse(dataView) {
-
-    const playerNetID = dataView.getBigInt64(_opcodeSize, true);
-
-    const xCoord = dataView.getFloat64(10, true);
-    const yCoord = dataView.getFloat64(18, true);
+    const playerId = dataView.getInt16(_opcodeSize, true);
+    const xCoord   = dataView.getFloat64(4, true);
+    const yCoord   = dataView.getFloat64(12, true);
 
     const movePlayerResponse = {
-        playerNetID: playerNetID,
+        playerNetID: playerId,
         coords: {
             xCoord: xCoord,
             yCoord: yCoord
         }
     };
-    getPlayer(playerNetID).move(xCoord, yCoord);
+    getPlayer(playerId).move(xCoord, yCoord);
 
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
@@ -78,6 +75,7 @@ function sendPlayerConnect() {
     const ab       = new ArrayBuffer(3);
     const dataView = new DataView(ab);
 
+    // opcode
     dataView.setInt16   (0, 2, true);
     // Placeholder data, does nothing
     dataView.setInt8    (2, 0, true);
@@ -86,36 +84,40 @@ function sendPlayerConnect() {
 }
 // The C struct
 // -----------------------------------
+// #define MAX_PLAYERS_IN_GAME 8
+// #define MAX_CREDENTIAL_LEN  32
+//
+// typedef uint16_t player_id_t;
+//
 // struct PlayerConnectRes {
-//    NetID              players      [MAX_PLAYERS_IN_GAME];
-//    char               playerNames  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
-//    struct Coordinates playerCoords [MAX_PLAYERS_IN_GAME];
-//    NetID              currentTurn; // NetID of the player who's turn it is
-//    bool               gameOngoing; // Has the game we've joined started yet?
-//    char               playerIndex; // Index in the "players" array of the connecting player
+//    player_id_t        players       [MAX_PLAYERS_IN_GAME];
+//    char               player_names  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
+//    struct coordinates player_coords [MAX_PLAYERS_IN_GAME];
+//    player_id_t        current_turn; // NetID of the player who's turn it is
+//    player_id_t        player_index; // Index in the "players" array of the connecting player
+//    bool               game_ongoing; // Has the game we've joined started yet?
 //}__attribute__((packed));
 function handlePlayerConnectResponse(dataView) {
     const maxPlayers         = 8;
-    const int64Size          = 8; // Size of int64 (BigInt)
-    const netIdSize          = int64Size;
-    const doubleSize         = 8; // Size of double
-    const opcodeSize         = 2; // Two bytes for the opcode
-    const MAX_CREDENTIAL_LEN = 32;
+    const playerIdSize       = 2;
+    const doubleSize         = 8;
+    const opcodeSize         = 2;
+    const maxCredentialLen   = 32;
+    const playerIdOffset     = opcodeSize;
+    const nameOffset         = playerIdOffset + (playerIdSize * maxPlayers);
+    const coordOffset        = nameOffset + (maxCredentialLen * maxPlayers);
 
-    let playerList   = [];
+    let playerList = [];
 
-    const netIdOffset = opcodeSize;
-    const nameOffset  = netIdOffset + (netIdSize * maxPlayers);
-    const coordOffset = nameOffset + (MAX_CREDENTIAL_LEN * maxPlayers);
     for (let i = 0; i < maxPlayers; i++) {
-        // Extract player NetID
-        const netID = dataView.getBigInt64(netIdOffset + (i * netIdSize), true);
-        playerList.push(netID);
+        // Extract player_id
+        const playerId = dataView.getInt16(playerIdOffset + (i * playerIdSize), true);
+        playerList.push(playerId);
 
         // Extract player name
         const playerNameBytes = new Uint8Array(dataView.buffer,
-                                               nameOffset + (MAX_CREDENTIAL_LEN * i),
-                                               MAX_CREDENTIAL_LEN);
+                                               nameOffset + (maxCredentialLen * i),
+                                               maxCredentialLen);
         const playerName      = new TextDecoder().decode(playerNameBytes).trim();
 
         // Extract player coordinates
@@ -124,32 +126,32 @@ function handlePlayerConnectResponse(dataView) {
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
 
         // Add player to the map (assuming default vigour, violence, cunning, image)
-        tryAddPlayer(netID, x, y, 1, 2, 3, "playerTest.png", playerName);
+        tryAddPlayer(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
     }
 
     // Adjust offset after player coordinates
     let offset = coordOffset + (3 * doubleSize * maxPlayers);
 
-    // Extract current turn NetID
-    const currentTurn = dataView.getBigInt64(offset, true);
+    // Extract current turn player_id
+    const currentTurn = dataView.getInt16(offset, true);
     setCurrentTurn(currentTurn);
-    offset += int64Size;
+    offset += playerIdSize;
+
+    // Extract player index
+    if (!_connected) {
+        _connected = true;
+        const playerIndex = dataView.getInt16(offset);
+        setMyPlayerId(playerList[playerIndex]);
+        console.log('Player Index:', playerIndex, '  Offset: ', offset);
+    }
 
     // Extract game ongoing status
     const gameOngoing = Boolean(dataView.getInt8(offset));
     offset += 1;
 
-    // Extract player index
-    if (!_connected) {
-        _connected = true;
-        const playerIndex = dataView.getInt8(offset);
-        setMyNetID(playerList[playerIndex]);
-        console.log('Player Index:', playerIndex, '  Offset: ', offset);
-    }
-
-    console.log('My NetID:', getMyNetID());
-    console.log('Player NetIDs:', playerList);
-    console.log('Current Turn NetID:', currentTurn);
+    console.log('My Player Id:', getMyPlayerId());
+    console.log('Player Ids:', playerList);
+    console.log('Current Turn Player Id:', currentTurn);
     console.log('Is Game Ongoing:', gameOngoing);
 }
 
