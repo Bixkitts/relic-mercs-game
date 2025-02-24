@@ -99,9 +99,12 @@ bool is_empty_string(const char *string)
 {
     return string[0] == '\0';
 }
-int char_search(const char *restrict text, char c, int buf_len)
+int char_search(const char *restrict text, char c, size_t buf_len)
 {
-    int i = 0;
+    if (buf_len >= INT_MAX) {
+        return -1;
+    }
+    size_t i = 0;
     while (text[i] != c && i < buf_len) {
         i++;
     }
@@ -136,7 +139,7 @@ double get_random_double(double min, double max)
         exit(1);
     }
     unsigned int rand_int = 0;
-    for (int i = 0; i < sizeof(buffer); i++) {
+    for (size_t i = 0; i < sizeof(buffer); i++) {
         rand_int = (rand_int << 8) | buffer[i];
     }
     double normalized = rand_int / (double)UINT64_MAX;
@@ -154,7 +157,7 @@ long long int get_random_int()
         fprintf(stderr, "Error generating random bytes.\n");
         return 0;
     }
-    for (int i = 0; i < sizeof(long long int); ++i) {
+    for (size_t i = 0; i < sizeof(long long int); i++) {
         random_integer = (random_integer << 8) | random_bytes[i];
     }
     return random_integer;

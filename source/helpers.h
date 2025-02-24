@@ -27,7 +27,7 @@ struct html_form {
 int string_search(const char *text, const char *pattern, int max_length);
 
 // returns the index at which c is found or -1
-int char_search(const char *restrict text, char c, int buf_len);
+int char_search(const char *restrict text, char c, size_t buf_len);
 
 void cap(int *int_to_cap, int max_value);
 

@@ -48,10 +48,10 @@ int decode_websocket_message(char *out_data, char *in_data, ssize_t data_size)
     const int opcode_length = 1;
     const int mask_length   = 4;
     // The 9th bit is the MASK bit, that's why it's 0.
-    const unsigned char length_code = (unsigned char)in_data[1] & 0b01111111;
+    const size_t length_code = (size_t)(in_data[1] & 0x7F);
     // By default, payload length is the same as the length code
     // up to 125 bytes
-    ssize_t payload_length     = (ssize_t)length_code;
+    ssize_t payload_length     = length_code;
     ssize_t max_payload_length = 0;
     // The amount of bytes that make up the number that indicates
     // the amount of bytes that make up the payload :))
@@ -116,20 +116,20 @@ int write_websocket_header(char in_out_data[static WEBSOCKET_HEADER_SIZE_MAX],
      */
     int header_size = 0;
     // 1. Websocket FIN Header
-    in_out_data[0] = 0x82;
+    in_out_data[0] = (char)0x82;
     // 2. Weirdest part of the
     //    websocket spec (writing payload length).
     if (data_size < 126) {
-        in_out_data[1] = (unsigned char)data_size & 0b01111111;
+        in_out_data[1] = (char)(data_size & 0x7F);
         header_size    = 2;
     }
     else {
         in_out_data[1] =
-            (unsigned char)126 & 0b01111111; // 126 is a magic number for a
-                                             // 16 bit payload length.
+            (char)(126 & 0x7F); // 126 is a magic number for a
+                                // 16 bit payload length.
         // Network byte order (big endian)
-        in_out_data[2] = (unsigned char)((data_size >> 8) & 0xFF);
-        in_out_data[3] = (unsigned char)(data_size & 0xFF);
+        in_out_data[2] = (char)((data_size >> 8) & 0xFF);
+        in_out_data[3] = (char)(data_size & 0xFF);
         header_size    = 4;
     }
 

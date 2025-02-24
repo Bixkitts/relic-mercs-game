@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "error_handling.h"
 #include "file_handling.h"
 #include "helpers.h"
 
@@ -36,7 +35,7 @@ static inline int search_mmap_buffer(const char *dir, char **buffer)
     for (int i = 0; i < memory_map_buffer_size; i++) {
         found_in_cache =
             string_search(memory_map_buffer[i].name, dir, MAX_FILENAME_LEN);
-        if (found_in_cache == 0) {
+        if (0 == found_in_cache) {
             *buffer = memory_map_buffer[i].data;
             return memory_map_buffer[i].size;
         }
@@ -153,8 +152,8 @@ int list_files(char *out_array)
                 i++;
             }
         }
+        closedir(d);
     }
-    closedir(d);
     d = opendir("./src/rendering");
     if (d) {
         while ((dir = readdir(d)) != NULL && i < MAX_FILE_COUNT) {
@@ -166,7 +165,7 @@ int list_files(char *out_array)
                 i++;
             }
         }
+        closedir(d);
     }
-    closedir(d);
     return i;
 }
