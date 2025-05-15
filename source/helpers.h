@@ -31,7 +31,7 @@ int char_search(const char *restrict text, char c, size_t buf_len);
 
 void cap(int *int_to_cap, int max_value);
 
-void print_buffer_in_hex(char *data, int size);
+void print_buffer_in_hex(char *data, size_t size);
 void parse_html_form(const char *in_buffer,
                      struct html_form *out_buffer,
                      ssize_t in_buffer_len);

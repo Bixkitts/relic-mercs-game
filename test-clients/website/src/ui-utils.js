@@ -27,14 +27,11 @@ export class TextElement {
 // TODO:
 // probably don't need some of this data
 export class Button {
-    constructor(vao, coords, width, height, isHidden, posBuffer, texCoordBuffer) {
-        this.vao            = vao;
+    constructor(coords, width, height, isHidden) {
         this.coords         = coords;
         this.width          = width;
         this.height         = height;
         this.isHidden       = isHidden;
-        this.posBuffer      = posBuffer;
-        this.texCoordBuffer = texCoordBuffer;
         // Is this text element still in the
         // primary array with it's GL buffers
         // intact?
@@ -146,53 +143,12 @@ export function deleteTextElement(textElement) {
     _textElements.splice(index, 1);
 }
 
-// TODO:
-// fill this with texture coordinates.
-const _buttonStyles = [
-                          [0.0803, 0.8326,
-                           0.1966, 0.8326,
-                           0.0803, 0.8960,
-                           0.1966, 0.8960]
-                      ];
+export function buildButton(coords, width, height) {
 
-export function buildButton(coords, width, height, style) {
-    const shaders       = getShaders();
-    const buffers       = getVertBuffers();
-    const indexBuffer   = buffers[2].indices;
-    const buttonShader  = shaders[1];
-    const gl            = getGLContext();
-    const uvs           = _buttonStyles[style];
-    const pos           = [
-                              pos[0]         , pos[1] - height,
-                              pos[0] + width , pos[1] - height,
-                              pos[0]         , pos[1],
-                              pos[0] + width , pos[1]
-                          ];
-    const vao           = gl.createVertexArray();
-    let   isHidden      = true;
-
-    const texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    const posBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
-
-    gl.bindVertexArray(vao);
-        setPositionAttribute2d (gl, posBuffer, buttonShader);
-        setTextureAttribute    (gl, texCoordBuffer, buttonShader);
-        gl.bindBuffer          (gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bindVertexArray(null);
-
-    const button = new Button(vao,
-                              coords,
+    const button = new Button(coords,
                               width,
                               height,
-                              isHidden,
-                              posBuffer,
-                              texCoordBuffer);
+                              false);
     _buttons.push(button);
-
     return button;
 }

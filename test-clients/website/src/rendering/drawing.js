@@ -1,6 +1,9 @@
 import { ProgramInfo } from "./type-hints.js";
+import { getPerspMatrix,
+         getOrthMatrix } from "./renderer.js";
 import { getAllPlayers } from "../game-logic.js";
-import { getTextElements } from "../ui-utils.js";
+import { getTextElements,
+         getButtons } from "../ui-utils.js";
 
 /**
  * @param {WebGLRenderingContext} gl 
@@ -10,15 +13,34 @@ import { getTextElements } from "../ui-utils.js";
  * @param {mat4} modelViewMatrix 
  * @returns 
  */
-export function drawMapPlane(gl, programInfo, modelViewMatrix) {
-    gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
-                        false,
-                        modelViewMatrix);
+export function drawMapPlane(gl,
+                             vaos,
+                             shaders,
+                             mapTexture,
+                             modelViewMatrix) {
+    gl.bindVertexArray(null);
+    const programInfo = shaders[1];
+    gl.useProgram       (programInfo.program);
+    setPersp            (gl, programInfo);
+    gl.bindVertexArray  (vaos[0]);
+    gl.activeTexture    (gl.TEXTURE0);
+    gl.bindTexture      (gl.TEXTURE_2D, mapTexture);
 
-    const offset      = 0;
-    const type        = gl.UNSIGNED_SHORT;
-    const vertexCount = 4;
-    gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    gl.uniform1i(programInfo.uniformLocations["uSampler"], 0);
+    gl.uniform2f(programInfo.uniformLocations["uUVOffset"],
+                 0.0, 0.0);
+    gl.uniform4f(programInfo.uniformLocations["uTintColor"],
+                 1.0, 1.0, 1.0, 1.0);
+    gl.uniformMatrix4fv (programInfo.uniformLocations["uModelViewMatrix"],
+                         false,
+                         modelViewMatrix);
+    {
+        const offset      = 0;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 4;
+        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    }
+    gl.bindVertexArray(null);
 }
 
 /**
@@ -28,8 +50,14 @@ export function drawMapPlane(gl, programInfo, modelViewMatrix) {
  * @param {mat4} modelViewMatrix 
  * @param {Array<number>} pos 
  */
-export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix) 
+export function drawPlayers(gl, vaos, camZoom, shaders, playerTexture, modelViewMatrix) 
 {
+    const programInfo = shaders[1];
+    gl.useProgram       (programInfo.program);
+    setPersp            (gl, programInfo);
+    gl.bindVertexArray  (vaos[1]);
+    gl.activeTexture    (gl.TEXTURE0);
+    gl.bindTexture      (gl.TEXTURE_2D, playerTexture);
     const players = getAllPlayers();
     players.forEach(player => {
         let mv = mat4.clone(modelViewMatrix);
@@ -44,6 +72,8 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
                         mv,
                         [0.05, 0.05, 0.05],);
 
+        gl.uniform4f(programInfo.uniformLocations["uTintColor"],
+                     1.0, 1.0, 1.0, 1.0);
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             mv);
@@ -54,28 +84,63 @@ export function drawPlayers(gl, camZoom, programInfo, modelViewMatrix)
             gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
         }
     });
+    gl.bindVertexArray  (null);
 }
 
-export function drawHUD(gl, programInfo, modelViewMatrix)
+export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
 {
-    // TODO:
-    // Render from a list of active HUD elements
-    // from another higher level source file
-    gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
-                        false,
-                        modelViewMatrix);
-    const offset      = 0;
-    const type        = gl.UNSIGNED_SHORT;
-    const vertexCount = 4;
-    gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    const programInfo = shaders[1]; // textured shader
+    setOrtho            (gl, programInfo);
+    gl.useProgram       (programInfo.program);
+    gl.bindVertexArray  (vaos[2]);
+    gl.activeTexture    (gl.TEXTURE0);
+    gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
+    // Hud Bar
+    {
+        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
+                            false,
+                            modelViewMatrix);
+        gl.uniform4f(programInfo.uniformLocations["uTintColor"],
+                     1.0, 1.0, 1.0, 1.0);
+        const offset      = 0;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 4;
+        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    }
+
+    const buttons = getButtons();
+    buttons.forEach( button => {
+        let mv = modelViewMatrix;
+        mat4.translate (mv,
+                        mv,
+                        [0.0, 1.0, 0.0]);
+        mat4.scale     (mv,
+                        mv,
+                        [0.5, 0.5, 0.5]);
+        const offset      = 8;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 4;
+        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
+                            false,
+                            mv);
+        gl.uniform4f(programInfo.uniformLocations["uTintColor"],
+                     0.0, 1.0, 0.0, 0.5);
+        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    });
+    gl.bindVertexArray(null);
 }
 
 // This function is to be a consumer that grabs
 // text, it's coordinates, and size from a buffer
 // and draws that in a loop, similar to how the players
 // are drawn.
-export function drawText(gl, programInfo, modelViewMatrix)
+export function drawText(gl, shaders, textTexture, modelViewMatrix)
 {
+    const programInfo = shaders[2]; // text shader
+    gl.useProgram       (programInfo.program);
+    setOrtho            (gl, programInfo);
+    gl.activeTexture    (gl.TEXTURE0);
+    gl.bindTexture      (gl.TEXTURE_2D, textTexture);
     const textElements = getTextElements();
     const offset       = 0;
     const type         = gl.UNSIGNED_SHORT;
@@ -94,4 +159,18 @@ export function drawText(gl, programInfo, modelViewMatrix)
         gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, type, offset, len);
         gl.bindVertexArray(null);
     }
+}
+
+function setPersp(gl, programInfo)
+{
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
+                        false,
+                        getPerspMatrix());
+}
+
+function setOrtho(gl, programInfo)
+{
+    gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
+                        false,
+                        getOrthMatrix());
 }

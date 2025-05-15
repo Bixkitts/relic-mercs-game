@@ -15,13 +15,14 @@ let _textBuffers = [];
 
 function initVertBuffers(gl)
 {
-    _geoBuffers  = initGeoBuffers (gl);
-    _hudBuffers  = initHudBuffers (gl);
-    _textBuffers = initTextBuffers(gl);
+    _geoBuffers  = createVertexBuffers(gl, getGeoModel());
+    _hudBuffers  = createVertexBuffers(gl, getHudModel());
+    _textBuffers = createVertexBuffers(gl, getTextModel());
     _vertBuffers.push(_geoBuffers);
     _vertBuffers.push(_hudBuffers);
     _vertBuffers.push(_textBuffers);
 }
+
 export function getVertBuffers()
 {
     if (!_vertBuffersInitialized) {
@@ -31,7 +32,26 @@ export function getVertBuffers()
     return _vertBuffers;
 }
 
-function initGeoBuffers(gl) 
+function createVertexBuffers(gl, modelData)
+{
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelData.positions), gl.STATIC_DRAW);
+
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(modelData.uvs), gl.STATIC_DRAW);
+
+    const indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(modelData.indices), gl.STATIC_DRAW);
+
+    return {vertices: positionBuffer,
+            uvs:      texCoordBuffer,
+            indices:  indexBuffer};
+}
+
+function getGeoModel() 
 {
     const positions = [
         -1.618, -1.0, 0.0, // Mesh for map 
@@ -57,66 +77,39 @@ function initGeoBuffers(gl)
         4, 5, 6, 7,
         8, 9, 10, 11
     ];
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-    const texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-    return {vertices: positionBuffer,
-            uvs:      texCoordBuffer,
-            indices:  indexBuffer};
+    return {positions: positions, uvs: uvs, indices:indices};
 }
 
-function initHudBuffers(gl)
+function getHudModel()
 {
     const positions = [
-        0.01, 0.01,       // Bottom Bar
-        1.0 - 0.01, 0.01,
-        0.01, 0.24,
-        1.0 - 0.01, 0.24
+        0.01, 0.01, 0.0,       // Bottom Bar
+        1.0 - 0.01, 0.01, 0.0,
+        0.01, 0.24, 0.0,
+        1.0 - 0.01, 0.24, 0.0,
+        0.0, -1.0, 0.0,        // Mesh for square
+        1.0, -1.0, 0.0,
+        0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0 
     ];
     const uvs = [
-        // Bottom Bar
-        0.0029, 0.9,
+        0.0029, 0.9,    // Bottom Bar
         0.49, 0.9,
         0.0029, 0.9985,
-        0.49, 0.9985
+        0.49, 0.9985,
+        0.0803, 0.8317, // Button texture
+        0.1948, 0.8317,
+        0.0803, 0.8946,
+        0.1948, 0.8946
     ];
     const indices = [
         0, 1, 2, 3,
+        4, 5, 6, 7
     ];
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-    const texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-    return {vertices: positionBuffer,
-            uvs:      texCoordBuffer,
-            indices:  indexBuffer};
+    return {positions: positions, uvs: uvs, indices:indices};
 }
 
-/*
- * We create a vertex and index
- * buffer with as many quads
- * as we could possibly want for a
- * line of text and send it to the
- * GPU
- */
-function initTextBuffers(gl) {
+function getTextModel() {
     const charWidth   = 0.0625;
     const charHeight  = 0.1;
 
@@ -137,22 +130,7 @@ function initTextBuffers(gl) {
         0.0625, 1.0,
         0.0625, 1.0-0.0625,
     ];
-
-    const vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-    const texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    const indexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-
-    return {vertices: vertexBuffer,
-            uvs:      texCoordBuffer,
-            indices:  indexBuffer};
+    return {positions: positions, uvs: uvs, indices:indices};
 }
 
 
@@ -168,21 +146,26 @@ function initVAOs(programs, buffers)
     const mapVao     = gl.createVertexArray();
     const playerVao  = gl.createVertexArray();
     const hudVao     = gl.createVertexArray();
+
+    gl.bindVertexArray(null);
     gl.bindVertexArray(mapVao);
-    setPositionAttribute (gl, buffers[0].vertices, programs[0], 0);
-    setTextureAttribute  (gl, buffers[0].uvs, programs[0], 0);
-    gl.bindBuffer       (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
+    setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
+    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+
     gl.bindVertexArray(null);
     gl.bindVertexArray(playerVao);
-    setPositionAttribute (gl, buffers[0].vertices, programs[0], 0);
-    setTextureAttribute  (gl, buffers[0].uvs, programs[0], 0);
-    gl.bindBuffer       (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
+    setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
+    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+
     gl.bindVertexArray(null);
     gl.bindVertexArray(hudVao);
-    setPositionAttribute2d(gl, buffers[1].vertices, programs[1], 0);
-    setTextureAttribute   (gl, buffers[1].uvs, programs[1], 0);
+    setPositionAttribute (gl, buffers[1].vertices, programs[1], 0);
+    setTextureAttribute  (gl, buffers[1].uvs, programs[1], 0);
     gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
     gl.bindVertexArray(null);
+
     _vaos.push(mapVao);
     _vaos.push(playerVao);
     _vaos.push(hudVao);

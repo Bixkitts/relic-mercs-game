@@ -48,9 +48,9 @@ void check_data_sizes()
     }
 }
 
-void print_buffer_in_hex(char *data, int size)
+void print_buffer_in_hex(char *data, size_t size)
 {
-    for (size_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; i++) {
         fprintf(stderr, "%02X ", data[i]);
     }
     fprintf(stderr, "\n");
@@ -116,13 +116,13 @@ int char_search(const char *restrict text, char c, size_t buf_len)
 
 float get_random_float(float min, float max)
 {
-    unsigned char buffer[sizeof(float)]; // 4 bytes to store a random integer
+    unsigned char buffer[sizeof(float)] = {0}; // 4 bytes to store a random integer
     if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
         fprintf(stderr, "Error generating random bytes\n");
         exit(1);
     }
     unsigned int rand_int = 0;
-    for (int i = 0; i < sizeof(buffer); i++) {
+    for (size_t i = 0; i < sizeof(buffer); i++) {
         rand_int = (rand_int << 8) | buffer[i];
     }
     float normalized = rand_int / (float)UINT_MAX;

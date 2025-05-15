@@ -73,9 +73,9 @@ static packet_handler_t handlers[HANDLER_COUNT] = {disconnect_handler,
 static inline enum handler initial_handler_check(struct host *remotehost)
 {
     struct host_custom_attr *custom_attr = NULL;
-    if (get_host_custom_attr(remotehost) == NULL) {
+    if (!get_host_custom_attr(remotehost)) {
         custom_attr = calloc(1, sizeof(*custom_attr));
-        if (custom_attr == NULL) {
+        if (!custom_attr) {
             print_error(BB_ERR_CALLOC);
             exit(1);
         }

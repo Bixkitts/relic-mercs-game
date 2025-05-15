@@ -1,6 +1,7 @@
 import { getGLContext } from '../canvas-getter.js';
 import { loadTexture } from './resource-loading.js';
 import { buildTextElement,
+         buildButton,
          deleteTextElement,
          TextElement} from './ui-utils.js';
 
@@ -39,6 +40,7 @@ function truncateAtNull(string)
     const nullIndex = string.indexOf('\0');
     return nullIndex !== -1 ? string.substring(0, nullIndex) : string;
 }
+
 export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name) {
     const truncatedName = truncateAtNull(name);
     const welcomeMsg = `Welcome ${truncatedName}!`;
@@ -46,6 +48,7 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
         let te = buildTextElement(welcomeMsg, textCoords, 0.25);
+        let but = buildButton(0, 1, 1);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }

@@ -60,8 +60,7 @@ function main() {
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    const buffers       = getVertBuffers();
-    const programs      = getShaders();
+    const shaders       = getShaders();
     const vaos          = getVAOs();
 
     const fpscap        = 50;
@@ -78,8 +77,7 @@ function main() {
     _gl.depthFunc         (_gl.LEQUAL);
     _gl.clear             (_gl.COLOR_BUFFER_BIT | _gl.DEPTH_BUFFER_BIT);
 
-
-    startRenderLoop(programs, vaos, buffers);
+    startRenderLoop(shaders, vaos);
 }
 
 
@@ -99,20 +97,14 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(programs, vaos, buffers) {
+function startRenderLoop(shaders, vaos) {
     const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
     const mapTexture    = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     const playerTexture = loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     const hudTexture    = loadTexture(_gl, "hud01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
-    _gl.useProgram        (programs[0].program);
-    setPersp(programs[0]);
-    console.log("Programs:" + programs);
-
-    let   then        = 0;
-
+    let then = 0;
     requestAnimationFrame(render);
     function render(now) {
-
         _renderCallbacks.forEach(callback => {
             callback(_deltaTime);
         });
@@ -133,61 +125,35 @@ function startRenderLoop(programs, vaos, buffers) {
         let locModelViewMatrix = mat4.create();
         mat4.copy(locModelViewMatrix, _modelViewMatrix);
 
-
-        _gl.useProgram(programs[0].program);
-        _gl.bindVertexArray(vaos[0]);
-        _gl.activeTexture    (_gl.TEXTURE0);
-        _gl.bindTexture      (_gl.TEXTURE_2D, mapTexture);
-        drawMapPlane  (_gl, 
-                       programs[0], 
-                       locModelViewMatrix);
-        _gl.bindVertexArray(null);
-
-        _gl.bindVertexArray(vaos[1]);
-        _gl.activeTexture    (_gl.TEXTURE0);
-        _gl.bindTexture      (_gl.TEXTURE_2D, playerTexture);
-        drawPlayers   (_gl, 
-                       camZoom, 
-                       programs[0], 
-                       locModelViewMatrix); 
-        _gl.bindVertexArray(null);
+        _gl.enable           (_gl.DEPTH_TEST);
+        drawMapPlane         (_gl, 
+                              vaos,
+                              shaders, 
+                              mapTexture,
+                              locModelViewMatrix);
+        drawPlayers          (_gl, 
+                              vaos,
+                              camZoom, 
+                              shaders, 
+                              playerTexture,
+                              locModelViewMatrix); 
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
-        _gl.disable   (_gl.DEPTH_TEST);
-
-        // TODO: Have HUD textures and not pass in placeholder
-        _gl.useProgram       (programs[1].program);
-        setOrtho             (programs[1]);
-        _gl.bindVertexArray  (vaos[2]);
-        _gl.activeTexture    (_gl.TEXTURE0);
-        _gl.bindTexture      (_gl.TEXTURE_2D, hudTexture);
-        drawHUD       (_gl,
-                       programs[1],
-                       mat4.create());
-        _gl.bindVertexArray(null);
-        _gl.useProgram    (programs[2].program);
-        setOrtho(programs[2]);
-        _gl.activeTexture (_gl.TEXTURE0);
-        _gl.bindTexture   (_gl.TEXTURE_2D, textTexture);
-        drawText      (_gl,
-                       programs[2],
-                       mat4.create());
+        _gl.disable          (_gl.DEPTH_TEST);
+        drawHUD              (_gl,
+                              vaos,
+                              shaders,
+                              hudTexture,
+                              mat4.create());
+        // Each text element has it's own vao,
+        // special and separate from the global ones
+        drawText             (_gl,
+                              shaders,
+                              textTexture,
+                              mat4.create());
 
         setTimeout(() => requestAnimationFrame(render), Math.max(0, wait))
     }
-}
-
-function setPersp(programInfo)
-{
-    _gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
-                        false,
-                        _perspMatrix);
-}
-function setOrtho(programInfo)
-{
-    _gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
-                        false,
-                        _orthMatrix);
 }
 
 function doCameraTransforms(matrix, camZoom, camPan)

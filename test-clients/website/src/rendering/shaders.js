@@ -1,7 +1,34 @@
 import { initShaderProgram } from './resource-loading';
 import { getGLContext } from '../canvas-getter.js'
 
-const _basicVertShaderSource = 
+const _solidVertShaderSource = 
+`#version 300 es
+
+in vec4 aVertexPosition;
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+void main(void) {
+    gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+}
+`;
+
+const _solidFragShaderSource =
+`#version 300 es
+
+precision highp float;
+
+uniform vec4 uColor;
+
+out vec4 fragColor;
+
+void main(void) {
+    fragColor = uColor;
+}
+`;
+
+const _textureVertShaderSource = 
 `#version 300 es
 
 in vec4 aVertexPosition;
@@ -18,47 +45,19 @@ void main(void) {
     vTextureCoord = aTextureCoord + uUVOffset;
 }
 `;
-const _basicFragShaderSource =
+const _textureFragShaderSource =
 `#version 300 es
 
 precision highp float;
 in vec2 vTextureCoord;
 uniform sampler2D uSampler;
+uniform vec4 uTintColor;
 
 out vec4 fragColor;
 
 void main(void) {
-    fragColor = texture(uSampler, vTextureCoord);
-}
-`;
-const _hudVertShaderSource = 
-`#version 300 es
-
-in vec4 aVertexPosition;
-in vec2 aTextureCoord; 
-
-uniform mat4 uModelViewMatrix;
-uniform mat4 uProjectionMatrix;
-uniform vec2 uUVOffset;
-
-out vec2 vTextureCoord;
-
-void main(void) {
-    gl_Position   = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-    vTextureCoord = aTextureCoord + uUVOffset;
-}
-`;
-const _hudFragShaderSource =
-`#version 300 es
-
-precision highp float;
-in vec2 vTextureCoord;
-uniform sampler2D uSampler;
-
-out vec4 fragColor;
-
-void main(void) {
-    fragColor = texture(uSampler, vTextureCoord);
+    vec4 texColor = texture(uSampler, vTextureCoord);
+    fragColor = texColor * uTintColor;
 }
 `;
 const _textVertShaderSource = 
@@ -75,8 +74,8 @@ uniform vec2 uUVOffset;
 
 out vec2 vTextureCoord;
 
-void main(void) {
-
+void main(void)
+{
     vec4 instanceOffset = vec4(aLineDisplace.x, -aLineDisplace.y, 0.0, 0.0);
     vec4 worldPosition = aVertexPosition + instanceOffset;
     gl_Position = uProjectionMatrix * uModelViewMatrix * worldPosition;
@@ -94,7 +93,8 @@ uniform sampler2D uSampler;
 
 out vec4 fragColor;
 
-void main(void) {
+void main(void)
+{
     vec4 textureColor = texture(uSampler, vTextureCoord);
 
     // Define white color
@@ -111,22 +111,24 @@ void main(void) {
 // indices returned from "GetShaders"
 const _shaderConfigs = [
     {
-        vertexSource:   _basicVertShaderSource,
-        fragmentSource: _basicFragShaderSource,
+        vertexSource:   _solidVertShaderSource,
+        fragmentSource: _solidFragShaderSource,
         attributes:     ["aVertexPosition",
                          "aTextureCoord"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
-                         "uUVOffset"]
+                         "uColor"]
     },
     {
-        vertexSource:   _hudVertShaderSource,
-        fragmentSource: _hudFragShaderSource,
+        vertexSource:   _textureVertShaderSource,
+        fragmentSource: _textureFragShaderSource,
         attributes:     ["aVertexPosition",
                          "aTextureCoord"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
-                         "uUVOffset"]
+                         "uSampler",
+                         "uUVOffset",
+                         "uTintColor"]
     },
     {
         vertexSource:   _textVertShaderSource,
@@ -250,6 +252,7 @@ export function setTextureAttributeInstanced(gl, texCoordBuffer, programInfo) {
                            offset,);
     gl.vertexAttribDivisor(programInfo.attribLocations["aTextureOffsets"], 1);
 }
+
 export function setPosAttributeInstanced(gl, posBuffer, programInfo) {
     const num       = 2; // every coordinate composed of 2 values
     const type      = gl.FLOAT;
