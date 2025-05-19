@@ -27,11 +27,13 @@ export class TextElement {
 // TODO:
 // probably don't need some of this data
 export class Button {
-    constructor(coords, width, height, isHidden) {
+    constructor(coords, width, height, label, callback, isHidden) {
         this.coords         = coords;
         this.width          = width;
         this.height         = height;
         this.isHidden       = isHidden;
+        this.label          = label;
+        this.callback       = callback;
         // Is this text element still in the
         // primary array with it's GL buffers
         // intact?
@@ -143,11 +145,14 @@ export function deleteTextElement(textElement) {
     _textElements.splice(index, 1);
 }
 
-export function buildButton(coords, width, height) {
+// Defined in GL screenspace coordinates
+export function buildButton(coords, width, height, label, callback) {
 
     const button = new Button(coords,
                               width,
                               height,
+                              label,
+                              callback,
                               false);
     _buttons.push(button);
     return button;

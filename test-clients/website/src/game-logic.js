@@ -48,10 +48,16 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
         let te = buildTextElement(welcomeMsg, textCoords, 0.25);
-        let but = buildButton(0, 1, 1);
+        let but = buildButton([0.0, 0.5], 0.1, 0.1, buttonCallbackTest);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }
+}
+
+function buttonCallbackTest(button)
+{
+    console.log("Button was clicked!");
+    button.isHidden = true;
 }
 
 export function getPlayer(netID) {

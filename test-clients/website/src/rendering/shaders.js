@@ -113,8 +113,7 @@ const _shaderConfigs = [
     {
         vertexSource:   _solidVertShaderSource,
         fragmentSource: _solidFragShaderSource,
-        attributes:     ["aVertexPosition",
-                         "aTextureCoord"],
+        attributes:     ["aVertexPosition"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
                          "uColor"]

@@ -8,6 +8,7 @@ import { getPerspMatrix } from './rendering/renderer.js';
 import { getModelViewMatrix } from './rendering/renderer.js';
 import { rayPlaneIntersection } from './helpers';
 import { sendMovePacket } from './networking.js';
+import { getButtons } from './ui-utils.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -87,15 +88,16 @@ export function initWASD() {
         if (e.button === 0) pressed[mouse.left] = true;
         if (e.button === 1) pressed[mouse.middle] = true;
         if (e.button === 2) pressed[mouse.right] = true;
-        console.log(mouseInCanvas);
         if (mouseInCanvas && pressed[mouse.left]) {
-            const rect             = canvas.getBoundingClientRect();
-            // TODO: event is deprecated
-            const mouseX           = event.clientX - rect.left;
-            const mouseY           = event.clientY - rect.top;
-
+            const rect    = canvas.getBoundingClientRect();
+            const mouseX  = e.clientX - rect.left;
+            const mouseY  = e.clientY - rect.top;
+            const screenX = mouseX / gl.canvas.width;
+            const screenY = 1.0 - (mouseY / gl.canvas.height);
+            if (doUiClick(screenX, screenY)) {
+                return;
+            }
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
-            // Get Own player here and MOVE() them
             getPlayer(getMyPlayerId()).move(worldCoords[0], worldCoords[1]);
             sendMovePacket(worldCoords[0], worldCoords[1]);
         }
@@ -117,10 +119,30 @@ export function initWASD() {
     }
 }
 
-function clickToWorldCoord(mouseX, mouseY) {
+function doUiClick(screenX, screenY)
+{
+    const buttons = getButtons();
+    let wasUiClicked = false;
+    buttons.forEach( button => {
+        if (button.isHidden)
+            return;
+        // detect collision and execute callback here
+        if (screenX >= button.coords[0]
+            && screenX <= button.coords[0] + button.width
+            && screenY <= button.coords[1]
+            && screenY >= button.coords[1] - button.height)
+        {
+            button.callback(button);
+            wasUiClicked = true;
+        }
+    });
+    return wasUiClicked;
+}
+
+function clickToWorldCoord(mouseX, mouseY)
+{
     const projectionMatrix = getPerspMatrix();
     const modelViewMatrix  = getModelViewMatrix();
-    // -------------Edder's Shit here----------------------
     const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;
     const ndcY = 1 - (mouseY * 2.0) / gl.canvas.height;
     const rayClip = vec4.fromValues(ndcX,

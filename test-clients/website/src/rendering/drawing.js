@@ -89,18 +89,18 @@ export function drawPlayers(gl, vaos, camZoom, shaders, playerTexture, modelView
 
 export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
 {
-    const programInfo = shaders[1]; // textured shader
-    setOrtho            (gl, programInfo);
+    const programInfo = shaders[0]; // solid color shader
     gl.useProgram       (programInfo.program);
+    setOrtho            (gl, programInfo);
     gl.bindVertexArray  (vaos[2]);
-    gl.activeTexture    (gl.TEXTURE0);
-    gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
+    //gl.activeTexture    (gl.TEXTURE0);
+    //gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
     // Hud Bar
     {
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             modelViewMatrix);
-        gl.uniform4f(programInfo.uniformLocations["uTintColor"],
+        gl.uniform4f(programInfo.uniformLocations["uColor"],
                      1.0, 1.0, 1.0, 1.0);
         const offset      = 0;
         const type        = gl.UNSIGNED_SHORT;
@@ -110,22 +110,24 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
 
     const buttons = getButtons();
     buttons.forEach( button => {
+        if (button.isHidden)
+            return;
         let mv = modelViewMatrix;
-        mat4.translate (mv,
-                        mv,
-                        [0.0, 1.0, 0.0]);
-        mat4.scale     (mv,
-                        mv,
-                        [0.5, 0.5, 0.5]);
+        mat4.translate      (mv,
+                             mv,
+                             [button.coords[0], button.coords[1], 0.0]);
+        mat4.scale          (mv,
+                             mv,
+                             [button.width, button.height, 0.5]);
+        gl.uniformMatrix4fv (programInfo.uniformLocations["uModelViewMatrix"],
+                             false,
+                             mv);
+        gl.uniform4f        (programInfo.uniformLocations["uColor"],
+                             1.0, 1.0, 1.0, 1.0);
         const offset      = 8;
         const type        = gl.UNSIGNED_SHORT;
         const vertexCount = 4;
-        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
-                            false,
-                            mv);
-        gl.uniform4f(programInfo.uniformLocations["uTintColor"],
-                     0.0, 1.0, 0.0, 0.5);
-        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+        gl.drawElements     (gl.TRIANGLE_STRIP, vertexCount, type, offset);
     });
     gl.bindVertexArray(null);
 }

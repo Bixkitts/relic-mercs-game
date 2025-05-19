@@ -97,7 +97,8 @@ export function unsubscribeFromRender(callback) {
     }
 }
 
-function startRenderLoop(shaders, vaos) {
+function startRenderLoop(shaders, vaos)
+{
     const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
     const mapTexture    = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     const playerTexture = loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);

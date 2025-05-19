@@ -161,8 +161,8 @@ function initVAOs(programs, buffers)
 
     gl.bindVertexArray(null);
     gl.bindVertexArray(hudVao);
-    setPositionAttribute (gl, buffers[1].vertices, programs[1], 0);
-    setTextureAttribute  (gl, buffers[1].uvs, programs[1], 0);
+    setPositionAttribute (gl, buffers[1].vertices, programs[0], 0);
+    //setTextureAttribute  (gl, buffers[1].uvs, programs[1], 0);
     gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
     gl.bindVertexArray(null);
 
