@@ -190,17 +190,8 @@ enum charsheet_form_fields {
  * multiple clients.
  * They each have their own threadlock mutex
  * set on creation.
- * Use this before modifying data in the structure,
- * unless it is an atomic variable.
+ * TODO: Come up with a good system for concurrent access.
  */
-// TODO:
-// we need to store exactly
-// what the player is in the middle of doing
-// in case they disconnect and reconnect so we can
-// restore whatever encounter they were having (or other
-// UI dialogue).
-//
-
 typedef int16_t player_id_t;
 
 struct player {

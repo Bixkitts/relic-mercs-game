@@ -97,9 +97,10 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
     //gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
     // Hud Bar
     {
+        let mv = mat4.clone(modelViewMatrix);
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
-                            modelViewMatrix);
+                            mv);
         gl.uniform4f(programInfo.uniformLocations["uColor"],
                      1.0, 1.0, 1.0, 1.0);
         const offset      = 0;
@@ -112,7 +113,7 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
     buttons.forEach( button => {
         if (button.isHidden)
             return;
-        let mv = modelViewMatrix;
+        let mv = mat4.clone(modelViewMatrix);
         mat4.translate      (mv,
                              mv,
                              [button.coords[0], button.coords[1], 0.0]);
@@ -147,17 +148,21 @@ export function drawText(gl, shaders, textTexture, modelViewMatrix)
     const offset       = 0;
     const type         = gl.UNSIGNED_SHORT;
     for (const textElement of textElements) {
+        if (textElement.isHidden) {
+            continue;
+        }
         const { vao, coords, len, size } = textElement;
+        let matrix = mat4.clone(modelViewMatrix);
         gl.bindVertexArray(vao);
-        mat4.translate (modelViewMatrix,
-                        modelViewMatrix,
+        mat4.translate (matrix,
+                        matrix,
                         [coords[0], coords[1], 0.0]);
-        mat4.scale     (modelViewMatrix,
-                        modelViewMatrix,
+        mat4.scale     (matrix,
+                        matrix,
                         [size, size, 0.0]);
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
-                            modelViewMatrix);
+                            matrix);
         gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, type, offset, len);
         gl.bindVertexArray(null);
     }

@@ -32,12 +32,21 @@ export class Button {
         this.width          = width;
         this.height         = height;
         this.isHidden       = isHidden;
-        this.label          = label;
         this.callback       = callback;
-        // Is this text element still in the
-        // primary array with it's GL buffers
-        // intact?
-        this.deleted        = false;
+        this.label          = buildTextElement(label,
+                                               [coords[0],
+                                               (coords[1] - (height/2)) + (height/10)],
+                                               (width * 16) / (label.length*1.2));
+    }
+    hide()
+    {
+        this.isHidden = true;
+        this.label.isHidden = true;
+    }
+    show()
+    {
+        this.isHidden = false;
+        this.label.isHidden = false;
     }
 }
 
@@ -68,7 +77,7 @@ export function buildTextElement(string, coords, size) {
     let   len          = 0;
     let   lineCount    = 0;
     const vao          = gl.createVertexArray();
-    let   isHidden     = true;
+    let   isHidden     = false;
 
     // Loop through each character in the string
     for (let i = 0, counter = 0; i < string.length; i++) {
@@ -146,8 +155,8 @@ export function deleteTextElement(textElement) {
 }
 
 // Defined in GL screenspace coordinates
-export function buildButton(coords, width, height, label, callback) {
-
+export function buildButton(coords, width, height, label, callback)
+{
     const button = new Button(coords,
                               width,
                               height,
