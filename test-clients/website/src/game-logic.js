@@ -48,9 +48,8 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
         let te = buildTextElement(welcomeMsg, textCoords, 0.25);
-        let but = buildButton([0.4, 0.5], 0.1, 0.1, "Test", buttonCallbackTest);
-        let but2 = buildButton([0.02, 0.9], 0.1, 0.06, "Trying to fit more text", buttonCallbackTest);
-        let but3 = buildButton([0.02, 0.8], 0.1, 0.06, "Click Me", buttonCallbackTest);
+        let but2 = buildButton([0.4, 0.4], 0.2, 0.04, "Option1: Eat the poor", buttonCallbackTest);
+        let but1 = buildButton([0.4, 0.35], 0.2, 0.04, "Option2: Eat the rich", buttonCallbackTest);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }

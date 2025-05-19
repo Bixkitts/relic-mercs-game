@@ -33,10 +33,11 @@ export class Button {
         this.height         = height;
         this.isHidden       = isHidden;
         this.callback       = callback;
+        const letterWidth = (width * 16) / (label.length+2);
         this.label          = buildTextElement(label,
-                                               [coords[0],
+                                               [coords[0] + (0.0625 * letterWidth),
                                                (coords[1] - (height/2)) + (height/10)],
-                                               (width * 16) / (label.length*1.2));
+                                               letterWidth);
     }
     hide()
     {
@@ -81,7 +82,6 @@ export function buildTextElement(string, coords, size) {
 
     // Loop through each character in the string
     for (let i = 0, counter = 0; i < string.length; i++) {
-        counter ++;
         const char      = string[i];
         if (char == '\n') {
             lineCount ++;
@@ -101,8 +101,10 @@ export function buildTextElement(string, coords, size) {
         // Push the UV coordinates for the character's quad
         uvs.push(uMin, vMin);
         pos.push(counter * charWidth, lineCount * charWidth * 1.52);
+        counter ++;
         len ++;
     }
+    console.log("text pos array:" + pos);
 
     // Create and bind the texture coordinate buffer
     const texCoordBuffer = gl.createBuffer();

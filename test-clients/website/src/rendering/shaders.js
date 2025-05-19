@@ -96,14 +96,12 @@ out vec4 fragColor;
 void main(void)
 {
     vec4 textureColor = texture(uSampler, vTextureCoord);
+    
+    if (textureColor.rgb == vec3(1.0)) {
+        discard;
+    }
 
-    // Define white color
-    vec3 whiteColor = vec3(1.0, 1.0, 1.0);
-
-    // Calculate alpha to discard pure white pixels
-    float alpha = 1.0 - step(1.0, dot(textureColor.rgb, whiteColor) / 3.0);
-
-    fragColor = vec4(textureColor.rgb, textureColor.a * alpha);
+    fragColor = vec4(textureColor.rgb, 1.0);
 }
 `;
 
