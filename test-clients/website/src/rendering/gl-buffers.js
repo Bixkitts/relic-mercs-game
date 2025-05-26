@@ -174,3 +174,10 @@ export function getVAOs()
     }
     return _vaos;
 }
+
+export function createFloatBuffer(gl, dataArray) {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dataArray), gl.STATIC_DRAW);
+    return buffer;
+}

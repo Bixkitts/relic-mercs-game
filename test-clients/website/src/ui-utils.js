@@ -60,76 +60,99 @@ export function getTextElements()
     return _textElements;
 }
 
-export function buildTextElement(string, coords, size) {
-    const shaders      = Shaders.getShaders();
-    const buffers      = GlBuffers.getVertBuffers();
-    const textBuffers  = buffers[2];
-    const textShader   = shaders[2];
-    const charWidth    = 0.0625;
-    const gl           = getGLContext();
-    const uvs          = [];
-    const pos          = [];
-    const charWidthUV  = 1.0 / 16.0;  // Assuming 16x16 grid
-    const charHeightUV = 1.0 / 16.0;  // Assuming 16x16 grid
-    let   len          = 0;
-    let   lineCount    = 0;
-    const vao          = gl.createVertexArray();
-    let   isHidden     = false;
+export function buildTextElement(text, coords, size)
+{
+    const gl = getGLContext();
+    const shaders = Shaders.getShaders();
+    const buffers = GlBuffers.getVertBuffers();
+    const textShader = shaders[2];
+    const textBuffers = buffers[2];
+    const vao = gl.createVertexArray();
+    const charWidth = 0.0625;
+    const uvScale = 1 / 16.0; // Assuming 16x16 atlas
+    const lineHeight = charWidth * 1.52;
 
-    // Loop through each character in the string
-    for (let i = 0, counter = 0; i < string.length; i++) {
-        const char      = string[i];
-        if (char == '\n') {
-            lineCount ++;
-            counter   = 0;
-            continue;
-        }
-        const charIndex = char.charCodeAt(0); // ASCII index
+    const uvArray = [];
+    const posArray = [];
+    const colorArray = [];
 
-        // Calculate the row and column in the texture atlas
-        const col = charIndex % 16;
-        const row = Math.floor(charIndex / 16);
+    let instanceCount = 0;
+    let currentLine = 0;
 
-        // Calculate the UV offsets
-        const uMin = col * charWidthUV;
-        const vMin = -(row * charHeightUV);
+    generateTextInstanceData(text,
+                             uvScale,
+                             charWidth,
+                             lineHeight,
+                             uvArray,
+                             posArray,
+                             colorArray,
+                             () => currentLine++,
+                             () => currentLine);
 
-        // Push the UV coordinates for the character's quad
-        uvs.push(uMin, vMin);
-        pos.push(counter * charWidth, lineCount * charWidth * 1.52);
-        counter ++;
-        len ++;
-    }
-    console.log("text pos array:" + pos);
-
-    // Create and bind the texture coordinate buffer
-    const texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
-
-    const posBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+    const texCoordBuffer = GlBuffers.createFloatBuffer(gl, uvArray);
+    const posBuffer      = GlBuffers.createFloatBuffer(gl, posArray);
+    const colorBuffer    = GlBuffers.createFloatBuffer(gl, colorArray);
 
     gl.bindVertexArray(vao);
-        Shaders.setPositionAttribute2d       (gl, textBuffers.vertices, textShader);
-        Shaders.setTextureAttribute          (gl, textBuffers.uvs, textShader);
-        gl.bindBuffer                        (gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
-        Shaders.setTextureAttributeInstanced (gl, texCoordBuffer, textShader);
-        Shaders.setPosAttributeInstanced     (gl, posBuffer, textShader);
+        Shaders.setPositionAttribute2d(gl, textBuffers.vertices, textShader);
+        Shaders.setTextureAttribute(gl, textBuffers.uvs, textShader);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, textBuffers.indices);
+
+        Shaders.setTextureAttributeInstanced(gl, texCoordBuffer, textShader);
+        Shaders.setPosAttributeInstanced(gl, posBuffer, textShader);
+        Shaders.setColorAttributeInstanced(gl, colorBuffer, textShader);
     gl.bindVertexArray(null);
 
-    const textElement = new TextElement(vao,
-                                        coords,
-                                        len,
-                                        size,
-                                        isHidden,
-                                        posBuffer,
-                                        texCoordBuffer);
-    _textElements.push(textElement);
+    const textElement = new TextElement(
+        vao,
+        coords,
+        posArray.length / 2, // one (x, y) pair per instance
+        size,
+        false, // isHidden
+        posBuffer,
+        texCoordBuffer
+    );
 
+    _textElements.push(textElement);
     return textElement;
 }
+
+function generateTextInstanceData(text,
+                                  uvScale,
+                                  charWidth,
+                                  lineHeight,
+                                  uvArray,
+                                  posArray,
+                                  colorArray,
+                                  onNewLine,
+                                  getCurrentLine)
+{
+    let column = 0;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '\n') {
+            onNewLine();
+            column = 0;
+            continue;
+        }
+
+        const code = char.charCodeAt(0);
+        const col = code % 16;
+        const row = Math.floor(code / 16);
+
+        const u = col * uvScale;
+        const v = -row * uvScale;
+
+        uvArray.push(u, v);
+        posArray.push(column * charWidth, getCurrentLine() * lineHeight);
+        colorArray.push(0.0, 1.0, 0.0, 1.0); // Green RGBA
+
+        column++;
+    }
+}
+
+
 
 // Deletes the text to free up memory.
 // Expensive operation, and you need

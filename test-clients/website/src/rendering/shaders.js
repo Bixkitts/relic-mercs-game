@@ -67,12 +67,14 @@ in vec4 aVertexPosition;
 in vec2 aTextureCoord; 
 in vec2 aTextureOffsets;
 in vec2 aLineDisplace;
+in vec4 aLetterColor;
 
 uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 uniform vec2 uUVOffset;
 
 out vec2 vTextureCoord;
+out vec4 vLetterColor;
 
 void main(void)
 {
@@ -80,6 +82,7 @@ void main(void)
     vec4 worldPosition = aVertexPosition + instanceOffset;
     gl_Position = uProjectionMatrix * uModelViewMatrix * worldPosition;
     vTextureCoord = aTextureCoord + uUVOffset + aTextureOffsets;
+    vLetterColor = aLetterColor;
 }
 `;
 const _textFragShaderSource = 
@@ -88,6 +91,7 @@ const _textFragShaderSource =
 precision highp float;
 
 in vec2 vTextureCoord;
+in vec4 vLetterColor;
 
 uniform sampler2D uSampler;
 
@@ -101,7 +105,7 @@ void main(void)
         discard;
     }
 
-    fragColor = vec4(textureColor.rgb, 1.0);
+    fragColor = vLetterColor;
 }
 `;
 
@@ -133,7 +137,8 @@ const _shaderConfigs = [
         attributes:     ["aVertexPosition",
                          "aTextureCoord",
                          "aTextureOffsets",
-                         "aLineDisplace"],
+                         "aLineDisplace",
+                         "aLetterColor"],
         uniforms:       ["uProjectionMatrix",
                          "uModelViewMatrix",
                          "uUVOffset",
@@ -266,4 +271,21 @@ export function setPosAttributeInstanced(gl, posBuffer, programInfo) {
                            stride,
                            offset,);
     gl.vertexAttribDivisor(programInfo.attribLocations["aLineDisplace"], 1);
+}
+
+export function setColorAttributeInstanced(gl, colorBuffer, programInfo) {
+    const colorSize = 4;
+    const type      = gl.FLOAT;
+    const normalize = false;
+    const stride    = 0;
+    const offset    = 0;
+    gl.bindBuffer              (gl.ARRAY_BUFFER, colorBuffer);
+    gl.enableVertexAttribArray (programInfo.attribLocations["aLetterColor"]);
+    gl.vertexAttribPointer     (programInfo.attribLocations["aLetterColor"],
+                                colorSize,
+                                type,
+                                normalize,
+                                stride,
+                                offset,);
+    gl.vertexAttribDivisor     (programInfo.attribLocations["aLetterColor"], 1);
 }
