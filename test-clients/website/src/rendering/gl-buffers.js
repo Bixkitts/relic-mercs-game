@@ -1,8 +1,5 @@
 import { getGLContext } from '../canvas-getter.js';
-import { getShaders,
-         setPositionAttribute2d,
-         setPositionAttribute,
-         setTextureAttribute } from './shaders.js';
+import * as Shaders from './shaders.js';
 
 // All the other buffers are
 // collected into _vertBuffers
@@ -149,21 +146,20 @@ function initVAOs(programs, buffers)
 
     gl.bindVertexArray(null);
     gl.bindVertexArray(mapVao);
-    setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
-    setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
-    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    Shaders.setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
+    Shaders.setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
 
     gl.bindVertexArray(null);
     gl.bindVertexArray(playerVao);
-    setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
-    setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
-    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
+    Shaders.setPositionAttribute (gl, buffers[0].vertices, programs[1], 0);
+    Shaders.setTextureAttribute  (gl, buffers[0].uvs, programs[1], 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[0].indices);
 
     gl.bindVertexArray(null);
     gl.bindVertexArray(hudVao);
-    setPositionAttribute (gl, buffers[1].vertices, programs[0], 0);
-    //setTextureAttribute  (gl, buffers[1].uvs, programs[1], 0);
-    gl.bindBuffer        (gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
+    Shaders.setPositionAttribute (gl, buffers[1].vertices, programs[0], 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers[1].indices);
     gl.bindVertexArray(null);
 
     _vaos.push(mapVao);
@@ -174,7 +170,7 @@ function initVAOs(programs, buffers)
 export function getVAOs()
 {
     if (!_vaosInitialized) {
-        initVAOs(getShaders(), getVertBuffers());
+        initVAOs(Shaders.getShaders(), getVertBuffers());
     }
     return _vaos;
 }

@@ -1,5 +1,3 @@
-
-
 const canvasQuery = "#glcanvas";
 const canvas = document.querySelector(canvasQuery);
 const context = canvas.getContext("webgl2", {alpha:false});

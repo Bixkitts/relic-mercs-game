@@ -1,14 +1,9 @@
-import { getVertBuffers,
-         getVAOs } from './gl-buffers.js';
-import { drawMapPlane } from './drawing.js';
-import { drawPlayers } from './drawing.js';
-import { drawHUD } from './drawing.js';
-import { drawText } from './drawing.js';
-import { initWASD } from '../user-inputs.js';
-import { getZoom, getCamPan } from '../user-inputs.js';
 import { getGLContext } from '../canvas-getter.js'
-import { loadTexture } from './resource-loading.js';
-import { getShaders } from './shaders.js';
+import * as GlBuffers from './gl-buffers.js';
+import * as Drawing from './drawing.js';
+import * as UserInputs from '../user-inputs.js';
+import * as ResourceLoading from './resource-loading.js';
+import * as Shaders from './shaders.js';
 
 const _gl           = getGLContext();
 let   _deltaTime    = 0;
@@ -33,6 +28,7 @@ let   _perspMatrix = createPerspMatrix(45);
 export function getPerspMatrix() {
     return _perspMatrix;
 }
+
 let   _orthMatrix = createOrthMatrix();
 export function getOrthMatrix() {
     return _orthMatrix;
@@ -53,15 +49,15 @@ main();
 
 function main() {
     canvasInit()
-    initWASD();
+    UserInputs.initWASD();
     if (_gl === null) {
         return;
     }
     // Flip image pixels into the bottom-to-top order that WebGL expects.
     _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    const shaders       = getShaders();
-    const vaos          = getVAOs();
+    const shaders       = Shaders.getShaders();
+    const vaos          = GlBuffers.getVAOs();
 
     const fpscap        = 50;
 
@@ -99,10 +95,10 @@ export function unsubscribeFromRender(callback) {
 
 function startRenderLoop(shaders, vaos)
 {
-    const textTexture   = loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
-    const mapTexture    = loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
-    const playerTexture = loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);
-    const hudTexture    = loadTexture(_gl, "hud01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
+    const textTexture   = ResourceLoading.loadTexture(_gl, "BirdFont88.bmp", _gl.NEAREST, false);
+    const mapTexture    = ResourceLoading.loadTexture(_gl, "map01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
+    const playerTexture = ResourceLoading.loadTexture(_gl, "playerTest.png", _gl.LINEAR_MIPMAP_LINEAR, true);
+    const hudTexture    = ResourceLoading.loadTexture(_gl, "hud01.png", _gl.LINEAR_MIPMAP_LINEAR, true);
     let then = 0;
     requestAnimationFrame(render);
     function render(now) {
@@ -116,8 +112,8 @@ function startRenderLoop(shaders, vaos)
         const wait = document.sperframe - _deltaTime;
         then = now;
 
-        const camPan    = getCamPan (_deltaTime);
-        const camZoom   = getZoom   (_deltaTime);
+        const camPan    = UserInputs.getCamPan (_deltaTime);
+        const camZoom   = UserInputs.getZoom   (_deltaTime);
 
         _modelViewMatrix = doCameraTransforms(mat4.create(),
                                               camZoom,
@@ -127,12 +123,12 @@ function startRenderLoop(shaders, vaos)
         mat4.copy(locModelViewMatrix, _modelViewMatrix);
 
         _gl.enable           (_gl.DEPTH_TEST);
-        drawMapPlane         (_gl, 
+        Drawing.drawMapPlane (_gl, 
                               vaos,
                               shaders, 
                               mapTexture,
                               locModelViewMatrix);
-        drawPlayers          (_gl, 
+        Drawing.drawPlayers  (_gl, 
                               vaos,
                               camZoom, 
                               shaders, 
@@ -141,14 +137,14 @@ function startRenderLoop(shaders, vaos)
         // From this point we render UI, so we
         // make it orthographic and disable the depth testing
         _gl.disable          (_gl.DEPTH_TEST);
-        drawHUD              (_gl,
+        Drawing.drawHUD      (_gl,
                               vaos,
                               shaders,
                               hudTexture,
                               mat4.create());
         // Each text element has it's own vao,
         // special and separate from the global ones
-        drawText             (_gl,
+        Drawing.drawText     (_gl,
                               shaders,
                               textTexture,
                               mat4.create());
@@ -184,6 +180,7 @@ function createPerspMatrix(fov)
 
     return projectionMatrix;
 }
+
 function createOrthMatrix()
 {
     const orthMatrix = mat4.create();

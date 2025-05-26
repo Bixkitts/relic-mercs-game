@@ -1,5 +1,5 @@
-import { initShaderProgram } from './resource-loading';
 import { getGLContext } from '../canvas-getter.js'
+import * as ResourceLoading from './resource-loading';
 
 const _solidVertShaderSource = 
 `#version 300 es
@@ -169,9 +169,9 @@ let   _programsInitialized = false;
 function initShaderPrograms(gl) {
 
     for (const config of _shaderConfigs) {
-        const shaderProgram = initShaderProgram(gl,
-                                                config.vertexSource,
-                                                config.fragmentSource);
+        const shaderProgram = ResourceLoading.initShaderProgram(gl,
+                                                                config.vertexSource,
+                                                                config.fragmentSource);
         const programInfo   = createProgramInfo(gl,
                                                 shaderProgram,
                                                 config.attributes,
@@ -203,6 +203,7 @@ export function setPositionAttribute(gl, posBuffer, programInfo, offset) {
                                offset);
     gl.enableVertexAttribArray(programInfo.attribLocations["aVertexPosition"]);
 }
+
 export function setPositionAttribute2d(gl, posBuffer, programInfo, offset) {
     const numComponents = 2;
     const type          = gl.FLOAT;

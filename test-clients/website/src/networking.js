@@ -1,9 +1,4 @@
-import { getAllPlayers } from  './game-logic.js';
-import { getPlayer } from  './game-logic.js';
-import { tryAddPlayer } from  './game-logic.js';
-import { getMyPlayerId } from  './game-logic.js';
-import { setMyPlayerId } from  './game-logic.js';
-import { setCurrentTurn } from  './game-logic.js';
+import * as GameLogic from './game-logic.js';
 
 const _scriptUrl     = new URL(window.location.href);
 const _websocketUrl  = 'wss://' + _scriptUrl.hostname + ':' + _scriptUrl.port;
@@ -66,7 +61,7 @@ function handleMovePlayerResponse(dataView) {
             yCoord: yCoord
         }
     };
-    getPlayer(playerId).move(xCoord, yCoord);
+    GameLogic.getPlayer(playerId).move(xCoord, yCoord);
 
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
@@ -126,7 +121,7 @@ function handlePlayerConnectResponse(dataView) {
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
 
         // Add player to the map (assuming default vigour, violence, cunning, image)
-        tryAddPlayer(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
+        GameLogic.tryAddPlayer(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
     }
 
     // Adjust offset after player coordinates
@@ -134,14 +129,14 @@ function handlePlayerConnectResponse(dataView) {
 
     // Extract current turn player_id
     const currentTurn = dataView.getInt16(offset, true);
-    setCurrentTurn(currentTurn);
+    GameLogic.setCurrentTurn(currentTurn);
     offset += playerIdSize;
 
     // Extract player index
     if (!_connected) {
         _connected = true;
         const playerIndex = dataView.getInt16(offset);
-        setMyPlayerId(playerList[playerIndex]);
+        GameLogic.setMyPlayerId(playerList[playerIndex]);
         console.log('Player Index:', playerIndex, '  Offset: ', offset);
     }
 
@@ -149,7 +144,7 @@ function handlePlayerConnectResponse(dataView) {
     const gameOngoing = Boolean(dataView.getInt8(offset));
     offset += 1;
 
-    console.log('My Player Id:', getMyPlayerId());
+    console.log('My Player Id:', GameLogic.getMyPlayerId());
     console.log('Player Ids:', playerList);
     console.log('Current Turn Player Id:', currentTurn);
     console.log('Is Game Ongoing:', gameOngoing);

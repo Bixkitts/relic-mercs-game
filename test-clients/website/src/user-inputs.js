@@ -1,14 +1,9 @@
 import { getGLContext, getCanvas } from './canvas-getter.js'
-import { getAllPlayers } from './game-logic.js';
-import { getMyPlayerId } from './game-logic.js';
-import { getPlayer } from './game-logic.js';
-import { printMat4 } from './helpers.js';
-import { getSocket } from './networking.js';
-import { getPerspMatrix } from './rendering/renderer.js';
-import { getModelViewMatrix } from './rendering/renderer.js';
-import { rayPlaneIntersection } from './helpers';
-import { sendMovePacket } from './networking.js';
-import { getButtons } from './ui-utils.js';
+import * as GameLogic from './game-logic.js';
+import * as Networking from './networking.js';
+import * as Renderer from './rendering/renderer.js';
+import * as Helpers from './helpers';
+import * as Ui from './ui-utils.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];
@@ -40,6 +35,7 @@ globalThis.unfuck   = () => {
     camPan  = [0, 0, 0];
     pressed = [0, 0, 0];
 }
+
 let   pressed          = [0, 0, 0];
 const gl               = getGLContext();
 
@@ -98,8 +94,8 @@ export function initWASD() {
                 return;
             }
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
-            getPlayer(getMyPlayerId()).move(worldCoords[0], worldCoords[1]);
-            sendMovePacket(worldCoords[0], worldCoords[1]);
+            GameLogic.getPlayer(GameLogic.getMyPlayerId()).move(worldCoords[0], worldCoords[1]);
+            Networking.sendMovePacket(worldCoords[0], worldCoords[1]);
         }
     }
     document.onmousedown = e => mouseDown(e)
@@ -121,7 +117,7 @@ export function initWASD() {
 
 function doUiClick(screenX, screenY)
 {
-    const buttons = getButtons();
+    const buttons = Ui.getButtons();
     let wasUiClicked = false;
     buttons.forEach( button => {
         if (button.isHidden)
@@ -141,8 +137,8 @@ function doUiClick(screenX, screenY)
 
 function clickToWorldCoord(mouseX, mouseY)
 {
-    const projectionMatrix = getPerspMatrix();
-    const modelViewMatrix  = getModelViewMatrix();
+    const projectionMatrix = Renderer.getPerspMatrix();
+    const modelViewMatrix  = Renderer.getModelViewMatrix();
     const ndcX = (2.0 * mouseX) / gl.canvas.width - 1;
     const ndcY = 1 - (mouseY * 2.0) / gl.canvas.height;
     const rayClip = vec4.fromValues(ndcX,
@@ -164,10 +160,10 @@ function clickToWorldCoord(mouseX, mouseY)
     vec3.set(camPos, viewToWorld[12], viewToWorld[13], viewToWorld[14]);
 
     let rayRelative = vec3.subtract(vec3.create(), rayWorld, camPos);
-    const iPoint = rayPlaneIntersection(camPos, 
-                                        rayRelative, 
-                                        vec3.fromValues(0,0,0), 
-                                        vec3.fromValues(0,0,1));
+    const iPoint = Helpers.rayPlaneIntersection(camPos, 
+                                                rayRelative, 
+                                                vec3.fromValues(0,0,0), 
+                                                vec3.fromValues(0,0,1));
 
     return iPoint
 }

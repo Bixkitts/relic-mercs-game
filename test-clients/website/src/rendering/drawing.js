@@ -1,9 +1,7 @@
 import { ProgramInfo } from "./type-hints.js";
-import { getPerspMatrix,
-         getOrthMatrix } from "./renderer.js";
-import { getAllPlayers } from "../game-logic.js";
-import { getTextElements,
-         getButtons } from "../ui-utils.js";
+import * as Renderer from "./renderer.js";
+import * as GameLogic from "../game-logic.js";
+import * as Ui from "../ui-utils.js";
 
 /**
  * @param {WebGLRenderingContext} gl 
@@ -58,7 +56,7 @@ export function drawPlayers(gl, vaos, camZoom, shaders, playerTexture, modelView
     gl.bindVertexArray  (vaos[1]);
     gl.activeTexture    (gl.TEXTURE0);
     gl.bindTexture      (gl.TEXTURE_2D, playerTexture);
-    const players = getAllPlayers();
+    const players = GameLogic.getAllPlayers();
     players.forEach(player => {
         let mv = mat4.clone(modelViewMatrix);
         mat4.translate (mv,
@@ -109,7 +107,7 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
         gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
     }
 
-    const buttons = getButtons();
+    const buttons = Ui.getButtons();
     buttons.forEach( button => {
         if (button.isHidden)
             return;
@@ -144,7 +142,7 @@ export function drawText(gl, shaders, textTexture, modelViewMatrix)
     setOrtho            (gl, programInfo);
     gl.activeTexture    (gl.TEXTURE0);
     gl.bindTexture      (gl.TEXTURE_2D, textTexture);
-    const textElements = getTextElements();
+    const textElements = Ui.getTextElements();
     const offset       = 0;
     const type         = gl.UNSIGNED_SHORT;
     for (const textElement of textElements) {
@@ -172,12 +170,12 @@ function setPersp(gl, programInfo)
 {
     gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
-                        getPerspMatrix());
+                        Renderer.getPerspMatrix());
 }
 
 function setOrtho(gl, programInfo)
 {
     gl.uniformMatrix4fv(programInfo.uniformLocations["uProjectionMatrix"],
                         false,
-                        getOrthMatrix());
+                        Renderer.getOrthMatrix());
 }
