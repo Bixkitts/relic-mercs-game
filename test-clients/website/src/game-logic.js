@@ -40,13 +40,18 @@ function truncateAtNull(string)
 
 export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name) {
     const truncatedName = truncateAtNull(name);
-    const welcomeMsg = `Welcome ${truncatedName}!`;
+    const welcomeMsg = `Welcome ${truncatedName}!\nI'm going to test scaling some smaller text here.\nHow does this look to you?`;
     const invalidNetID = -1;
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
-        let te   = Ui.buildTextElement(welcomeMsg, textCoords, 0.25);
+        let te   = Ui.buildTextElement(welcomeMsg, textCoords, 0.125);
         const buttonColor = [0.9, 0.9, 0.9, 1.0];
-        let but2 = Ui.buildButton([0.3, 0.4], 0.4, 0.04, '<color="#FF0000">Option1:</color> The poor should eat the poor', buttonColor, buttonCallbackTest);
+        let but2 = Ui.buildButton([0.3, 0.4],
+                                  0.4, 0.04,
+                                  '<color="#FF0000">Option1:</color> The poor should eat the poor\n'
+                                 + '         as visciously as possible',
+                                  buttonColor,
+                                  buttonCallbackTest);
         let but1 = Ui.buildButton([0.3, 0.35], 0.4, 0.04, '<color="#FF0000">Option2:</color> Say nothing', buttonColor, buttonCallbackTest);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);

@@ -9,7 +9,7 @@ const _buttons      = [];
 const _labels       = [];
 
 export class TextElement {
-    constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer) {
+    constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer, colorBuffer) {
         this.vao            = vao;
         this.coords         = coords;
         this.len            = len;
@@ -17,6 +17,7 @@ export class TextElement {
         this.isHidden       = isHidden;
         this.posBuffer      = posBuffer;
         this.texCoordBuffer = texCoordBuffer;
+        this.colorBuffer    = colorBuffer;
         // Is this text element still in the
         // primary array with it's GL buffers
         // intact?
@@ -154,7 +155,8 @@ export function buildTextElement(text, coords, size)
         size,
         false, // isHidden
         posBuffer,
-        texCoordBuffer
+        texCoordBuffer,
+        colorBuffer
     );
 
     _textElements.push(textElement);
@@ -249,6 +251,7 @@ export function deleteTextElement(textElement) {
     gl.deleteVertexArray (textElement.vao);
     gl.deleteBuffer      (textElement.posBuffer);
     gl.deleteBuffer      (textElement.texCoordBuffer);
+    gl.deleteBuffer      (textElement.colorBuffer);
 
     _textElements.splice(index, 1);
 }
