@@ -1,9 +1,6 @@
 import { getGLContext } from '../canvas-getter.js';
 import { loadTexture } from './resource-loading.js';
-import { buildTextElement,
-         buildButton,
-         deleteTextElement,
-         TextElement} from './ui-utils.js';
+import * as Ui from './ui-utils.js';
 
 // Where we should position the player
 // models so they align with the map plane
@@ -47,9 +44,10 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     const invalidNetID = -1;
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
-        let te = buildTextElement(welcomeMsg, textCoords, 0.25);
-        let but2 = buildButton([0.4, 0.4], 0.2, 0.04, "Option1: Eat the poor", buttonCallbackTest);
-        let but1 = buildButton([0.4, 0.35], 0.2, 0.04, "Option2: Eat the rich", buttonCallbackTest);
+        let te   = Ui.buildTextElement(welcomeMsg, textCoords, 0.25);
+        const buttonColor = [0.9, 0.9, 0.9, 1.0];
+        let but2 = Ui.buildButton([0.3, 0.4], 0.4, 0.04, '<color="#FF0000">Option1:</color> The poor should eat the poor', buttonColor, buttonCallbackTest);
+        let but1 = Ui.buildButton([0.3, 0.35], 0.4, 0.04, '<color="#FF0000">Option2:</color> Say nothing', buttonColor, buttonCallbackTest);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }

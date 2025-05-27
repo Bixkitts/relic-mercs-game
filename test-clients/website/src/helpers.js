@@ -35,3 +35,59 @@ export function rayPlaneIntersection(rayOrigin, rayDirection, planePoint, planeN
 
     return intersectionPoint;
 }
+
+export function longestLineLength(text) {
+    let maxLength = 0;
+    let currentLength = 0;
+    let i = 0;
+
+    while (i < text.length) {
+        // Handle opening color tag: <color="#RRGGBB">
+        if (text.startsWith('<color="#', i)) {
+            const hexStart = i + 8;
+            const hexEnd = text.indexOf('"', hexStart);
+            const tagClose = text.indexOf('>', hexEnd);
+
+            if (hexEnd !== -1 && tagClose !== -1) {
+                const hex = text.slice(hexStart, hexEnd);
+                i = tagClose + 1;
+                continue;
+            }
+        }
+        // Handle closing tag: </color>
+        if (text.startsWith('</color>', i)) {
+            i += 8;
+            continue;
+        }
+        const char = text[i];
+        if (char === '\n') {
+            if (currentLength > maxLength) {
+              maxLength = currentLength;
+            }
+            currentLength = 0;
+        }
+        else {
+            currentLength++;
+        }
+        i++;
+    }
+    // Check last line
+    if (currentLength > maxLength) {
+      maxLength = currentLength;
+    }
+    return maxLength;
+}
+
+export function countLines(text) {
+  if (text.length === 0) return 0;
+
+  let count = 1; // Start with 1 line
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\n') {
+      count++;
+    }
+  }
+
+  return count;
+}
+

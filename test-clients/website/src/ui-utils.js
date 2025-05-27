@@ -1,9 +1,13 @@
 import * as Shaders from './rendering/shaders.js';
 import * as GlBuffers from './rendering/gl-buffers.js';
 import { getGLContext } from './canvas-getter';
+import * as Helpers from './helpers.js';
 
-// TODO:
-// probably don't need some of this data
+// Global variables
+const _textElements = [];
+const _buttons      = [];
+const _labels       = [];
+
 export class TextElement {
     constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer) {
         this.vao            = vao;
@@ -20,17 +24,55 @@ export class TextElement {
     }
 }
 
-// TODO:
-// probably don't need some of this data
 export class Button {
-    constructor(coords, width, height, label, callback, isHidden) {
+    constructor(coords, width, height, text, color, callback, isHidden) {
+        this.coords   = coords;
+        this.width    = width;
+        this.height   = height;
+        this.isHidden = isHidden;
+        this.color    = color;
+        this.callback = callback;
+    
+        const textLength = Helpers.longestLineLength(text) + 2;
+        const letterWidth = (width * 16) / textLength;
+        const letterHeight = 0.0625 * letterWidth * 1.52;
+        const lineCount = Helpers.countLines(text);
+    
+        // Compute total text block height
+        const totalTextHeight = letterHeight * lineCount;
+    
+        // Compute vertical starting position to center all lines in button
+        const startY = (coords[1] - (height / 2)) + (totalTextHeight / 2);
+    
+        this.label = buildTextElement(
+            text,
+            [coords[0] + (0.0625 * letterWidth), startY],
+            letterWidth
+        );
+    }
+
+    hide()
+    {
+        this.isHidden = true;
+        this.label.isHidden = true;
+    }
+    show()
+    {
+        this.isHidden = false;
+        this.label.isHidden = false;
+    }
+}
+
+export class Label {
+    constructor(coords, width, height, text, color, isHidden) {
         this.coords         = coords;
         this.width          = width;
         this.height         = height;
         this.isHidden       = isHidden;
-        this.callback       = callback;
-        const letterWidth = (width * 16) / (label.length+2);
-        this.label          = buildTextElement(label,
+        this.color          = color;
+        const textLength = Helpers.longestLineLength(text);
+        const letterWidth = (width * 16) / textLength;
+        this.label          = buildTextElement(text,
                                                [coords[0] + (0.0625 * letterWidth),
                                                (coords[1] - (height/2)) + (height/10)],
                                                letterWidth);
@@ -47,12 +89,14 @@ export class Button {
     }
 }
 
-const _textElements = [];
-const _buttons      = [];
-
 export function getButtons()
 {
     return _buttons;
+}
+
+export function getLabels()
+{
+    return _labels;
 }
 
 export function getTextElements()
@@ -128,15 +172,51 @@ function generateTextInstanceData(text,
                                   getCurrentLine)
 {
     let column = 0;
+    let i = 0;
 
-    for (let i = 0; i < text.length; i++) {
+    let currentColor = [0.0, 0.0, 0.0, 1.0]; // Default: Green RGBA
+    const colorStack = [];
+
+    while (i < text.length) {
+        // Check for opening <color="#RRGGBB">
+        if (text.startsWith('<color="#', i)) {
+            console.log("Found text color!");
+            const hexStart = i + 8;
+            const hexEnd = text.indexOf('"', hexStart);
+            const tagClose = text.indexOf('>', hexEnd);
+
+            if (hexEnd !== -1 && tagClose !== -1) {
+                const hex = text.slice(hexStart, hexEnd);
+                colorStack.push(currentColor);
+                const r = parseInt(hex.slice(1, 3), 16) / 255;
+                const g = parseInt(hex.slice(3, 5), 16) / 255;
+                const b = parseInt(hex.slice(5, 7), 16) / 255;
+                currentColor = [r, g, b, 1.0];
+                console.log(`CurrentColor: ${currentColor}`);
+                i = tagClose + 1;
+                continue;
+            }
+        }
+
+        // Check for closing </color> tag
+        if (text.startsWith('</color>', i)) {
+            if (colorStack.length > 0) {
+                currentColor = colorStack.pop();
+            }
+            i += 8; // skip "</color>"
+            continue;
+        }
+
+        // Handle newlines
         const char = text[i];
         if (char === '\n') {
             onNewLine();
             column = 0;
+            i++;
             continue;
         }
 
+        // Normal character rendering
         const code = char.charCodeAt(0);
         const col = code % 16;
         const row = Math.floor(code / 16);
@@ -146,14 +226,12 @@ function generateTextInstanceData(text,
 
         uvArray.push(u, v);
         posArray.push(column * charWidth, getCurrentLine() * lineHeight);
-        colorArray.push(0.0, 1.0, 0.0, 1.0); // Green RGBA
+        colorArray.push(...currentColor);
 
         column++;
+        i++;
     }
 }
-
-
-
 // Deletes the text to free up memory.
 // Expensive operation, and you need
 // to rebuild the TextElement if you need
@@ -176,14 +254,29 @@ export function deleteTextElement(textElement) {
 }
 
 // Defined in GL screenspace coordinates
-export function buildButton(coords, width, height, label, callback)
+export function buildButton(coords, width, height, label, color, callback)
 {
     const button = new Button(coords,
                               width,
                               height,
                               label,
+                              color,
                               callback,
                               false);
     _buttons.push(button);
     return button;
+}
+
+// Defined in GL screenspace coordinates
+export function buildLabel(coords, width, height, text, color, callback)
+{
+    const label = new Label(coords,
+                             width,
+                             height,
+                             text,
+                             color,
+                             callback,
+                             false);
+    _labels.push(label);
+    return label;
 }

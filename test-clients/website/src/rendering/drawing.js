@@ -85,28 +85,8 @@ export function drawPlayers(gl, vaos, camZoom, shaders, playerTexture, modelView
     gl.bindVertexArray  (null);
 }
 
-export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
+function drawButtons(gl, shader, modelViewMatrix)
 {
-    const programInfo = shaders[0]; // solid color shader
-    gl.useProgram       (programInfo.program);
-    setOrtho            (gl, programInfo);
-    gl.bindVertexArray  (vaos[2]);
-    //gl.activeTexture    (gl.TEXTURE0);
-    //gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
-    // Hud Bar
-    {
-        let mv = mat4.clone(modelViewMatrix);
-        gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
-                            false,
-                            mv);
-        gl.uniform4f(programInfo.uniformLocations["uColor"],
-                     1.0, 1.0, 1.0, 1.0);
-        const offset      = 0;
-        const type        = gl.UNSIGNED_SHORT;
-        const vertexCount = 4;
-        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
-    }
-
     const buttons = Ui.getButtons();
     buttons.forEach( button => {
         if (button.isHidden)
@@ -118,16 +98,44 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
         mat4.scale          (mv,
                              mv,
                              [button.width, button.height, 0.5]);
-        gl.uniformMatrix4fv (programInfo.uniformLocations["uModelViewMatrix"],
+        gl.uniformMatrix4fv (shader.uniformLocations["uModelViewMatrix"],
                              false,
                              mv);
-        gl.uniform4f        (programInfo.uniformLocations["uColor"],
-                             1.0, 1.0, 1.0, 1.0);
+        gl.uniform4f        (shader.uniformLocations["uColor"],
+                             button.color[0],
+                             button.color[1],
+                             button.color[2],
+                             button.color[3]);
         const offset      = 8;
         const type        = gl.UNSIGNED_SHORT;
         const vertexCount = 4;
         gl.drawElements     (gl.TRIANGLE_STRIP, vertexCount, type, offset);
     });
+}
+
+export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
+{
+    const shader = shaders[0]; // solid color shader
+    gl.useProgram       (shader.program);
+    setOrtho            (gl, shader);
+    gl.bindVertexArray  (vaos[2]);
+    //gl.activeTexture    (gl.TEXTURE0);
+    //gl.bindTexture      (gl.TEXTURE_2D, hudTexture);
+    // Hud Bar
+    {
+        let mv = mat4.clone(modelViewMatrix);
+        gl.uniformMatrix4fv(shader.uniformLocations["uModelViewMatrix"],
+                            false,
+                            mv);
+        gl.uniform4f(shader.uniformLocations["uColor"],
+                     1.0, 1.0, 1.0, 1.0);
+        const offset      = 0;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 4;
+        gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    }
+    drawButtons(gl, shader, modelViewMatrix);
+
     gl.bindVertexArray(null);
 }
 
