@@ -1,4 +1,4 @@
-import { getGLContext, getCanvas } from './canvas-getter.js'
+import { getGLContext, getCanvas } from './canvas-getter.js';
 import * as GameLogic from './game-logic.js';
 import * as Networking from './networking.js';
 import * as Renderer from './rendering/renderer.js';
@@ -94,7 +94,8 @@ export function initWASD() {
                 return;
             }
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
-            GameLogic.getPlayer(GameLogic.getMyPlayerId()).move(worldCoords[0], worldCoords[1]);
+            const player = GameLogic.getPlayer(GameLogic.getMyPlayerId());
+            player.move(worldCoords[0], worldCoords[1]);
             Networking.sendMovePacket(worldCoords[0], worldCoords[1]);
         }
     }

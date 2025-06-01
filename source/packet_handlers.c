@@ -146,7 +146,7 @@ static void get_handler(char *restrict data,
      * or game depending on their session token.
      */
     if (string_search(data, "GET / ", 10) >= 0) {
-        if (player == NULL) {
+        if (!player) {
             send_content("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
         }
         else if (!is_charsheet_valid(player)) {
@@ -184,7 +184,7 @@ static void get_handler(char *restrict data,
      * the remotehost needs to be authenticated
      * otherwise we're not sending anything at all.
      */
-    if (player == NULL) {
+    if (!player) {
         send_forbidden_packet(remotehost);
         return;
     }
@@ -214,8 +214,8 @@ static void login_handler(char *restrict data,
     struct html_form form                           = {0};
 
     credential_index =
-
         string_search(data, first_form_field, packet_size);
+
     parse_html_form(&data[credential_index],
                     &form,
                     packet_size - credential_index);
@@ -254,7 +254,7 @@ static void charsheet_handler(char *restrict data,
 
     const char first_form_field[HTMLFORM_FIELD_MAX_LEN] = "playerBackground=";
 
-    if (player == NULL) {
+    if (!player) {
         // token was invalid, handle that
         send_forbidden_packet(remotehost);
         return;
@@ -311,6 +311,7 @@ static void http_handler(char *restrict data,
  * Affected by disconnections.
  */
 pthread_mutex_t caching_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Netlib gives us numbered caches for
 // storing hosts that connect
 int8_t current_host_cache = 0;

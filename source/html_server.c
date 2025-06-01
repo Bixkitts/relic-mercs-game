@@ -133,7 +133,7 @@ void send_content(char *dir,
     content_len = get_file_data(dir, &content);
     if (content_len < 0) {
         print_error(BB_ERR_FILE_NOT_FOUND);
-        if (content != NULL) {
+        if (!content) {
             free(content);
         }
         return;
@@ -153,7 +153,7 @@ void send_content(char *dir,
 
     header_len = strnlen(header, HEADER_PACKET_LENGTH);
     // Custom Header:
-    if (custom_headers != NULL) {
+    if (custom_headers) {
         strncat(header, custom_headers, HEADER_PACKET_LENGTH - header_len);
     }
     strncat(header, "\r\n", 3);
@@ -169,10 +169,6 @@ void send_content(char *dir,
         exit(1);
     }
 
-    // TODO: Do I malloc and memcpy into one buffer so
-    // I only call send() once, or do I avoid a malloc
-    // and memcpy of the content but use two send() calls?
-    // (header, and then content)
     memcpy(packet, header, header_len);
     memcpy(&packet[header_len], content, content_len);
 
