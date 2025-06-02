@@ -20,8 +20,19 @@ struct html_form {
     char fields[HTMLFORM_MAX_FIELDS][HTMLFORM_FIELD_MAX_LEN];
     int field_count;
 };
+
+struct char_slice {
+    const char *start;
+    ssize_t len;
+};
+
 /* Helper functions */
 
+struct char_slice slice_string(const char *string, const ssize_t start_index, const ssize_t string_length, const ssize_t len);
+struct char_slice slice_string_to(const char *string,
+                                  const ssize_t start_index,
+                                  const ssize_t string_length,
+                                  const char until_this);
 // returns the index of the first occurence of the pattern or -1 on failure.
 // Max length should be the size of the buffer we're searching
 int string_search(const char *text, const char *pattern, int max_length);

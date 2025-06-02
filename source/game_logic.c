@@ -8,7 +8,6 @@
 
 #include "auth.h"
 #include "bbnetlib.h"
-#include "error_handling.h"
 #include "game_logic.h"
 #include "helpers.h"
 #include "host_custom_attributes.h"
@@ -447,6 +446,30 @@ static void try_start_game(struct game *game)
         game->state = GAME_STATE_STARTED;
     }
 }
+
+static void construct_player_connect_response(struct player_conn_res *response_data,
+                                              const struct game *game,
+                                              const struct player *player_connecting)
+{
+    const ssize_t namelen = sizeof(game->players[0].credentials.name);
+    for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
+        if (!game->players[i].game) {
+            response_data->players[i] = INVALID_PLAYER_ID;
+            continue;
+        }
+        const player_id_t id      = game->players[i].id;
+        response_data->players[i] = id;
+        memcpy(&response_data->player_names[i],
+               game->players[i].credentials.name,
+               namelen);
+        memcpy(&response_data->player_coords[i],
+               &game->players[i].coords,
+               sizeof(game->players[i].coords));
+        if (player_connecting->id == id) {
+            response_data->player_index = (int16_t)i;
+        }
+    }
+}
 /*
  * The client is attempting to fetch the player net_ids
  * so it can interpret messages about player state
@@ -461,50 +484,26 @@ static void player_connect_handler(char *data,
     // an ongoing game when someone, or themselves, are
     // in the middle of an encounter or other dialog.
     // This will need to be communicated.
-    struct player_conn_res *response_data = NULL;
-    // Currently unused
-    // ---------------------
-    // const struct
-    // PlayerConnectReq  *playerData     = (struct PlayerConnectReq*)data;
-    const opcode_t response_opcode = OPCODE_PLAYER_CONNECT;
-    struct player *host_player     = get_player_from_host(remotehost);
-    struct game *game              = host_player->game;
-    if (game == NULL) {
+    const opcode_t response_opcode         = OPCODE_PLAYER_CONNECT;
+    const struct player *player_connecting = get_player_from_host(remotehost);
+    struct game *game                      = player_connecting->game;
+    if (!game) {
         return;
     }
-    const ssize_t namelen = sizeof(game->players[0].credentials.name);
 
     char response_buffer[MAX_RESPONSE_HEADER_SIZE +
                          sizeof(struct player_conn_res)] = {0};
-
     int header_size =
         init_handler_response_buffer(response_buffer, response_opcode);
-    response_data = (struct player_conn_res *)&response_buffer[header_size];
+    struct player_conn_res *const response_data =
+        (struct player_conn_res *)&response_buffer[header_size];
 
-    for (int i = 0; i < MAX_PLAYERS_IN_GAME; i++) {
-        if (game->players[i].game == NULL) {
-            response_data->players[i] = INVALID_PLAYER_ID;
-            continue;
-        }
-        player_id_t id            = game->players[i].id;
-        response_data->players[i] = id;
-        memcpy(&response_data->player_names[i],
-               game->players[i].credentials.name,
-               namelen);
-        memcpy(&response_data->player_coords[i],
-               &game->players[i].coords,
-               sizeof(game->players[i].coords));
-        if (host_player->id == id) {
-            response_data->player_index = (int16_t)i;
-        }
-    }
-
+    construct_player_connect_response(response_data, game, player_connecting);
     // It's *nobody's* turn?
     // This means the game hasn't started yet.
-    if (game->current_turn == NULL) {
+    if (!game->current_turn) {
         try_start_game(game);
     }
-
     if (game->state == GAME_STATE_STARTED) {
         response_data->current_turn = game->current_turn->id;
     }
@@ -512,7 +511,7 @@ static void player_connect_handler(char *data,
         response_data->current_turn = INVALID_PLAYER_ID;
     }
 
-    int packet_size = header_size + sizeof(*response_data);
+    const ssize_t packet_size = header_size + sizeof(*response_data);
     multicast_tcp(response_buffer, packet_size, 0);
 }
 

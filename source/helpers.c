@@ -237,3 +237,26 @@ void parse_html_form(const char *in_buffer,
         out_buffer->field_count++;
     }
 }
+
+
+struct char_slice slice_string(const char *string,
+                               const ssize_t start_index,
+                               const ssize_t string_length,
+                               const ssize_t len)
+{
+    const struct char_slice slice =
+    { &string[start_index], len};
+    return slice;
+}
+
+struct char_slice slice_string_to(const char *string,
+                                  const ssize_t start_index,
+                                  const ssize_t string_length,
+                                  const char until_this)
+{
+    const char *text = &string[start_index];
+    const struct char_slice slice =
+    { text,
+      char_search(text, until_this, string_length - start_index)};
+    return slice;
+}

@@ -47,7 +47,7 @@ static void charsheet_handler(char *restrict data,
 static void post_handler(char *restrict data,
                          ssize_t packet_size,
                          struct host *remotehost);
-static void get_handler(char *restrict data,
+static void http_get_handler(char *restrict data,
                         ssize_t packet_size,
                         struct host *remotehost);
 
@@ -119,33 +119,40 @@ void master_handler(char *restrict data,
     return;
 }
 
-static void get_handler(char *restrict data,
-                        ssize_t packet_size,
-                        struct host *remotehost)
+/*
+ * Handler for HTTP GET requests
+ */
+static void http_get_handler(char *restrict get_request,
+                             ssize_t packet_size,
+                             struct host *remotehost)
 {
-    char requested_resource[MAX_FILENAME_LEN] = {0};
+    const int starting_index = strnlen("GET /", 5);
+    if (packet_size <= starting_index) return;
 
-    char *restrict starting_point = &data[5];
-    int string_len         = char_search(starting_point, ' ', packet_size - 5);
+    char requested_resource[MAX_FILENAME_LEN] = {0};
+    const struct char_slice filename = slice_string_to(get_request,
+                                                       starting_index,
+                                                       packet_size,
+                                                       ' ');
     char *file_table_entry = NULL;
 
     struct host_custom_attr *custom_attr =
         (struct host_custom_attr *)get_host_custom_attr(remotehost);
 
-    if (string_len < 0 || string_len > MAX_FILENAME_LEN) {
+    if (filename.len < 0 || filename.len > MAX_FILENAME_LEN) {
         return;
     }
 
-    memcpy(requested_resource, starting_point, string_len);
+    memcpy(requested_resource, filename.start, filename.len);
 
     struct game *game     = get_game_from_name(test_game_name);
-    session_token_t token = get_token_from_http(data, packet_size);
+    session_token_t token = get_token_from_http(get_request, packet_size);
     struct player *player = try_get_player_from_token(token, game);
 
     /* Direct the remotehost to the login, character creation
      * or game depending on their session token.
      */
-    if (string_search(data, "GET / ", 10) >= 0) {
+    if (string_search(get_request, "GET / ", 10) >= 0) {
         if (!player) {
             send_content("./login.html", HTTP_FLAG_TEXT_HTML, remotehost, NULL);
         }
@@ -155,8 +162,8 @@ static void get_handler(char *restrict data,
                          remotehost,
                          NULL);
         }
-        else if (string_search(data, "Sec-WebSocket-Key", packet_size) >= 0) {
-            send_web_socket_response(data, packet_size, remotehost);
+        else if (string_search(get_request, "Sec-WebSocket-Key", packet_size) >= 0) {
+            send_web_socket_response(get_request, packet_size, remotehost);
             struct host_custom_attr *host_attr =
                 (struct host_custom_attr *)get_host_custom_attr(remotehost);
             host_attr->player    = player;
@@ -170,11 +177,11 @@ static void get_handler(char *restrict data,
         return;
     }
     // Unauthenticated users are allowed the stylesheet, and login script
-    else if (string_search(data, "GET /styles.css", 16) >= 0) {
+    else if (string_search(get_request, "GET /styles.css", 16) >= 0) {
         send_content("./styles.css", HTTP_FLAG_TEXT_CSS, remotehost, NULL);
         return;
     }
-    else if (string_search(data, "GET /login.js", 14) >= 0) {
+    else if (string_search(get_request, "GET /login.js", 14) >= 0) {
         send_content("./login.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
@@ -195,7 +202,7 @@ static void get_handler(char *restrict data,
                      NULL);
         return;
     }
-    else if (string_search(data, "GET /index.js", 12) >= 0) {
+    else if (string_search(get_request, "GET /index.js", 12) >= 0) {
         send_content("./index.js", HTTP_FLAG_TEXT_JAVASCRIPT, remotehost, NULL);
         return;
     }
@@ -296,7 +303,7 @@ static void http_handler(char *restrict data,
         return;
     }
     if (string_search(data, "GET /", 8) >= 0) {
-        get_handler(data, packet_size, remotehost);
+        http_get_handler(data, packet_size, remotehost);
     }
     else if (string_search(data, "POST /", 8) >= 0) {
         post_handler(data, packet_size, remotehost);
@@ -323,7 +330,7 @@ static void disconnect_handler(char *data,
 {
     struct host_custom_attr *attr = get_host_custom_attr(remotehost);
     if (attr->handler == HANDLER_WEBSOCK) {
-        uncache_host(remotehost, 0);
+        uncache_host(remotehost, get_current_host_cache());
         // TODO: When someone disconnects,
         // the game will need to pause and alert everyone
         // of the disconnect and ask whether to
@@ -351,7 +358,8 @@ static void websock_handler(char *restrict data,
                             ssize_t packet_size,
                             struct host *remotehost)
 {
-    if (packet_size < 8) {
+    const int min_websocket_packet_len = 8;
+    if (packet_size < min_websocket_packet_len) {
         fprintf(stderr, "\nToo short websocket packet received.\n");
         return;
     }
