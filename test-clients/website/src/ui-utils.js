@@ -8,6 +8,11 @@ const _textElements = [];
 const _buttons      = [];
 const _labels       = [];
 
+export const UiAlignmentEnum = Object.freeze({
+    Top: 0,
+    Center: 1
+});
+
 export class TextElement {
     constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer, colorBuffer) {
         this.vao            = vao;
@@ -25,17 +30,24 @@ export class TextElement {
     }
 }
 
+export class UiTransformStruct {
+    constructor(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+}
+
 export class Button {
-    constructor(coords, width, height, text, color, callback, isHidden) {
-        this.coords   = coords;
-        this.width    = width;
-        this.height   = height;
-        this.isHidden = isHidden;
-        this.color    = color;
-        this.callback = callback;
+    constructor(uiTransform, text, color, callback, alignEnum, isHidden) {
+        this.transform = uiTransform;
+        this.isHidden  = isHidden;
+        this.color     = color;
+        this.callback  = callback;
     
         const textLength = Helpers.longestLineLength(text) + 2;
-        const letterWidth = (width * 16) / textLength;
+        const letterWidth = (this.transform.width * 16) / textLength;
         const letterHeight = 0.0625 * letterWidth * 1.52;
         const lineCount = Helpers.countLines(text);
     
@@ -43,11 +55,17 @@ export class Button {
         const totalTextHeight = letterHeight * lineCount;
     
         // Compute vertical starting position to center all lines in button
-        const startY = (coords[1] - (height / 2)) + (totalTextHeight / 2);
+        let startY = 0.0;
+        if (alignEnum === UiAlignmentEnum.Center) {
+            startY = (this.transform.y - (this.transform.height / 2)) + (totalTextHeight / 2);
+        }
+        else if (alignEnum === UiAlignmentEnum.Top) {
+            startY = (this.transform.y - (0)) + (totalTextHeight / 2);
+        }
     
         this.text = buildTextElement(
             text,
-            [coords[0] + (0.0625 * letterWidth), startY],
+            [this.transform.x + (0.0625 * letterWidth), startY],
             letterWidth
         );
     }
@@ -69,29 +87,35 @@ export class Button {
 // TODO: Labels are 99.9% the same as buttons, but copy-pasted.
 //       Perhaps I should address that?
 export class Label {
-    constructor(coords, width, height, text, color, isHidden) {
-        this.coords         = coords;
-        this.width          = width;
-        this.height         = height;
-        this.isHidden       = isHidden;
-        this.color          = color;
-        const textLength   = Helpers.longestLineLength(text) + 2;
-        const letterWidth  = (width * 16) / textLength;
+    constructor(uiTransform, text, color, alignEnum, isHidden) {
+        this.transform = uiTransform;
+        this.isHidden  = isHidden;
+        this.color     = color;
+    
+        const textLength = Helpers.longestLineLength(text) + 2;
+        const letterWidth = (this.transform.width * 16) / textLength;
         const letterHeight = 0.0625 * letterWidth * 1.52;
-        const lineCount    = Helpers.countLines(text);
+        const lineCount = Helpers.countLines(text);
     
         // Compute total text block height
         const totalTextHeight = letterHeight * lineCount;
     
         // Compute vertical starting position to center all lines in button
-        const startY = (coords[1] - (height / 2)) + (totalTextHeight / 2);
+        let startY = 0.0;
+        if (alignEnum === UiAlignmentEnum.Center) {
+            startY = (this.transform.y - (this.transform.height / 2)) + (totalTextHeight / 2);
+        }
+        else if (alignEnum === UiAlignmentEnum.Top) {
+            startY = (this.transform.y);
+        }
     
         this.text = buildTextElement(
             text,
-            [coords[0] + (0.0625 * letterWidth), startY],
+            [this.transform.x + (0.0625 * letterWidth), startY],
             letterWidth
         );
     }
+
     hide()
     {
         this.isHidden = true;
@@ -271,27 +295,25 @@ export function deleteTextElement(textElement) {
 }
 
 // Defined in GL screenspace coordinates
-export function buildButton(coords, width, height, text, color, callback)
+export function buildButton(transformStruct, text, color, callback, alignEnum)
 {
-    const button = new Button(coords,
-                              width,
-                              height,
+    const button = new Button(transformStruct,
                               text,
                               color,
                               callback,
+                              alignEnum,
                               false);
     _buttons.push(button);
     return button;
 }
 
 // Defined in GL screenspace coordinates
-export function buildLabel(coords, width, height, text, color, callback)
+export function buildLabel(transformStruct, text, color, alignEnum)
 {
-    const label = new Label(coords,
-                             width,
-                             height,
+    const label = new Label( transformStruct,
                              text,
                              color,
+                             alignEnum,
                              false);
     _labels.push(label);
     return label;

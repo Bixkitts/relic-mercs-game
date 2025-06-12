@@ -124,10 +124,10 @@ function doUiClick(screenX, screenY)
         if (button.isHidden)
             return;
         // detect collision and execute callback here
-        if (screenX >= button.coords[0]
-            && screenX <= button.coords[0] + button.width
-            && screenY <= button.coords[1]
-            && screenY >= button.coords[1] - button.height)
+        if (screenX >= button.transform.x
+            && screenX <= button.transform.x + button.transform.width
+            && screenY <= button.transform.y
+            && screenY >= button.transform.y - button.transform.height)
         {
             button.callback(button);
             wasUiClicked = true;
