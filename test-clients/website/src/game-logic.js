@@ -45,13 +45,13 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
         let te   = Ui.buildTextElement(welcomeMsg, textCoords, 0.125);
-        const buttonColor = [0.9, 0.9, 0.9, 1.0];
-        let but2 = Ui.buildButton([0.3, 0.4],
-                                  0.4, 0.04,
+        const buttonColor = [0.9, 0.9, 1.0, 1.0];
+        const labelColor  = [0.8, 0.8, 1.0, 0.7];
+        let lab = Ui.buildLabel([0.25, 0.9],
+                                  0.5, 0.54,
                                   '<color="#FF0000">Option1:</color> The poor should eat the poor\n'
-                                 + '         as visciously as possible',
-                                  buttonColor,
-                                  buttonCallbackTest);
+                                 + '         as visciously as possible.\nThis is going to be a longer piece of text...\nIm not sorry.',
+                                  labelColor);
         let but1 = Ui.buildButton([0.3, 0.35], 0.4, 0.04, '<color="#FF0000">Option2:</color> Say nothing', buttonColor, buttonCallbackTest);
         const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);

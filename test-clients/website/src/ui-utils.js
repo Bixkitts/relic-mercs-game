@@ -45,7 +45,7 @@ export class Button {
         // Compute vertical starting position to center all lines in button
         const startY = (coords[1] - (height / 2)) + (totalTextHeight / 2);
     
-        this.label = buildTextElement(
+        this.text = buildTextElement(
             text,
             [coords[0] + (0.0625 * letterWidth), startY],
             letterWidth
@@ -55,15 +55,19 @@ export class Button {
     hide()
     {
         this.isHidden = true;
-        this.label.isHidden = true;
+        this.text.isHidden = true;
     }
     show()
     {
         this.isHidden = false;
-        this.label.isHidden = false;
+        this.text.isHidden = false;
     }
 }
 
+// Like a button, but not clickable.
+// Just allows a background square for text
+// TODO: Labels are 99.9% the same as buttons, but copy-pasted.
+//       Perhaps I should address that?
 export class Label {
     constructor(coords, width, height, text, color, isHidden) {
         this.coords         = coords;
@@ -71,22 +75,32 @@ export class Label {
         this.height         = height;
         this.isHidden       = isHidden;
         this.color          = color;
-        const textLength = Helpers.longestLineLength(text);
-        const letterWidth = (width * 16) / textLength;
-        this.label          = buildTextElement(text,
-                                               [coords[0] + (0.0625 * letterWidth),
-                                               (coords[1] - (height/2)) + (height/10)],
-                                               letterWidth);
+        const textLength   = Helpers.longestLineLength(text) + 2;
+        const letterWidth  = (width * 16) / textLength;
+        const letterHeight = 0.0625 * letterWidth * 1.52;
+        const lineCount    = Helpers.countLines(text);
+    
+        // Compute total text block height
+        const totalTextHeight = letterHeight * lineCount;
+    
+        // Compute vertical starting position to center all lines in button
+        const startY = (coords[1] - (height / 2)) + (totalTextHeight / 2);
+    
+        this.text = buildTextElement(
+            text,
+            [coords[0] + (0.0625 * letterWidth), startY],
+            letterWidth
+        );
     }
     hide()
     {
         this.isHidden = true;
-        this.label.isHidden = true;
+        this.text.isHidden = true;
     }
     show()
     {
         this.isHidden = false;
-        this.label.isHidden = false;
+        this.text.isHidden = false;
     }
 }
 
@@ -257,12 +271,12 @@ export function deleteTextElement(textElement) {
 }
 
 // Defined in GL screenspace coordinates
-export function buildButton(coords, width, height, label, color, callback)
+export function buildButton(coords, width, height, text, color, callback)
 {
     const button = new Button(coords,
                               width,
                               height,
-                              label,
+                              text,
                               color,
                               callback,
                               false);
@@ -278,7 +292,6 @@ export function buildLabel(coords, width, height, text, color, callback)
                              height,
                              text,
                              color,
-                             callback,
                              false);
     _labels.push(label);
     return label;

@@ -113,6 +113,34 @@ function drawButtons(gl, shader, modelViewMatrix)
     });
 }
 
+function drawLabels(gl, shader, modelViewMatrix)
+{
+    const buttons = Ui.getLabels();
+    buttons.forEach( label => {
+        if (label.isHidden)
+            return;
+        let mv = mat4.clone(modelViewMatrix);
+        mat4.translate      (mv,
+                             mv,
+                             [label.coords[0], label.coords[1], 0.0]);
+        mat4.scale          (mv,
+                             mv,
+                             [label.width, label.height, 0.5]);
+        gl.uniformMatrix4fv (shader.uniformLocations["uModelViewMatrix"],
+                             false,
+                             mv);
+        gl.uniform4f        (shader.uniformLocations["uColor"],
+                             label.color[0],
+                             label.color[1],
+                             label.color[2],
+                             label.color[3]);
+        const offset      = 8;
+        const type        = gl.UNSIGNED_SHORT;
+        const vertexCount = 4;
+        gl.drawElements     (gl.TRIANGLE_STRIP, vertexCount, type, offset);
+    });
+}
+
 export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
 {
     const shader = shaders[0]; // solid color shader
@@ -135,6 +163,7 @@ export function drawHUD(gl, vaos, shaders, hudTexture, modelViewMatrix)
         gl.drawElements(gl.TRIANGLE_STRIP, vertexCount, type, offset);
     }
     drawButtons(gl, shader, modelViewMatrix);
+    drawLabels(gl, shader, modelViewMatrix);
 
     gl.bindVertexArray(null);
 }
