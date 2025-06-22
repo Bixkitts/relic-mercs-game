@@ -259,10 +259,9 @@ struct player_conn_res {
     player_id_t players[MAX_PLAYERS_IN_GAME];
     char player_names[MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
     struct coordinates player_coords[MAX_PLAYERS_IN_GAME];
-    player_id_t current_turn; // ID of the player who's turn it is
-    player_id_t player_index; // Index in the "players"
-                              // array of the connecting player
-    bool game_ongoing; // Has the game we've joined started yet?
+    player_id_t current_turn;         // ID of the player who's turn it is
+    player_id_t connecting_player_id; // ID of the player who connected
+    bool game_ongoing;                // Has the game we've joined started yet?
 } __attribute__((packed));
 
 /*

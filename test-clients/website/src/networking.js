@@ -120,29 +120,27 @@ function handlePlayerConnectResponse(dataView) {
         const x = dataView.getFloat64(coordStartIndex, true);
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
 
-        // Add player to the map (assuming default vigour, violence, cunning, image)
+        // Add player to the map, if their ID is not already in the map
         GameLogic.tryAddPlayer(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
     }
 
-    // Adjust offset after player coordinates
-    let offset = coordOffset + (3 * doubleSize * maxPlayers);
-
     // Extract current turn player_id
-    const currentTurn = dataView.getInt16(offset, true);
+    const currentTurnOffset = coordOffset + (3 * doubleSize * maxPlayers);
+    const currentTurn = dataView.getInt16(currentTurnOffset, true);
     GameLogic.setCurrentTurn(currentTurn);
-    offset += playerIdSize;
 
     // Extract player index
+    const myPlayerIdOffset = currentTurnOffset + playerIdSize;
     if (!_connected) {
         _connected = true;
-        const playerIndex = dataView.getInt16(offset);
-        GameLogic.setMyPlayerId(playerList[playerIndex]);
-        console.log('Player Index:', playerIndex, '  Offset: ', offset);
+        const extractedPlayerId = dataView.getInt16(myPlayerIdOffset, true);
+        GameLogic.setMyPlayerId(extractedPlayerId);
+        console.log('Player ID extracted from packet:', extractedPlayerId);
     }
 
+    const gameOngoingOffset = myPlayerIdOffset + playerIdSize;
     // Extract game ongoing status
-    const gameOngoing = Boolean(dataView.getInt8(offset));
-    offset += 1;
+    const gameOngoing = Boolean(dataView.getInt8(gameOngoingOffset));
 
     console.log('My Player Id:', GameLogic.getMyPlayerId());
     console.log('Player Ids:', playerList);

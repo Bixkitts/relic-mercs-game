@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +48,7 @@ static void charsheet_handler(char *restrict data,
 static void post_handler(char *restrict data,
                          ssize_t packet_size,
                          struct host *remotehost);
-static void http_get_handler(char *restrict data,
+static void http_get_handler(char *restrict get_request,
                         ssize_t packet_size,
                         struct host *remotehost);
 
@@ -126,6 +127,7 @@ static void http_get_handler(char *restrict get_request,
                              ssize_t packet_size,
                              struct host *remotehost)
 {
+    assert(get_request && remotehost);
     const int starting_index = strnlen("GET /", 5);
     if (packet_size <= starting_index) return;
 
@@ -145,9 +147,9 @@ static void http_get_handler(char *restrict get_request,
 
     memcpy(requested_resource, filename.start, filename.len);
 
-    struct game *game     = get_game_from_name(test_game_name);
-    session_token_t token = get_token_from_http(get_request, packet_size);
-    struct player *player = try_get_player_from_token(token, game);
+    struct game     *game   = get_game_from_name(test_game_name);
+    session_token_t  token  = get_token_from_http(get_request, packet_size);
+    struct player   *player = try_get_player_from_token(token, game);
 
     /* Direct the remotehost to the login, character creation
      * or game depending on their session token.
@@ -220,6 +222,7 @@ static void login_handler(char *restrict data,
     const char first_form_field[MAX_CREDENTIAL_LEN] = "playerName=";
     struct html_form form                           = {0};
 
+    // Where the credentials start, as expected by parse_html_form().
     credential_index =
         string_search(data, first_form_field, packet_size);
 

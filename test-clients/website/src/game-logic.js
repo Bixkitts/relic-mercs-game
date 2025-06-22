@@ -71,6 +71,7 @@ function buttonCallbackTest(button)
 }
 
 export function getPlayer(netID) {
+    console.log("Current PLayers:" + players);
     return players.get(netID);
 }
 
@@ -91,5 +92,6 @@ export function setMyPlayerId(netID) {
 }
 
 export function getMyPlayerId() {
+    console.log("My NetID: " + _myNetID);
     return _myNetID;
 }

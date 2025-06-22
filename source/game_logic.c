@@ -174,7 +174,7 @@ void handle_game_message(char *data, ssize_t data_size, struct host *remotehost)
     };
 }
 
-static inline int get_free_game()
+static inline int get_free_game(void)
 {
     int expected = 0;
     for (int i = 0; i < MAX_GAMES; i++) {
@@ -222,10 +222,12 @@ void delete_game(struct game *game)
 
 static void gen_player_start_pos(struct coordinates *out_coords)
 {
+    // TODO: generate an actual start position
     out_coords->x = 0.0f;
     out_coords->y = 0.0f;
     out_coords->z = 0.0f;
 }
+
 /*
  * This function assumes that the player was redirected to
  * character creation and creates a character at the next free
@@ -235,9 +237,11 @@ static void gen_player_start_pos(struct coordinates *out_coords)
 struct player *create_player(struct game *game,
                              const struct player_credentials *credentials)
 {
-    /* TODO: make this find a free slot instead */
     const player_id_t new_player_id = atomic_fetch_add(&game->player_count, 1);
+
+    /* TODO: make this find a free slot instead */
     struct player *new_player = &game->players[new_player_id];
+
     new_player->id = new_player_id;
     pthread_mutex_init(&new_player->threadlock, NULL);
     new_player->game = game;
@@ -248,6 +252,8 @@ struct player *create_player(struct game *game,
 
 void delete_player(struct player *restrict player)
 {
+    // TODO: if we memset the entire player struct this probably
+    //       messes up the player threadlock
     pthread_mutex_lock(&player->threadlock);
     atomic_fetch_sub(&player->game->player_count, 1);
     memset(player, 0, sizeof(*player));
@@ -292,13 +298,12 @@ int init_charsheet_from_form(struct player *player,
     }
     // TODO: This math only works as long as chargen stat limits
     // are EXACTLY 10. Just do string to int.
-    sheet->vigour = (form->fields[FORM_CHARSHEET_VIGOUR][0] - ASCII_TO_INT) +
-                    (9 * (form->fields[FORM_CHARSHEET_VIGOUR][1] != 0));
-    sheet->violence =
-        (form->fields[FORM_CHARSHEET_VIOLENCE][0] - ASCII_TO_INT) +
-        (9 * (form->fields[FORM_CHARSHEET_VIOLENCE][1] != 0));
-    sheet->cunning = (form->fields[FORM_CHARSHEET_CUNNING][0] - ASCII_TO_INT) +
-                     (9 * (form->fields[FORM_CHARSHEET_CUNNING][1] != 0));
+    sheet->vigour   = (form->fields[FORM_CHARSHEET_VIGOUR][0] - ASCII_TO_INT)
+                      + (9 * (form->fields[FORM_CHARSHEET_VIGOUR][1] != 0));
+    sheet->violence = (form->fields[FORM_CHARSHEET_VIOLENCE][0] - ASCII_TO_INT)
+                      + (9 * (form->fields[FORM_CHARSHEET_VIOLENCE][1] != 0));
+    sheet->cunning  = (form->fields[FORM_CHARSHEET_CUNNING][0] - ASCII_TO_INT)
+                      + (9 * (form->fields[FORM_CHARSHEET_CUNNING][1] != 0));
 
     if (validate_new_charsheet(sheet) != 0) {
         memset(sheet, 0, sizeof(*sheet));
@@ -465,11 +470,14 @@ static void construct_player_connect_response(struct player_conn_res *response_d
         memcpy(&response_data->player_coords[i],
                &game->players[i].coords,
                sizeof(game->players[i].coords));
-        if (player_connecting->id == id) {
-            response_data->player_index = (int16_t)i;
-        }
     }
+    // On the client side we build an id->name map
+    // from the previous data.
+    // This entry allows the client to know
+    // which player in the map they are.
+    response_data->connecting_player_id = player_connecting->id;
 }
+
 /*
  * The client is attempting to fetch the player net_ids
  * so it can interpret messages about player state
@@ -491,8 +499,8 @@ static void player_connect_handler(char *data,
         return;
     }
 
-    char response_buffer[MAX_RESPONSE_HEADER_SIZE +
-                         sizeof(struct player_conn_res)] = {0};
+    char response_buffer[MAX_RESPONSE_HEADER_SIZE
+                         + sizeof(struct player_conn_res)] = {0};
     int header_size =
         init_handler_response_buffer(response_buffer, response_opcode);
     struct player_conn_res *const response_data =
