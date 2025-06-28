@@ -1,18 +1,22 @@
+/*
+ * ===========================
+ * validators.h
+ * ===========================
+ * This file is just a big bunch of static inline
+ * helper functions for validating data coming in from
+ * the websockets, e.g. making sure a set of coordinates
+ * a player wants to move to is within the bounds of
+ * the map.
+ * These functions will probably all only
+ * ever have one entry point each, so they're inlined.
+ *
+ */
+
 #ifndef BB_GAME_VALIDATORS
 #define BB_GAME_VALIDATORS
 #include "game_logic.h"
 #include "helpers.h"
-/*
-
-This file is just a big bunch of static inline
-helper functions for validating data coming in from
-the websockets, e.g. making sure a set of coordinates
-a player wants to move to is within the bounds of
-the map.
-These functions will probably all only
-ever have one entry point each, so they're inlined.
-
- */
+#include "websocket_handlers.h"
 
 /*
  * Returns true if the coordinates that were
@@ -20,8 +24,7 @@ ever have one entry point each, so they're inlined.
  * Attempts to correct the coordinates either way
  * and write corrected coords to outData.
  */
-static inline bool validate_player_move_coords(const struct player_move_req
-                                                   *in_data,
+static inline bool validate_player_move_coords(const struct player_move_req *in_data,
                                                struct player_move_req *out_data)
 {
     const double map_bound_x = 1.6;

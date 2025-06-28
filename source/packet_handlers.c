@@ -10,11 +10,11 @@
 #include "bbnetlib.h"
 #include "error_handling.h"
 #include "file_handling.h"
-#include "game_logic.h"
 #include "helpers.h"
 #include "host_custom_attributes.h"
 #include "html_server.h"
 #include "packet_handlers.h"
+#include "websocket_handlers.h"
 #include "websockets.h"
 
 enum credential_form_fields {
@@ -340,6 +340,7 @@ static void disconnect_handler(char *data,
         // continue or wait.
     }
 }
+
 /*
  * When a user disconnects,
  * all OTHER users who are still

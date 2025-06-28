@@ -23,6 +23,7 @@ extern const char test_game_name[];
 #define MAX_PLAYERS_IN_GAME 8
 #define MAX_GAMES           16
 #define MAX_PLAYERS         MAX_PLAYERS_IN_GAME *MAX_GAMES
+#define INVALID_PLAYER_ID   -1
 
 typedef uint16_t opcode_t;
 
@@ -232,68 +233,26 @@ struct game {
     atomic_int player_count;
 };
 
-/*
- * Data structures coupled with websocket
- * handlers
- */
-// REQUESTS //
-struct player_move_req {
-    double x_coord;
-    double y_coord;
-} __attribute__((packed));
 
-struct player_conn_req {
-    // We don't actually need anything from
-    // the client on connection.
-    // But one day we might!
-    char placeholder;
-} __attribute__((packed));
-
-// RESPONSES //
-struct player_move_res {
-    player_id_t player_id;
-    struct player_move_req coords;
-} __attribute__((packed));
-
-struct player_conn_res {
-    player_id_t players[MAX_PLAYERS_IN_GAME];
-    char player_names[MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
-    struct coordinates player_coords[MAX_PLAYERS_IN_GAME];
-    player_id_t current_turn;         // ID of the player who's turn it is
-    player_id_t connecting_player_id; // ID of the player who connected
-    bool game_ongoing;                // Has the game we've joined started yet?
-} __attribute__((packed));
-
-/*
- * Primary entry point for interpreting
- * incoming websocket messages
- */
-void handle_game_message(char *data,
-                         ssize_t data_size,
-                         struct host *remotehost);
-
-void set_game_password(struct game *restrict game,
-                       const char password[static MAX_CREDENTIAL_LEN]);
-struct player *try_get_player_from_token(session_token_t token,
-                                         struct game *restrict game);
-struct game *get_game_from_name(const char name[static MAX_CREDENTIAL_LEN]);
+void           set_game_password         (struct game *restrict game,
+                                          const char password[static MAX_CREDENTIAL_LEN]);
+struct player *try_get_player_from_token (session_token_t token,
+                                          struct game *restrict game);
+struct game   *get_game_from_name        (const char name[static MAX_CREDENTIAL_LEN]);
 // Character sheet setup stuff
-int init_charsheet_from_form(struct player *player,
-                             const struct html_form *form);
-bool is_charsheet_valid(const struct player *restrict player);
+int            init_charsheet_from_form  (struct player *player,
+                                          const struct html_form *form);
+bool           is_charsheet_valid        (const struct player *restrict player);
 // Note: use initCharsheetFromForm.
-void set_player_char_sheet(struct player *player,
-                           const struct character_sheet *charsheet);
+void           set_player_char_sheet     (struct player *player,
+                                          const struct character_sheet *charsheet);
 /* --------------------------------------------- */
 
-struct game *create_game(struct game_config *config);
-struct player *create_player(struct game *game,
-                             const struct player_credentials *credentials);
-void delete_player(struct player *restrict player);
-// returns the ID the player got
-// Returns the pointer to global Game
-// variable.
-// Not thread safe, set this exactly once
-// in the main thread.
-int get_player_count(const struct game *game);
+struct game *create_game      (struct game_config *config);
+void         try_start_game   (struct game *game);
+int          get_player_count (const struct game *game);
+
+struct player *create_player (struct game *game,
+                              const struct player_credentials *credentials);
+void           delete_player (struct player *restrict player);
 #endif
