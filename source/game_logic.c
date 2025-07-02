@@ -29,8 +29,6 @@ static const char player_background_strings[PLAYER_BACKGROUND_COUNT]
 static const char player_gender_strings[GENDER_COUNT][HTMLFORM_FIELD_MAX_LEN] =
     {"Male", "Female"};
 
-pthread_mutex_t net_obj_mutexes[MAX_NETOBJS] = {0};
-
 const char test_game_name[MAX_CREDENTIAL_LEN] = "test game";
 
 /*
@@ -68,7 +66,6 @@ struct game *get_game_from_name(const char name[static MAX_CREDENTIAL_LEN])
  *  the functions that call them are expected
  *  to lock the game state they are modifying.
  */
-// TODO: move these to validator.h
 static void gen_player_start_pos(struct coordinates *out_coords);
 
 static inline int get_free_game(void)
@@ -86,7 +83,7 @@ static inline int get_free_game(void)
 
 struct game *create_game(struct game_config *config)
 {
-    int game_index = get_free_game();
+    const int game_index = get_free_game();
     if (game_index == -1) {
         return NULL;
     }
@@ -120,8 +117,29 @@ void delete_game(struct game *game)
 static void gen_player_start_pos(struct coordinates *out_coords)
 {
     // TODO: generate an actual start position
-    out_coords->x = 0.0f;
-    out_coords->y = 0.0f;
+    const enum cardinal_dir edge_to_spawn = (enum cardinal_dir)(get_random_int() % DIR_COUNT);
+    switch (edge_to_spawn) {
+        case DIR_NORTH:
+            out_coords->x = get_random_double(-1.5f, 1.5f);
+            out_coords->y = 0.9f;
+            break;
+        case DIR_SOUTH:
+            out_coords->x = get_random_double(-1.5f, 1.5f);
+            out_coords->y = -0.9f;
+            break;
+        case DIR_WEST:
+            out_coords->x = -1.5f;
+            out_coords->y = 0.0f;
+            break;
+        case DIR_EAST:
+            out_coords->x = 1.5f;
+            out_coords->y = get_random_double(-0.9f, 0.9f);
+            break;
+        default:
+            out_coords->x = -1.5f;
+            out_coords->y = get_random_double(-0.9f, 0.9f);
+    }
+
     out_coords->z = 0.0f;
 }
 

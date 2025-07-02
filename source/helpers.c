@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <dirent.h>
 #include <openssl/rand.h>
 #include <pthread.h>
@@ -39,7 +40,7 @@ static void string_search_compute_lps(const char *pattern, int m, int *lps)
  * want to consult the C standard for guarenteed type sizes,
  * or make/find custom fixed length types for all data coming in.
  */
-void check_data_sizes()
+void check_data_sizes(void)
 {
     if (sizeof(double) != 8 || sizeof(int) != 4 || sizeof(long long) != 8) {
         fprintf(stderr,
@@ -55,8 +56,10 @@ void print_buffer_in_hex(char *data, size_t size)
     }
     fprintf(stderr, "\n");
 }
+
 /*
  *  Complicated KMP string search algo, don't bother touching
+ *  TODO: This is terrible, just use strstr or something.
  */
 int string_search(const char *text, const char *pattern, int max_length)
 {
@@ -99,19 +102,14 @@ bool is_empty_string(const char *string)
 {
     return string[0] == '\0';
 }
+
 int char_search(const char *restrict text, char c, size_t buf_len)
 {
-    if (buf_len >= INT_MAX) {
-        return -1;
+    assert(buf_len > 0);
+    for (size_t i = 0; i < buf_len; i++) {
+        if (text[i] == c) return i;
     }
-    size_t i = 0;
-    while (text[i] != c && i < buf_len) {
-        i++;
-    }
-    if (i == buf_len) {
-        return -1;
-    }
-    return i;
+    return -1;
 }
 
 float get_random_float(float min, float max)
@@ -133,27 +131,21 @@ float get_random_float(float min, float max)
 
 double get_random_double(double min, double max)
 {
-    unsigned char buffer[sizeof(double)]; // 4 bytes to store a random integer
-    if (RAND_bytes(buffer, sizeof(buffer)) != 1) {
+    uint64_t rand_int;
+    if (1 != RAND_bytes((unsigned char *)&rand_int, sizeof(rand_int))) {
         fprintf(stderr, "Error generating random bytes\n");
         exit(1);
     }
-    unsigned int rand_int = 0;
-    for (size_t i = 0; i < sizeof(buffer); i++) {
-        rand_int = (rand_int << 8) | buffer[i];
-    }
     double normalized = rand_int / (double)UINT64_MAX;
-    double result     = min + normalized * (max - min);
-
-    return result;
+    return min + normalized * (max - min);
 }
 
-long long int get_random_int()
+long long int get_random_int(void)
 {
     long long random_integer                          = 0;
     unsigned char random_bytes[sizeof(long long int)] = {0};
 
-    if (RAND_bytes(random_bytes, sizeof(random_bytes)) != 1) {
+    if (1 != RAND_bytes(random_bytes, sizeof(random_bytes))) {
         fprintf(stderr, "Error generating random bytes.\n");
         return 0;
     }

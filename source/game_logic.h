@@ -9,20 +9,12 @@
 #include "helpers.h"
 #include "session_token.h"
 
-/*
- * Maximum amount of networked
- * objects/states
- */
-#define MAX_NETOBJS \
-    MAX_GAMES       \
-    +MAX_PLAYERS
-
 extern const char test_game_name[];
 
 #define MAX_CREDENTIAL_LEN  32
 #define MAX_PLAYERS_IN_GAME 8
 #define MAX_GAMES           16
-#define MAX_PLAYERS         MAX_PLAYERS_IN_GAME *MAX_GAMES
+#define MAX_PLAYERS         MAX_PLAYERS_IN_GAME * MAX_GAMES
 #define INVALID_PLAYER_ID   -1
 
 typedef uint16_t opcode_t;
@@ -42,6 +34,14 @@ enum injury_type {
     INJURY_MISSING_LEFT_ARM,
     INJURY_MISSING_RIGHT_ARM,
     INJURY_COUNT
+};
+
+enum cardinal_dir {
+    DIR_NORTH,
+    DIR_SOUTH,
+    DIR_WEST,
+    DIR_EAST,
+    DIR_COUNT
 };
 
 enum factions {
