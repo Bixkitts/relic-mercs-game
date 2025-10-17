@@ -42,7 +42,7 @@ export function makeButton(uiTransform, text, color, callback, alignEnum, isHidd
         startY = (uiTransform.y - (0)) + (totalTextHeight / 2);
     }
 
-    const textElement = makeTextElement(
+    const textElement = new makeTextElement(
         text,
         [uiTransform.x + (0.0625 * letterWidth), startY],
         letterWidth
@@ -61,7 +61,7 @@ export function makeButton(uiTransform, text, color, callback, alignEnum, isHidd
 export function hideUiElement(uiElement)
 {
     uiElement.isHidden = true;
-    uiElement.textElement.isHidden = false;
+    uiElement.textElement.isHidden = true;
 }
 
 export function showUiElement(uiElement)

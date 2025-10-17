@@ -186,7 +186,7 @@ export function drawText(gl, shaders, textTexture, modelViewMatrix)
         if (textElement.isHidden) {
             continue;
         }
-        const { vao, coords, len, size } = textElement;
+        const { vao, coords, length, size } = textElement;
         let matrix = mat4.clone(modelViewMatrix);
         gl.bindVertexArray(vao);
         mat4.translate (matrix,
@@ -198,7 +198,7 @@ export function drawText(gl, shaders, textTexture, modelViewMatrix)
         gl.uniformMatrix4fv(programInfo.uniformLocations["uModelViewMatrix"],
                             false,
                             matrix);
-        gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, type, offset, len);
+        gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, type, offset, length);
         gl.bindVertexArray(null);
     }
 }

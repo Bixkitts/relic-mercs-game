@@ -57,7 +57,7 @@ export function addPlayerToGame(netID, x, y, vigour, violence, cunning, image, n
                                labelColor,
                                Ui.TextAlignment.Top);
 
-        const buttonTransform = new Ui.makeUiTransform(0.3, 0.35, 0.4, 0.04);
+        const buttonTransform = Ui.makeUiTransform(0.3, 0.35, 0.4, 0.04);
         const buttonColor = [0.9, 0.9, 1.0, 1.0];
         let but1 = Ui.makeButton(buttonTransform,
                                  '<color="#FF0000">Option2:</color> Say nothing',
