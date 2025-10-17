@@ -28,13 +28,6 @@ const mouse = {
     middle: 1,
     right: 2
 };
-globalThis.peekZoom = () => camZoom;
-globalThis.peekPan  = () => camPan;
-globalThis.unfuck   = () => {
-    mov     = [0, 0];
-    camPan  = [0, 0, 0];
-    pressed = [0, 0, 0];
-}
 
 let   pressed          = [0, 0, 0];
 const gl               = getGLContext();
@@ -95,7 +88,7 @@ export function initWASD() {
             }
             const worldCoords = clickToWorldCoord(mouseX, mouseY);
             const player = GameLogic.getPlayer(GameLogic.getMyPlayerId());
-            player.move(worldCoords[0], worldCoords[1]);
+            GameLogic.movePlayer(player, worldCoords[0], worldCoords[1]);
             Networking.sendMovePacket(worldCoords[0], worldCoords[1]);
         }
     }
@@ -124,10 +117,10 @@ function doUiClick(screenX, screenY)
         if (button.isHidden)
             return;
         // detect collision and execute callback here
-        if (screenX >= button.transform.x
-            && screenX <= button.transform.x + button.transform.width
-            && screenY <= button.transform.y
-            && screenY >= button.transform.y - button.transform.height)
+        if (screenX >= button.uiTransform.x
+            && screenX <= button.uiTransform.x + button.uiTransform.width
+            && screenY <= button.uiTransform.y
+            && screenY >= button.uiTransform.y - button.uiTransform.height)
         {
             button.callback(button);
             wasUiClicked = true;

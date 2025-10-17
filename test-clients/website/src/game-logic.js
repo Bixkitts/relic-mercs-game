@@ -5,32 +5,35 @@ import * as Ui from './ui-utils.js';
 // Where we should position the player
 // models so they align with the map plane
 // on Z axis
-const _playerZHeight = 0.0125;
+const PLAYER_POS_Z = 0.0125;
 
 // We get this from the server and use it to know
 // who's turn it currently is
 let _currentTurn = 0;
 let _myNetID     = 0;
 
-export class Player {
-    constructor(netID, x, y, vigour, violence, cunning, image, name) {
-        this.netID    = netID;
-        this.position = vec3.fromValues(x, y, _playerZHeight);
-        this.vigour   = vigour;
-        this.violence = violence;
-        this.cunning  = cunning;
-        this.image    = loadTexture(getGLContext(), image, getGLContext().LINEAR);
-        this.name     = name;
-    }
-    move(targetX, targetY) {
-        this.position[0] = targetX;
-        this.position[1] = targetY;
-    }
+
+export function movePlayer(player, x, y)
+{
+    player.position[0] = x;
+    player.position[1] = y;
+}
+
+function makePlayer(netId, x, y, vigour, violence, cunning, image, name)
+{
+    return {
+        netId,
+        position: vec3.fromValues(x, y, PLAYER_POS_Z),
+        vigour,
+        violence,
+        cunning,
+        image,
+        name
+    };
 }
 
 // Map to store players by netID
 const players = new Map();
-
 
 function truncateAtNull(string)
 {
@@ -38,28 +41,31 @@ function truncateAtNull(string)
     return nullIndex !== -1 ? string.substring(0, nullIndex) : string;
 }
 
-export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name) {
+export function addPlayerToGame(netID, x, y, vigour, violence, cunning, image, name) {
     const truncatedName = truncateAtNull(name);
-    const welcomeMsg = `Welcome ${truncatedName}!\nI'm going to test scaling some smaller text here.\nHow does this look to you?`;
+    const welcomeMsg = `Welcome ${truncatedName}.`;
     const invalidNetID = -1;
     if (!players.has(netID) && netID != invalidNetID) {
         const textCoords = [0.3, 0.2 - (0.1 * players.size)];
-        let te   = Ui.buildTextElement(welcomeMsg, textCoords, 0.125);
-        const buttonColor = [0.9, 0.9, 1.0, 1.0];
+        let te   = Ui.makeTextElement(welcomeMsg, textCoords, 0.125);
+
+        const labelTransform = Ui.makeUiTransform(0.25, 0.9, 0.5, 0.54);
         const labelColor  = [0.8, 0.8, 1.0, 0.7];
-        const labelTransform = new Ui.UiTransformStruct(0.25, 0.9, 0.5, 0.54);
-        let lab = Ui.buildLabel(labelTransform,
-                                  '<color="#FF0000">Option1:</color> The poor should eat the poor\n'
-                                 + '         as visciously as possible.\nThis is going to be a longer piece of text...\nIm not sorry.',
-                                  labelColor,
-                                  Ui.UiAlignmentEnum.Top);
-        const buttonTransform = new Ui.UiTransformStruct(0.3, 0.35, 0.4, 0.04);
-        let but1 = Ui.buildButton(buttonTransform,
-                                  '<color="#FF0000">Option2:</color> Say nothing',
-                                  buttonColor,
-                                  buttonCallbackTest,
-                                  Ui.UiAlignmentEnum.Center);
-        const player = new Player(netID, x, y, vigour, violence, cunning, image, name);
+        let lab = Ui.makeLabel(labelTransform,
+                               '<color="#FF0000">Option1:</color> The poor should eat the poor\n'
+                               + '         as visciously as possible.\nThis is going to be a longer piece of text...\nIm not sorry.',
+                               labelColor,
+                               Ui.TextAlignment.Top);
+
+        const buttonTransform = new Ui.makeUiTransform(0.3, 0.35, 0.4, 0.04);
+        const buttonColor = [0.9, 0.9, 1.0, 1.0];
+        let but1 = Ui.makeButton(buttonTransform,
+                                 '<color="#FF0000">Option2:</color> Say nothing',
+                                 buttonColor,
+                                 buttonCallbackTest,
+                                 Ui.TextAlignment.Center);
+
+        const player = new makePlayer(netID, x, y, vigour, violence, cunning, image, name);
         players.set(netID, player);
     }
 }
@@ -67,7 +73,7 @@ export function tryAddPlayer(netID, x, y, vigour, violence, cunning, image, name
 function buttonCallbackTest(button)
 {
     console.log("Button was clicked!");
-    button.hide();
+    Ui.hideUiElement(button);
 }
 
 export function getPlayer(netID) {

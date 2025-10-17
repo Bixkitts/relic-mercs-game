@@ -94,10 +94,10 @@ function drawButtons(gl, shader, modelViewMatrix)
         let mv = mat4.clone(modelViewMatrix);
         mat4.translate      (mv,
                              mv,
-                             [button.transform.x, button.transform.y, 0.0]);
+                             [button.uiTransform.x, button.uiTransform.y, 0.0]);
         mat4.scale          (mv,
                              mv,
-                             [button.transform.width, button.transform.height, 0.5]);
+                             [button.uiTransform.width, button.uiTransform.height, 0.5]);
         gl.uniformMatrix4fv (shader.uniformLocations["uModelViewMatrix"],
                              false,
                              mv);
@@ -122,10 +122,10 @@ function drawLabels(gl, shader, modelViewMatrix)
         let mv = mat4.clone(modelViewMatrix);
         mat4.translate      (mv,
                              mv,
-                             [label.transform.x, label.transform.y, 0.0]);
+                             [label.uiTransform.x, label.uiTransform.y, 0.0]);
         mat4.scale          (mv,
                              mv,
-                             [label.transform.width, label.transform.height, 0.5]);
+                             [label.uiTransform.width, label.uiTransform.height, 0.5]);
         gl.uniformMatrix4fv (shader.uniformLocations["uModelViewMatrix"],
                              false,
                              mv);

@@ -105,7 +105,6 @@ bool is_empty_string(const char *string)
 
 int char_search(const char *restrict text, char c, size_t buf_len)
 {
-    assert(buf_len > 0);
     for (size_t i = 0; i < buf_len; i++) {
         if (text[i] == c) return i;
     }

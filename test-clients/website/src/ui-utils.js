@@ -8,124 +8,104 @@ const _textElements = [];
 const _buttons      = [];
 const _labels       = [];
 
-export const UiAlignmentEnum = Object.freeze({
+export const TextAlignment = Object.freeze({
     Top: 0,
     Center: 1
 });
 
-export class TextElement {
-    constructor(vao, coords, len, size, isHidden, posBuffer, texCoordBuffer, colorBuffer) {
-        this.vao            = vao;
-        this.coords         = coords;
-        this.len            = len;
-        this.size           = size;
-        this.isHidden       = isHidden;
-        this.posBuffer      = posBuffer;
-        this.texCoordBuffer = texCoordBuffer;
-        this.colorBuffer    = colorBuffer;
-        // Is this text element still in the
-        // primary array with it's GL buffers
-        // intact?
-        this.deleted        = false;
+export function makeUiTransform(x, y, width, height)
+{
+    return {
+        x,
+        y,
+        width,
+        height
     }
 }
 
-export class UiTransformStruct {
-    constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+export function makeButton(uiTransform, text, color, callback, alignEnum, isHidden)
+{
+    const textLength   = Helpers.longestLineLength(text) + 2;
+    const letterWidth  = (uiTransform.width * 16) / textLength;
+    const letterHeight = 0.0625 * letterWidth * 1.52;
+    const lineCount    = Helpers.countLines(text);
+
+    // Compute total text block height
+    const totalTextHeight = letterHeight * lineCount;
+
+    // Compute vertical starting position to center all lines in button
+    let startY = 0.0;
+    if (alignEnum === TextAlignment.Center) {
+        startY = (uiTransform.y - (uiTransform.height / 2)) + (totalTextHeight / 2);
     }
+    else if (alignEnum === TextAlignment.Top) {
+        startY = (uiTransform.y - (0)) + (totalTextHeight / 2);
+    }
+
+    const textElement = makeTextElement(
+        text,
+        [uiTransform.x + (0.0625 * letterWidth), startY],
+        letterWidth
+    );
+    const button = {
+        uiTransform,
+        isHidden,
+        color,
+        callback,
+        textElement
+    }
+    _buttons.push(button);
+    return button;
 }
 
-export class Button {
-    constructor(uiTransform, text, color, callback, alignEnum, isHidden) {
-        this.transform = uiTransform;
-        this.isHidden  = isHidden;
-        this.color     = color;
-        this.callback  = callback;
-    
-        const textLength = Helpers.longestLineLength(text) + 2;
-        const letterWidth = (this.transform.width * 16) / textLength;
-        const letterHeight = 0.0625 * letterWidth * 1.52;
-        const lineCount = Helpers.countLines(text);
-    
-        // Compute total text block height
-        const totalTextHeight = letterHeight * lineCount;
-    
-        // Compute vertical starting position to center all lines in button
-        let startY = 0.0;
-        if (alignEnum === UiAlignmentEnum.Center) {
-            startY = (this.transform.y - (this.transform.height / 2)) + (totalTextHeight / 2);
-        }
-        else if (alignEnum === UiAlignmentEnum.Top) {
-            startY = (this.transform.y - (0)) + (totalTextHeight / 2);
-        }
-    
-        this.text = buildTextElement(
-            text,
-            [this.transform.x + (0.0625 * letterWidth), startY],
-            letterWidth
-        );
-    }
+export function hideUiElement(uiElement)
+{
+    uiElement.isHidden = true;
+    uiElement.textElement.isHidden = false;
+}
 
-    hide()
-    {
-        this.isHidden = true;
-        this.text.isHidden = true;
-    }
-    show()
-    {
-        this.isHidden = false;
-        this.text.isHidden = false;
-    }
+export function showUiElement(uiElement)
+{
+    uiElement.isHidden = false;
+    uiElement.textElement.isHidden = false;
 }
 
 // Like a button, but not clickable.
 // Just allows a background square for text
 // TODO: Labels are 99.9% the same as buttons, but copy-pasted.
 //       Perhaps I should address that?
-export class Label {
-    constructor(uiTransform, text, color, alignEnum, isHidden) {
-        this.transform = uiTransform;
-        this.isHidden  = isHidden;
-        this.color     = color;
-    
-        const textLength = Helpers.longestLineLength(text) + 2;
-        const letterWidth = (this.transform.width * 16) / textLength;
-        const letterHeight = 0.0625 * letterWidth * 1.52;
-        const lineCount = Helpers.countLines(text);
-    
-        // Compute total text block height
-        const totalTextHeight = letterHeight * lineCount;
-    
-        // Compute vertical starting position to center all lines in button
-        let startY = 0.0;
-        if (alignEnum === UiAlignmentEnum.Center) {
-            startY = (this.transform.y - (this.transform.height / 2)) + (totalTextHeight / 2);
-        }
-        else if (alignEnum === UiAlignmentEnum.Top) {
-            startY = (this.transform.y);
-        }
-    
-        this.text = buildTextElement(
-            text,
-            [this.transform.x + (0.0625 * letterWidth), startY],
-            letterWidth
-        );
-    }
+export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
+{
+    const textLength = Helpers.longestLineLength(text) + 2;
+    const letterWidth = (uiTransform.width * 16) / textLength;
+    const letterHeight = 0.0625 * letterWidth * 1.52;
+    const lineCount = Helpers.countLines(text);
 
-    hide()
-    {
-        this.isHidden = true;
-        this.text.isHidden = true;
+    // Compute total text block height
+    const totalTextHeight = letterHeight * lineCount;
+
+    // Compute vertical starting position to center all lines in button
+    let startY = 0.0;
+    if (alignEnum === TextAlignment.Center) {
+        startY = (uiTransform.y - (uiTransform.height / 2)) + (totalTextHeight / 2);
     }
-    show()
-    {
-        this.isHidden = false;
-        this.text.isHidden = false;
+    else if (alignEnum === TextAlignment.Top) {
+        startY = (uiTransform.y);
     }
+    const textElement = makeTextElement(
+        text,
+        [uiTransform.x + (0.0625 * letterWidth), startY],
+        letterWidth
+    );
+
+    const label = {
+        uiTransform,
+        isHidden,
+        color,
+        textElement
+    }
+    _labels.push(label);
+    return label;
 }
 
 export function getButtons()
@@ -143,24 +123,23 @@ export function getTextElements()
     return _textElements;
 }
 
-export function buildTextElement(text, coords, size)
+export function makeTextElement(text, coords, size)
 {
-    const gl = getGLContext();
-    const shaders = Shaders.getShaders();
-    const buffers = GlBuffers.getVertBuffers();
-    const textShader = shaders[2];
+    const gl          = getGLContext();
+    const shaders     = Shaders.getShaders();
+    const buffers     = GlBuffers.getVertBuffers();
+    const textShader  = shaders[2];
     const textBuffers = buffers[2];
-    const vao = gl.createVertexArray();
-    const charWidth = 0.0625;
-    const uvScale = 1 / 16.0; // Assuming 16x16 atlas
-    const lineHeight = charWidth * 1.52;
+    const vao         = gl.createVertexArray();
+    const charWidth   = 0.0625;
+    const uvScale     = 1 / 16.0; // Assuming 16x16 atlas
+    const lineHeight  = charWidth * 1.52;
 
-    const uvArray = [];
-    const posArray = [];
-    const colorArray = [];
+    const uvArray     = [];
+    const posArray    = [];
+    const colorArray  = [];
 
-    let instanceCount = 0;
-    let currentLine = 0;
+    let currentLine   = 0;
 
     generateTextInstanceData(text,
                              uvScale,
@@ -186,16 +165,17 @@ export function buildTextElement(text, coords, size)
         Shaders.setColorAttributeInstanced(gl, colorBuffer, textShader);
     gl.bindVertexArray(null);
 
-    const textElement = new TextElement(
+    const textElement = {
         vao,
         coords,
-        posArray.length / 2, // one (x, y) pair per instance
+        length: posArray.length / 2, // one (x, y) pair per instance
         size,
-        false, // isHidden
+        isHidden: false, // isHidden
         posBuffer,
         texCoordBuffer,
-        colorBuffer
-    );
+        colorBuffer,
+        deleted: false
+    };
 
     _textElements.push(textElement);
     return textElement;
@@ -272,6 +252,7 @@ function generateTextInstanceData(text,
         i++;
     }
 }
+
 // Deletes the text to free up memory.
 // Expensive operation, and you need
 // to rebuild the TextElement if you need
@@ -292,29 +273,4 @@ export function deleteTextElement(textElement) {
     gl.deleteBuffer      (textElement.colorBuffer);
 
     _textElements.splice(index, 1);
-}
-
-// Defined in GL screenspace coordinates
-export function buildButton(transformStruct, text, color, callback, alignEnum)
-{
-    const button = new Button(transformStruct,
-                              text,
-                              color,
-                              callback,
-                              alignEnum,
-                              false);
-    _buttons.push(button);
-    return button;
-}
-
-// Defined in GL screenspace coordinates
-export function buildLabel(transformStruct, text, color, alignEnum)
-{
-    const label = new Label( transformStruct,
-                             text,
-                             color,
-                             alignEnum,
-                             false);
-    _labels.push(label);
-    return label;
 }

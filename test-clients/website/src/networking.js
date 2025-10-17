@@ -61,7 +61,8 @@ function handleMovePlayerResponse(dataView) {
             yCoord: yCoord
         }
     };
-    GameLogic.getPlayer(playerId).move(xCoord, yCoord);
+    const player = GameLogic.getPlayer(playerId);
+    GameLogic.movePlayer(player, xCoord, yCoord);
 
     console.log('Received movePlayerResponse: ', movePlayerResponse);
 }
@@ -77,6 +78,7 @@ function sendPlayerConnect() {
 
     _socket.send(ab);
 }
+
 // The C struct
 // -----------------------------------
 // #define MAX_PLAYERS_IN_GAME 8
@@ -84,7 +86,7 @@ function sendPlayerConnect() {
 //
 // typedef uint16_t player_id_t;
 //
-// struct PlayerConnectRes {
+// struct player_connect_res {
 //    player_id_t        players       [MAX_PLAYERS_IN_GAME];
 //    char               player_names  [MAX_CREDENTIAL_LEN][MAX_PLAYERS_IN_GAME];
 //    struct coordinates player_coords [MAX_PLAYERS_IN_GAME];
@@ -121,7 +123,7 @@ function handlePlayerConnectResponse(dataView) {
         const y = dataView.getFloat64(coordStartIndex + doubleSize, true);
 
         // Add player to the map, if their ID is not already in the map
-        GameLogic.tryAddPlayer(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
+        GameLogic.addPlayerToGame(playerId, x, y, 1, 2, 3, "playerTest.png", playerName);
     }
 
     // Extract current turn player_id
