@@ -3,7 +3,7 @@ import * as GameLogic from './game-logic.js';
 import * as Networking from './networking.js';
 import * as Renderer from './rendering/renderer.js';
 import * as Helpers from './helpers';
-import * as Ui from './ui-utils.js';
+import * as Ui from './ui/ui-utils.js';
 
 let   mov         = [0.0, 0.0];
 let   moveOnce    = [0.0, 0.0];

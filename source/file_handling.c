@@ -106,34 +106,27 @@ cleanup_threadlock:
     return ret;
 }
 
-/*
- * TODO: rewrite this spaghetti
- */
-size_t list_files(char *out_array)
+size_t list_files(char **dirs, int dirs_count, char *out_array)
 {
     size_t file_count = 0;
 
-    const char *src_rendering_dir = "./src/rendering/";
-    file_count += list_files_in_directory(src_rendering_dir, strlen(src_rendering_dir), &out_array[file_count * MAX_FILENAME_LEN]);
-
-    const char *src_dir = "./src/";
-    file_count += list_files_in_directory(src_dir, strlen(src_dir), &out_array[file_count * MAX_FILENAME_LEN]);
-
-    const char *images_dir = "./images/";
-    file_count += list_files_in_directory(images_dir, strlen(images_dir), &out_array[file_count * MAX_FILENAME_LEN]);
-
+    for (int i = 0; i < dirs_count; i++)
+    {
+        const char *src = dirs[i];
+        file_count += list_files_in_directory(src, strlen(src), &out_array[file_count * MAX_FILENAME_LEN]);
+    }
     return file_count;
 }
 
 /*
  * Writes the names of one file after the other.
- * Returns the number of chars written.
+ * returns the amount of file names it wrote to the buffer
  */
 static size_t list_files_in_directory(const char *directory_name,
                                       size_t directory_name_len,
                                       char *out_array)
 {
-    assert(strlen(directory_name) == directory_name_len);
+    assert(directory_name && directory_name_len > 0);
     struct dirent *dir        = NULL;
     DIR           *d          = opendir(directory_name);
     size_t         file_count = 0;

@@ -1,12 +1,16 @@
-import * as Shaders from './rendering/shaders.js';
-import * as GlBuffers from './rendering/gl-buffers.js';
-import { getGLContext } from './canvas-getter';
-import * as Helpers from './helpers.js';
+import * as Shaders from '../rendering/shaders.js';
+import * as GlBuffers from '../rendering/gl-buffers.js';
+import { getGLContext } from '../canvas-getter';
+import * as Helpers from '../helpers.js';
 
 // Global variables
 const _textElements = [];
 const _buttons      = [];
 const _labels       = [];
+
+// How wide and tall a letter is in the font texture
+const FONT_ATLAS_DIVISOR = 16;
+const LETTER_TEXTURE_WIDTH = 1.0 / FONT_ATLAS_DIVISOR;
 
 export const TextAlignment = Object.freeze({
     Top: 0,
@@ -26,8 +30,8 @@ export function makeUiTransform(x, y, width, height)
 export function makeButton(uiTransform, text, color, callback, alignEnum, isHidden)
 {
     const textLength   = Helpers.longestLineLength(text) + 2;
-    const letterWidth  = (uiTransform.width * 16) / textLength;
-    const letterHeight = 0.0625 * letterWidth * 1.52;
+    const letterWidth  = (uiTransform.width * FONT_ATLAS_DIVISOR) / textLength;
+    const letterHeight = LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
     const lineCount    = Helpers.countLines(text);
 
     // Compute total text block height
@@ -44,7 +48,7 @@ export function makeButton(uiTransform, text, color, callback, alignEnum, isHidd
 
     const textElement = new makeTextElement(
         text,
-        [uiTransform.x + (0.0625 * letterWidth), startY],
+        [uiTransform.x + (LETTER_TEXTURE_WIDTH * letterWidth), startY],
         letterWidth
     );
     const button = {
@@ -76,15 +80,12 @@ export function showUiElement(uiElement)
 //       Perhaps I should address that?
 export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
 {
-    const textLength = Helpers.longestLineLength(text) + 2;
-    const letterWidth = (uiTransform.width * 16) / textLength;
-    const letterHeight = 0.0625 * letterWidth * 1.52;
-    const lineCount = Helpers.countLines(text);
-
-    // Compute total text block height
+    const textLength      = Helpers.longestLineLength(text) + 2;
+    const letterWidth     = (uiTransform.width * FONT_ATLAS_DIVISOR) / textLength;
+    const letterHeight    = LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
+    const lineCount       = Helpers.countLines(text);
     const totalTextHeight = letterHeight * lineCount;
 
-    // Compute vertical starting position to center all lines in button
     let startY = 0.0;
     if (alignEnum === TextAlignment.Center) {
         startY = (uiTransform.y - (uiTransform.height / 2)) + (totalTextHeight / 2);
@@ -94,7 +95,7 @@ export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
     }
     const textElement = makeTextElement(
         text,
-        [uiTransform.x + (0.0625 * letterWidth), startY],
+        [uiTransform.x + (LETTER_TEXTURE_WIDTH * letterWidth), startY],
         letterWidth
     );
 
@@ -123,6 +124,11 @@ export function getTextElements()
     return _textElements;
 }
 
+export function doNotification(text)
+{
+    makeTextElement()
+}
+
 export function makeTextElement(text, coords, size)
 {
     const gl          = getGLContext();
@@ -131,9 +137,7 @@ export function makeTextElement(text, coords, size)
     const textShader  = shaders[2];
     const textBuffers = buffers[2];
     const vao         = gl.createVertexArray();
-    const charWidth   = 0.0625;
-    const uvScale     = 1 / 16.0; // Assuming 16x16 atlas
-    const lineHeight  = charWidth * 1.52;
+    const lineHeight  = LETTER_TEXTURE_WIDTH * 1.52;
 
     const uvArray     = [];
     const posArray    = [];
@@ -142,8 +146,7 @@ export function makeTextElement(text, coords, size)
     let currentLine   = 0;
 
     generateTextInstanceData(text,
-                             uvScale,
-                             charWidth,
+                             LETTER_TEXTURE_WIDTH,
                              lineHeight,
                              uvArray,
                              posArray,
@@ -181,8 +184,8 @@ export function makeTextElement(text, coords, size)
     return textElement;
 }
 
+// TODO: Refactor this function
 function generateTextInstanceData(text,
-                                  uvScale,
                                   charWidth,
                                   lineHeight,
                                   uvArray,
@@ -241,8 +244,8 @@ function generateTextInstanceData(text,
         const col = code % 16;
         const row = Math.floor(code / 16);
 
-        const u = col * uvScale;
-        const v = -row * uvScale;
+        const u = col * charWidth;
+        const v = -row * charWidth;
 
         uvArray.push(u, v);
         posArray.push(column * charWidth, getCurrentLine() * lineHeight);

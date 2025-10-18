@@ -13,8 +13,8 @@
 
 #define FILE_EXTENSION_LEN 16
 
-static char allowed_file_table[MAX_FILENAME_LEN * MAX_FILE_COUNT] = {0};
-static int allowed_file_table_len                                 = 0;
+static char files_to_serve[MAX_FILENAME_LEN * MAX_FILE_COUNT] = {0};
+static int files_to_serve_len                                 = 0;
 
 static const char content_type_strings[HTTP_FLAG_COUNT][STATUS_LENGTH] =
     {"text/html\r\n",
@@ -55,11 +55,11 @@ static const char *get_content_type_string(enum http_content_type type)
  */
 bool is_file_allowed(const char *in_name, char **out_dir)
 {
-    for (int i = 0; i < allowed_file_table_len; i++) {
-        char *file_table_entry = &allowed_file_table[i * MAX_FILENAME_LEN];
+    for (int i = 0; i < files_to_serve_len; i++) {
+        char *file_table_entry = &files_to_serve[i * MAX_FILENAME_LEN];
         if (string_search(file_table_entry,
                           in_name,
-                          allowed_file_table_len * MAX_FILENAME_LEN) >= 0) {
+                          files_to_serve_len * MAX_FILENAME_LEN) >= 0) {
             *out_dir = file_table_entry;
             return 1;
         }
@@ -102,11 +102,17 @@ enum http_content_type get_content_type_enum_from_filename(char *name)
  */
 void create_allowed_file_table(void)
 {
+    char *allowed_directories[] = {"./src/rendering/",
+                                   "./src/ui/",
+                                   "./src/",
+                                   "./images/" };
     // Currently just whitelists everything
-    allowed_file_table_len = list_files(allowed_file_table);
+    files_to_serve_len = list_files(allowed_directories,
+                                    sizeof(allowed_directories) / sizeof(*allowed_directories),
+                                    files_to_serve);
 #ifdef DEBUG
-    for (int i = 0; i < allowed_file_table_len; i++) {
-        printf("%s\n", &allowed_file_table[i * MAX_FILENAME_LEN]);
+    for (int i = 0; i < files_to_serve_len; i++) {
+        printf("%s\n", &files_to_serve[i * MAX_FILENAME_LEN]);
     }
 #endif
 }

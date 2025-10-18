@@ -1,7 +1,7 @@
 import { ProgramInfo } from "./type-hints.js";
 import * as Renderer from "./renderer.js";
 import * as GameLogic from "../game-logic.js";
-import * as Ui from "../ui-utils.js";
+import * as Ui from "../ui/ui-utils.js";
 
 /**
  * @param {WebGLRenderingContext} gl 

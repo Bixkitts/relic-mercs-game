@@ -9,5 +9,5 @@
 // Returns amount of bytes read
 // -1 on error
 size_t get_file_data(const char *dir, char **out_buffer);
-size_t list_files(char *out_array);
+size_t list_files(char **dirs, int dirs_count, char *out_array);
 #endif

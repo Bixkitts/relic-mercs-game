@@ -1,6 +1,6 @@
 import { getGLContext } from '../canvas-getter.js';
 import { loadTexture } from './resource-loading.js';
-import * as Ui from './ui-utils.js';
+import * as Ui from './ui/ui-utils.js';
 
 // Where we should position the player
 // models so they align with the map plane
@@ -11,6 +11,9 @@ const PLAYER_POS_Z = 0.0125;
 // who's turn it currently is
 let _currentTurn = 0;
 let _myNetID     = 0;
+
+// Map to store players by netID
+const _players = new Map();
 
 
 export function movePlayer(player, x, y)
@@ -32,9 +35,6 @@ function makePlayer(netId, x, y, vigour, violence, cunning, image, name)
     };
 }
 
-// Map to store players by netID
-const players = new Map();
-
 function truncateAtNull(string)
 {
     const nullIndex = string.indexOf('\0');
@@ -45,8 +45,8 @@ export function addPlayerToGame(netID, x, y, vigour, violence, cunning, image, n
     const truncatedName = truncateAtNull(name);
     const welcomeMsg = `Welcome ${truncatedName}.`;
     const invalidNetID = -1;
-    if (!players.has(netID) && netID != invalidNetID) {
-        const textCoords = [0.3, 0.2 - (0.1 * players.size)];
+    if (!_players.has(netID) && netID != invalidNetID) {
+        const textCoords = [0.3, 0.2 - (0.1 * _players.size)];
         let te   = Ui.makeTextElement(welcomeMsg, textCoords, 0.125);
 
         const labelTransform = Ui.makeUiTransform(0.25, 0.9, 0.5, 0.54);
@@ -66,7 +66,7 @@ export function addPlayerToGame(netID, x, y, vigour, violence, cunning, image, n
                                  Ui.TextAlignment.Center);
 
         const player = new makePlayer(netID, x, y, vigour, violence, cunning, image, name);
-        players.set(netID, player);
+        _players.set(netID, player);
     }
 }
 
@@ -77,16 +77,16 @@ function buttonCallbackTest(button)
 }
 
 export function getPlayer(netID) {
-    console.log("Current PLayers:" + players);
-    return players.get(netID);
+    console.log("Current PLayers:" + _players);
+    return _players.get(netID);
 }
 
 export function removePlayer(netID) {
-    players.delete(netID);
+    _players.delete(netID);
 }
 
 export function getAllPlayers() {
-    return Array.from(players.values());
+    return Array.from(_players.values());
 }
 
 export function setCurrentTurn(netID) {
