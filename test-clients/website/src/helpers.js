@@ -91,3 +91,13 @@ export function countLines(text) {
   return count;
 }
 
+export function tryDeleteFromDict(dict, object)
+{
+    for (const key in dict) {
+        if (dict[key] === object) {
+            delete dict[key];
+            return true;
+        }
+    }
+    return false;
+}

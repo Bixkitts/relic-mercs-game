@@ -2,6 +2,7 @@ import * as Shaders from '../rendering/shaders.js';
 import * as GlBuffers from '../rendering/gl-buffers.js';
 import { getGLContext } from '../canvas-getter';
 import * as Helpers from '../helpers.js';
+import * as Text from './text.js';
 
 // Global variables
 const _textElements = [];
@@ -9,8 +10,6 @@ const _buttons      = [];
 const _labels       = [];
 
 // How wide and tall a letter is in the font texture
-const FONT_ATLAS_DIVISOR = 16;
-const LETTER_TEXTURE_WIDTH = 1.0 / FONT_ATLAS_DIVISOR;
 
 export const TextAlignment = Object.freeze({
     Top: 0,
@@ -27,11 +26,12 @@ export function makeUiTransform(x, y, width, height)
     }
 }
 
+// TODO: Buttons are 99% the same as labels
 export function makeButton(uiTransform, text, color, callback, alignEnum, isHidden)
 {
     const textLength   = Helpers.longestLineLength(text) + 2;
-    const letterWidth  = (uiTransform.width * FONT_ATLAS_DIVISOR) / textLength;
-    const letterHeight = LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
+    const letterWidth  = (uiTransform.width * Text.FONT_ATLAS_DIVISOR) / textLength;
+    const letterHeight = Text.LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
     const lineCount    = Helpers.countLines(text);
 
     // Compute total text block height
@@ -48,7 +48,7 @@ export function makeButton(uiTransform, text, color, callback, alignEnum, isHidd
 
     const textElement = new makeTextElement(
         text,
-        [uiTransform.x + (LETTER_TEXTURE_WIDTH * letterWidth), startY],
+        [uiTransform.x + (Text.LETTER_TEXTURE_WIDTH * letterWidth), startY],
         letterWidth
     );
     const button = {
@@ -81,8 +81,8 @@ export function showUiElement(uiElement)
 export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
 {
     const textLength      = Helpers.longestLineLength(text) + 2;
-    const letterWidth     = (uiTransform.width * FONT_ATLAS_DIVISOR) / textLength;
-    const letterHeight    = LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
+    const letterWidth     = (uiTransform.width * Text.FONT_ATLAS_DIVISOR) / textLength;
+    const letterHeight    = Text.LETTER_TEXTURE_WIDTH * letterWidth * 1.52;
     const lineCount       = Helpers.countLines(text);
     const totalTextHeight = letterHeight * lineCount;
 
@@ -95,7 +95,7 @@ export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
     }
     const textElement = makeTextElement(
         text,
-        [uiTransform.x + (LETTER_TEXTURE_WIDTH * letterWidth), startY],
+        [uiTransform.x + (Text.LETTER_TEXTURE_WIDTH * letterWidth), startY],
         letterWidth
     );
 
@@ -107,6 +107,15 @@ export function makeLabel(uiTransform, text, color, alignEnum, isHidden)
     }
     _labels.push(label);
     return label;
+}
+
+export function tryDeleteLabel(label)
+{
+    deleteTextElement(label.textElement);
+    // The renderer loops through these
+    // UI element dicts to draw the UI,
+    // hence we remove it.
+    Helpers.tryDeleteFromDict(_labels, label);
 }
 
 export function getButtons()
@@ -126,9 +135,13 @@ export function getTextElements()
 
 export function doNotification(text)
 {
-    makeTextElement()
+    makeLabel();
+    makeTextElement("NOTIFICATION", [0.4, 0.6], 0.5);
 }
 
+// The coords argument should be a
+// two-element array with opengl coordinate
+// x and y components.
 export function makeTextElement(text, coords, size)
 {
     const gl          = getGLContext();
@@ -137,7 +150,7 @@ export function makeTextElement(text, coords, size)
     const textShader  = shaders[2];
     const textBuffers = buffers[2];
     const vao         = gl.createVertexArray();
-    const lineHeight  = LETTER_TEXTURE_WIDTH * 1.52;
+    const lineHeight  = Text.LETTER_TEXTURE_WIDTH * 1.52;
 
     const uvArray     = [];
     const posArray    = [];
@@ -145,14 +158,14 @@ export function makeTextElement(text, coords, size)
 
     let currentLine   = 0;
 
-    generateTextInstanceData(text,
-                             LETTER_TEXTURE_WIDTH,
-                             lineHeight,
-                             uvArray,
-                             posArray,
-                             colorArray,
-                             () => currentLine++,
-                             () => currentLine);
+    Text.generateTextInstanceData(text,
+                                  Text.LETTER_TEXTURE_WIDTH,
+                                  lineHeight,
+                                  uvArray,
+                                  posArray,
+                                  colorArray,
+                                  () => currentLine++,
+                                  () => currentLine);
 
     const texCoordBuffer = GlBuffers.createFloatBuffer(gl, uvArray);
     const posBuffer      = GlBuffers.createFloatBuffer(gl, posArray);
@@ -184,76 +197,53 @@ export function makeTextElement(text, coords, size)
     return textElement;
 }
 
-// TODO: Refactor this function
-function generateTextInstanceData(text,
-                                  charWidth,
-                                  lineHeight,
-                                  uvArray,
-                                  posArray,
-                                  colorArray,
-                                  onNewLine,
-                                  getCurrentLine)
+// This function creates all sorts of ui elements
+// to demonstrate how to create them, and to be
+// able to visually check if they look correct.
+export function doUiTest()
 {
-    let column = 0;
-    let i = 0;
+    const labelTransform = makeUiTransform(0.25, 0.9, 0.5, 0.54);
+    const labelColor     = [0.8, 0.8, 1.0, 0.7];
+    let lab = makeLabel(labelTransform,
+                        '<color="#FF0000">Colored Text!</color>\nNot colored text!',
+                        labelColor,
+                        TextAlignment.Top);
 
-    let currentColor = [0.0, 0.0, 0.0, 1.0]; // Default: Green RGBA
-    const colorStack = [];
+    const buttonTransform = makeUiTransform(0.3, 0.35, 0.4, 0.04);
+    const buttonColor     = [0.9, 0.9, 1.0, 1.0];
+    let but1 = makeButton(buttonTransform,
+                          '<color="#FF0000">Option2:</color> Say nothing',
+                          buttonColor,
+                          buttonCallbackTest,
+                          TextAlignment.Center);
+}
 
-    while (i < text.length) {
-        // Check for opening <color="#RRGGBB">
-        if (text.startsWith('<color="#', i)) {
-            console.log("Found text color!");
-            const hexStart = i + 8;
-            const hexEnd = text.indexOf('"', hexStart);
-            const tagClose = text.indexOf('>', hexEnd);
+function buttonCallbackTest(button)
+{
+    console.log("Button was clicked!");
+    Ui.hideUiElement(button);
+}
 
-            if (hexEnd !== -1 && tagClose !== -1) {
-                const hex = text.slice(hexStart, hexEnd);
-                colorStack.push(currentColor);
-                const r = parseInt(hex.slice(1, 3), 16) / 255;
-                const g = parseInt(hex.slice(3, 5), 16) / 255;
-                const b = parseInt(hex.slice(5, 7), 16) / 255;
-                currentColor = [r, g, b, 1.0];
-                console.log(`CurrentColor: ${currentColor}`);
-                i = tagClose + 1;
-                continue;
-            }
-        }
+function truncateAtNull(string)
+{
+    const nullIndex = string.indexOf('\0');
+    return nullIndex !== -1 ? string.substring(0, nullIndex) : string;
+}
 
-        // Check for closing </color> tag
-        if (text.startsWith('</color>', i)) {
-            if (colorStack.length > 0) {
-                currentColor = colorStack.pop();
-            }
-            i += 8; // skip "</color>"
-            continue;
-        }
-
-        // Handle newlines
-        const char = text[i];
-        if (char === '\n') {
-            onNewLine();
-            column = 0;
-            i++;
-            continue;
-        }
-
-        // Normal character rendering
-        const code = char.charCodeAt(0);
-        const col = code % 16;
-        const row = Math.floor(code / 16);
-
-        const u = col * charWidth;
-        const v = -row * charWidth;
-
-        uvArray.push(u, v);
-        posArray.push(column * charWidth, getCurrentLine() * lineHeight);
-        colorArray.push(...currentColor);
-
-        column++;
-        i++;
-    }
+export function greetPlayer(playerName)
+{
+    const truncatedName = truncateAtNull(playerName);
+    const welcomeMsg    = `Welcome ${truncatedName}.`;
+    const textCoords    = [0.3, 0.2];
+    let welcomMsgTransform = makeUiTransform(0.5, 0.5, 0.4, 0.2);
+    let te   = makeLabel(welcomMsgTransform,
+                         welcomeMsg,
+                         textCoords,
+                         0.125,
+                         TextAlignment.Center);
+    // TODO: Implement
+    //setTimeout(() => {
+    //}, 3000);
 }
 
 // Deletes the text to free up memory.
